@@ -1,0 +1,11 @@
+{
+  "type": "piano",
+  "tags": ["music", "loud"],
+  "solid": true,
+  "verbs": {
+    "play": { "range": 1, "durationTicks": 40, "handler": "basic.play" },
+    "press": { "range": 1, "durationTicks": 5, "handler": "basic.press" },
+    "scan": { "range": 6, "durationTicks": 20, "handler": "basic.inspect" }
+  },
+  "state": { "lastKey": null }
+}

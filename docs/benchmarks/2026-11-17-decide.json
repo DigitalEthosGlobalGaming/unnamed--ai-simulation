@@ -1,0 +1,977 @@
+[
+ {
+  "model": "uas-laya",
+  "digest": "3b550861d3de",
+  "samples": [
+   {
+    "id": "11-0-decide",
+    "ms": 2154.833133,
+    "inTokens": 199,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c4"
+    ],
+    "confidence": 0.046059527215219206,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "11-15805-decide",
+    "ms": 5058.783263,
+    "inTokens": 485,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c8",
+     "c10"
+    ],
+    "confidence": 0.6703991504825292,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "11-18919-decide",
+    "ms": 4791.023114000001,
+    "inTokens": 486,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c10"
+    ],
+    "confidence": 0.7410790555563295,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "11-33-decide",
+    "ms": 2244.1151299999983,
+    "inTokens": 227,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0"
+    ],
+    "confidence": 0.3629938213055129,
+    "checks": {
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "noPickupWhileHolding": false
+    }
+   },
+   {
+    "id": "11-33032-decide",
+    "ms": 4629.7323240000005,
+    "inTokens": 484,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c10"
+    ],
+    "confidence": 0.5707452155266365,
+    "checks": {
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "11-34335-decide",
+    "ms": 4635.632847000001,
+    "inTokens": 486,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c10"
+    ],
+    "confidence": 0.7884270691668209,
+    "checks": {
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "12-11-decide",
+    "ms": 2660.732115999999,
+    "inTokens": 242,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c8",
+     "c6"
+    ],
+    "confidence": 0.4488515752573354,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "12-16252-decide",
+    "ms": 4474.221460000001,
+    "inTokens": 480,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c7"
+    ],
+    "confidence": 0.6645270770977103,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "12-42954-decide",
+    "ms": 4972.251517999997,
+    "inTokens": 495,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c7"
+    ],
+    "confidence": 0.6018099824464164,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "13-18931-decide",
+    "ms": 4799.180401999998,
+    "inTokens": 486,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c7"
+    ],
+    "confidence": 0.653286464402427,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "13-19849-decide",
+    "ms": 4787.907516000007,
+    "inTokens": 486,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c7"
+    ],
+    "confidence": 0.653286464402427,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "13-20548-decide",
+    "ms": 4737.830151000002,
+    "inTokens": 484,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c5",
+     "c7"
+    ],
+    "confidence": 0.5934090735576933,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20569-decide",
+    "ms": 4606.284962000005,
+    "inTokens": 484,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c5",
+     "c7"
+    ],
+    "confidence": 0.5934090735576933,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20590-decide",
+    "ms": 4821.5158539999975,
+    "inTokens": 484,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c5",
+     "c7"
+    ],
+    "confidence": 0.5934090735576933,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20657-decide",
+    "ms": 4629.490180000001,
+    "inTokens": 482,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c6"
+    ],
+    "confidence": 0.6278072457278285,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20688-decide",
+    "ms": 4895.932407,
+    "inTokens": 482,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c6"
+    ],
+    "confidence": 0.6278072457278285,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20704-decide",
+    "ms": 4598.5635880000045,
+    "inTokens": 482,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c6"
+    ],
+    "confidence": 0.7421766204321989,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-2539-decide",
+    "ms": 2971.425105000002,
+    "inTokens": 339,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c2"
+    ],
+    "confidence": 0.8341506475565957,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "13-45769-decide",
+    "ms": 4670.801483999996,
+    "inTokens": 498,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c7"
+    ],
+    "confidence": 0.587467921767361,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "14-31153-decide",
+    "ms": 4867.601794999995,
+    "inTokens": 499,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c8"
+    ],
+    "confidence": 0.9318123659965226,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "14-33629-decide",
+    "ms": 4746.985928999988,
+    "inTokens": 499,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1"
+    ],
+    "confidence": 0.973057559847561,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-44353-decide",
+    "ms": 4776.5433309999935,
+    "inTokens": 498,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1"
+    ],
+    "confidence": 0.9805500199338648,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "14-48195-decide",
+    "ms": 5100.21387800001,
+    "inTokens": 498,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c7",
+     "c2"
+    ],
+    "confidence": 0.4408144871369916,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-48930-decide",
+    "ms": 4656.181190000003,
+    "inTokens": 498,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c7",
+     "c2"
+    ],
+    "confidence": 0.4408144871369916,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-5162-decide",
+    "ms": 3139.7365960000025,
+    "inTokens": 328,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0"
+    ],
+    "confidence": 0.6019818409952803,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "15-0-decide",
+    "ms": 1794.314308000001,
+    "inTokens": 199,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c4"
+    ],
+    "confidence": 0.046059527215219206,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "15-15947-decide",
+    "ms": 4581.1491160000005,
+    "inTokens": 484,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c8"
+    ],
+    "confidence": 0.7273869296631539,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "15-20188-decide",
+    "ms": 4416.23758500001,
+    "inTokens": 487,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1"
+    ],
+    "confidence": 0.9999710507634212,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "15-34017-decide",
+    "ms": 4432.0534079999925,
+    "inTokens": 486,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1"
+    ],
+    "confidence": 0.9860770505612199,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "15-48126-decide",
+    "ms": 4692.103808000014,
+    "inTokens": 492,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1",
+     "c0"
+    ],
+    "confidence": 0.49339497556575873,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   }
+  ],
+  "load": {
+   "mean": 3.3214814814814813,
+   "max": 3.88
+  },
+  "residentDuring": [
+   "uas-laya:latest"
+  ]
+ },
+ {
+  "model": "uas-tev1",
+  "digest": "f09701baa000",
+  "samples": [
+   {
+    "id": "11-0-decide",
+    "ms": 4183.254416000011,
+    "inTokens": 366,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c6"
+    ],
+    "confidence": 0.5281138704058487,
+    "checks": {
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "11-15805-decide",
+    "ms": 8657.133684,
+    "inTokens": 708,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1"
+    ],
+    "confidence": 0.5434560326169927,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "11-18919-decide",
+    "ms": 7688.769465999998,
+    "inTokens": 709,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1"
+    ],
+    "confidence": 0.5645146692802792,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "11-33-decide",
+    "ms": 4808.162917000009,
+    "inTokens": 438,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0"
+    ],
+    "confidence": 0.5209632536214426,
+    "checks": {
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "noPickupWhileHolding": false
+    }
+   },
+   {
+    "id": "11-33032-decide",
+    "ms": 7734.758486999985,
+    "inTokens": 708,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1"
+    ],
+    "confidence": 0.499348129809098,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "11-34335-decide",
+    "ms": 7926.485557000007,
+    "inTokens": 711,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1"
+    ],
+    "confidence": 0.48258952472026095,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "12-11-decide",
+    "ms": 4984.682356000005,
+    "inTokens": 454,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c9"
+    ],
+    "confidence": 0.209773982609714,
+    "checks": {
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "12-16252-decide",
+    "ms": 7763.815849000006,
+    "inTokens": 702,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0"
+    ],
+    "confidence": 0.3066823863627278,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "12-42954-decide",
+    "ms": 9460.107526000007,
+    "inTokens": 716,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0"
+    ],
+    "confidence": 0.19045387344824555,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "13-18931-decide",
+    "ms": 8314.698407999997,
+    "inTokens": 708,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1"
+    ],
+    "confidence": 0.4746354934998662,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "13-19849-decide",
+    "ms": 7624.668203999987,
+    "inTokens": 708,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1"
+    ],
+    "confidence": 0.4746354934998662,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "13-20548-decide",
+    "ms": 8387.864770999993,
+    "inTokens": 706,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c11"
+    ],
+    "confidence": 0.13642376709568982,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20569-decide",
+    "ms": 10508.378977000015,
+    "inTokens": 706,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c11"
+    ],
+    "confidence": 0.13642376709568982,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20590-decide",
+    "ms": 8729.862212999986,
+    "inTokens": 706,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c11"
+    ],
+    "confidence": 0.13642376709568982,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20657-decide",
+    "ms": 8852.73440300001,
+    "inTokens": 705,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0",
+     "c1"
+    ],
+    "confidence": 0.4608146866452771,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20688-decide",
+    "ms": 8399.234279999975,
+    "inTokens": 705,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0",
+     "c1"
+    ],
+    "confidence": 0.4608146866452771,
+    "checks": {
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20704-decide",
+    "ms": 7884.950921999989,
+    "inTokens": 705,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0",
+     "c1"
+    ],
+    "confidence": 0.43924786118086906,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-2539-decide",
+    "ms": 6415.96282799996,
+    "inTokens": 573,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c11"
+    ],
+    "confidence": 0.1829372876944674,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "13-45769-decide",
+    "ms": 7958.515650000016,
+    "inTokens": 722,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0"
+    ],
+    "confidence": 0.2280955734721876,
+    "checks": {
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "14-31153-decide",
+    "ms": 9477.827029999986,
+    "inTokens": 720,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0"
+    ],
+    "confidence": 0.20811604949928914,
+    "checks": {
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "14-33629-decide",
+    "ms": 9952.600107999984,
+    "inTokens": 723,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0",
+     "c1"
+    ],
+    "confidence": 0.25798732803613256,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-44353-decide",
+    "ms": 10301.746791000012,
+    "inTokens": 723,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1"
+    ],
+    "confidence": 0.19177493348395142,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "14-48195-decide",
+    "ms": 8563.824329000025,
+    "inTokens": 722,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0"
+    ],
+    "confidence": 0.25925424289949367,
+    "checks": {
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-48930-decide",
+    "ms": 8682.050266999984,
+    "inTokens": 722,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0"
+    ],
+    "confidence": 0.2505100216706595,
+    "checks": {
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-5162-decide",
+    "ms": 6477.477115000016,
+    "inTokens": 555,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0"
+    ],
+    "confidence": 0.4791574772879195,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "15-0-decide",
+    "ms": 4157.468082999985,
+    "inTokens": 366,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c6"
+    ],
+    "confidence": 0.5281138704058487,
+    "checks": {
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "15-15947-decide",
+    "ms": 7864.526524999994,
+    "inTokens": 709,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c2"
+    ],
+    "confidence": 0.1707727926765786,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "15-20188-decide",
+    "ms": 9726.565451000002,
+    "inTokens": 713,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1",
+     "c0"
+    ],
+    "confidence": 0.4498598306668578,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "15-34017-decide",
+    "ms": 10554.971068000013,
+    "inTokens": 713,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c1",
+     "c0"
+    ],
+    "confidence": 0.39009176616738134,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "15-48126-decide",
+    "ms": 10594.60790599999,
+    "inTokens": 718,
+    "outTokens": 0,
+    "valid": true,
+    "output": [
+     "c0",
+     "c1"
+    ],
+    "confidence": 0.41119795605816206,
+    "checks": {
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   }
+  ],
+  "load": {
+   "mean": 3.9769999999999994,
+   "max": 4
+  },
+  "residentDuring": [
+   "uas-tev1:latest"
+  ]
+ }
+]

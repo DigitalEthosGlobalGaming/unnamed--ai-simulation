@@ -1,0 +1,2842 @@
+[
+ {
+  "model": "llama3.2:1b",
+  "digest": "baf6a787fdff",
+  "samples": [
+   {
+    "id": "11-0-decide",
+    "ms": 4936.466046999998,
+    "promptMs": 66.489,
+    "genMs": 4856.646,
+    "inTokens": 467,
+    "outTokens": 76,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Explore the surroundings"
+      },
+      {
+       "id": "c1",
+       "reason": "Return to the garden"
+      },
+      {
+       "id": "c2",
+       "reason": "Push the ball"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "11-15805-decide",
+    "ms": 28957.649112,
+    "promptMs": 21326.812,
+    "genMs": 7607.432,
+    "inTokens": 1071,
+    "outTokens": 87,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Dock the dock to charge your battery"
+      },
+      {
+       "id": "c1",
+       "reason": "Rest the dock to conserve energy"
+      },
+      {
+       "id": "c2",
+       "reason": "Play the piano to stimulate your curiosity"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "11-18919-decide",
+    "ms": 18413.129847999997,
+    "promptMs": 12367.041,
+    "genMs": 5990.286,
+    "inTokens": 1063,
+    "outTokens": 87,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Dock the dock (0 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "Rest the dock (0 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "Play the piano (5 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "11-33-decide",
+    "ms": 13191.226286000005,
+    "promptMs": 7338.669,
+    "genMs": 5731.992,
+    "inTokens": 525,
+    "outTokens": 75,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Find the ball"
+      },
+      {
+       "id": "c1",
+       "reason": "Release the ball"
+      },
+      {
+       "id": "c2",
+       "reason": "Push the ball"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "noPickupWhileHolding": false
+    }
+   },
+   {
+    "id": "11-33032-decide",
+    "ms": 25976.017391,
+    "promptMs": 19831.731,
+    "genMs": 6118.529,
+    "inTokens": 1040,
+    "outTokens": 87,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Dock the dock (0 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "Rest the dock (0 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "Play the piano (5 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "11-34335-decide",
+    "ms": 12579.321933,
+    "promptMs": 6525.032,
+    "genMs": 6038.812,
+    "inTokens": 1044,
+    "outTokens": 87,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Dock the dock (0 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "Rest the dock (0 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "Play the piano (5 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "12-11-decide",
+    "ms": 10400.969276999997,
+    "promptMs": 5680.991,
+    "genMs": 4677.749,
+    "inTokens": 541,
+    "outTokens": 75,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Explore the ball"
+      },
+      {
+       "id": "c1",
+       "reason": "Release the ball"
+      },
+      {
+       "id": "c2",
+       "reason": "Push the ball"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "12-16252-decide",
+    "ms": 20995.038315000013,
+    "promptMs": 15892.304,
+    "genMs": 5086.559,
+    "inTokens": 1059,
+    "outTokens": 77,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "charge the solarPad"
+      },
+      {
+       "id": "c1",
+       "reason": "scan the solarPad"
+      },
+      {
+       "id": "c2",
+       "reason": "dock the dock"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "12-42954-decide",
+    "ms": 22390.257241999992,
+    "promptMs": 17405.754,
+    "genMs": 4921.143,
+    "inTokens": 1129,
+    "outTokens": 77,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "charge the solarPad"
+      },
+      {
+       "id": "c1",
+       "reason": "scan the solarPad"
+      },
+      {
+       "id": "c2",
+       "reason": "dock the dock"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "13-18931-decide",
+    "ms": 22486.21127,
+    "promptMs": 16174.521,
+    "genMs": 6261.392,
+    "inTokens": 1077,
+    "outTokens": 87,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Dock the dock (0 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "Rest the dock (0 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "Play the piano (5 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "13-19849-decide",
+    "ms": 6268.443119000003,
+    "promptMs": 88.478,
+    "genMs": 6156.756,
+    "inTokens": 1077,
+    "outTokens": 87,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Dock the dock (0 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "Rest the dock (0 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "Play the piano (5 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "13-20548-decide",
+    "ms": 16963.157220000023,
+    "promptMs": 11617.667,
+    "genMs": 5273.328,
+    "inTokens": 1075,
+    "outTokens": 78,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "charge the solarPad"
+      },
+      {
+       "id": "c1",
+       "reason": "scan the solarPad"
+      },
+      {
+       "id": "c2",
+       "reason": "dock the dock"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": false
+    }
+   },
+   {
+    "id": "13-20569-decide",
+    "ms": 16970.46948,
+    "promptMs": 10897.207,
+    "genMs": 6029.898,
+    "inTokens": 1076,
+    "outTokens": 90,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "charge the solarPad (0 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "scan the solarPad (0 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "dock the dock (7 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": false
+    }
+   },
+   {
+    "id": "13-20590-decide",
+    "ms": 15546.459850999992,
+    "promptMs": 9526.453,
+    "genMs": 5972.507,
+    "inTokens": 1077,
+    "outTokens": 89,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "charge the solarPad (0 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "scan the solarPad (0 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "dock the dock (7 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": false
+    }
+   },
+   {
+    "id": "13-20657-decide",
+    "ms": 17445.308893999987,
+    "promptMs": 10970.126,
+    "genMs": 6435.046,
+    "inTokens": 1085,
+    "outTokens": 89,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain (1 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain (1 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain (1 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20688-decide",
+    "ms": 16818.42280499998,
+    "promptMs": 11555.421,
+    "genMs": 5201.793,
+    "inTokens": 1082,
+    "outTokens": 79,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "rinsing the fountain"
+      },
+      {
+       "id": "c1",
+       "reason": "splashing the fountain"
+      },
+      {
+       "id": "c2",
+       "reason": "scanning the fountain"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20704-decide",
+    "ms": 15274.570629000023,
+    "promptMs": 10684.512,
+    "genMs": 4543.668,
+    "inTokens": 1077,
+    "outTokens": 71,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "low signal"
+      },
+      {
+       "id": "c1",
+       "reason": "loud fountain"
+      },
+      {
+       "id": "c2",
+       "reason": "dark"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-2539-decide",
+    "ms": 15904.491930999968,
+    "promptMs": 10106.938,
+    "genMs": 5745.41,
+    "inTokens": 773,
+    "outTokens": 88,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "pickup the ball (1 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "drop the ball (1 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "push the ball (1 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "13-45769-decide",
+    "ms": 23468.345742999983,
+    "promptMs": 17345.492,
+    "genMs": 6103.249,
+    "inTokens": 1154,
+    "outTokens": 89,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "charge the solarPad (0 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "scan the solarPad (0 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "dock the dock (7 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "14-31153-decide",
+    "ms": 22297.373701000004,
+    "promptMs": 16613.151999,
+    "genMs": 5630.987,
+    "inTokens": 1116,
+    "outTokens": 87,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "play the piano (1 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "press the piano (1 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "scan the piano (1 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "14-33629-decide",
+    "ms": 16142.929845999985,
+    "promptMs": 10169.862,
+    "genMs": 5923.853,
+    "inTokens": 1089,
+    "outTokens": 89,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain (1 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain (1 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain (1 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-44353-decide",
+    "ms": 18916.77639299998,
+    "promptMs": 13056.85,
+    "genMs": 5801.191,
+    "inTokens": 1097,
+    "outTokens": 89,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain (1 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain (1 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain (1 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "14-48195-decide",
+    "ms": 16861.31553600001,
+    "promptMs": 11075.029,
+    "genMs": 5735.005,
+    "inTokens": 1129,
+    "outTokens": 73,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "low signal"
+      },
+      {
+       "id": "c1",
+       "reason": "loud fountain"
+      },
+      {
+       "id": "c2",
+       "reason": "fountain light"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-48930-decide",
+    "ms": 5190.128966999997,
+    "promptMs": 75.25,
+    "genMs": 5097.302,
+    "inTokens": 1129,
+    "outTokens": 73,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "low signal"
+      },
+      {
+       "id": "c1",
+       "reason": "loud fountain"
+      },
+      {
+       "id": "c2",
+       "reason": "fountain light"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-5162-decide",
+    "ms": 13666.691526999988,
+    "promptMs": 8761.392,
+    "genMs": 4830.97,
+    "inTokens": 766,
+    "outTokens": 73,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "curiosity"
+      },
+      {
+       "id": "c1",
+       "reason": "curiosity"
+      },
+      {
+       "id": "c2",
+       "reason": "curiosity"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "15-0-decide",
+    "ms": 10794.479808999982,
+    "promptMs": 5966.061,
+    "genMs": 4813.039,
+    "inTokens": 467,
+    "outTokens": 78,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Explore the surroundings"
+      },
+      {
+       "id": "c1",
+       "reason": "Return to the garden"
+      },
+      {
+       "id": "c2",
+       "reason": "Investigate the solarPad"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "15-15947-decide",
+    "ms": 21976.130971000006,
+    "promptMs": 16570.932,
+    "genMs": 5372.518,
+    "inTokens": 1069,
+    "outTokens": 84,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "You want to play the piano."
+      },
+      {
+       "id": "c1",
+       "reason": "You want to press the piano."
+      },
+      {
+       "id": "c2",
+       "reason": "You want to scan the piano."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "15-20188-decide",
+    "ms": 15884.798307999969,
+    "promptMs": 10091.223,
+    "genMs": 5742.714,
+    "inTokens": 1062,
+    "outTokens": 89,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain (1 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain (1 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain (1 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "15-34017-decide",
+    "ms": 18570.883004000003,
+    "promptMs": 12418.763,
+    "genMs": 6106.511,
+    "inTokens": 1044,
+    "outTokens": 89,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain (1 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain (1 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain (1 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "15-48126-decide",
+    "ms": 19929.06753500004,
+    "promptMs": 13898.329,
+    "genMs": 5988.063,
+    "inTokens": 1055,
+    "outTokens": 89,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain (1 tiles away)"
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain (1 tiles away)"
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain (1 tiles away)"
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   }
+  ],
+  "load": {
+   "mean": 4.040970873786408,
+   "max": 4.12
+  },
+  "residentDuring": [
+   "llama3.2:1b"
+  ]
+ },
+ {
+  "model": "qwen3.5:0.8b",
+  "digest": "de63045f2975",
+  "samples": [
+   {
+    "id": "11-0-decide",
+    "ms": 7344.131562000024,
+    "promptMs": 105.407,
+    "genMs": 7226.844,
+    "inTokens": 492,
+    "outTokens": 110,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Pick up the ball to explore its contents."
+      },
+      {
+       "id": "c1",
+       "reason": "Drop the ball to test if it has a specific object inside."
+      },
+      {
+       "id": "c2",
+       "reason": "Push the ball to see what happens when it is moved."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "11-15805-decide",
+    "ms": 22105.71563900006,
+    "promptMs": 13246.812,
+    "genMs": 8820.366,
+    "inTokens": 1130,
+    "outTokens": 140,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Docking the dock is an immediate action to resolve low signal and agitation, though it drains battery."
+      },
+      {
+       "id": "c1",
+       "reason": "Resting at the dock cools down my battery and improves mood, which is crucial given my low battery status."
+      },
+      {
+       "id": "c2",
+       "reason": "Playing the piano at night provides a fun activity to combat my low signal and agitated mood."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "11-18919-decide",
+    "ms": 25482.308685999946,
+    "promptMs": 13683.31,
+    "genMs": 11747.573,
+    "inTokens": 1122,
+    "outTokens": 138,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c1",
+       "reason": "Resting at the dock drains battery and cools me down, which is good given my low signal and low curiosity."
+      },
+      {
+       "id": "c0",
+       "reason": "Docking the dock moves me closer to the cool environment and reduces anxiety about my low signal."
+      },
+      {
+       "id": "c11",
+       "reason": "Waiting and watching allows me to observe the surroundings without consuming battery or causing agitation."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "11-33-decide",
+    "ms": 13954.143627999933,
+    "promptMs": 7124,
+    "genMs": 6770.952,
+    "inTokens": 558,
+    "outTokens": 113,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Pick up the ball to continue exploring its surroundings."
+      },
+      {
+       "id": "c1",
+       "reason": "Drop the ball to test if it moves or stays still in the air."
+      },
+      {
+       "id": "c2",
+       "reason": "Push the ball gently to see how it reacts to force."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "noPickupWhileHolding": false
+    }
+   },
+   {
+    "id": "11-33032-decide",
+    "ms": 22362.881901999936,
+    "promptMs": 12334.529,
+    "genMs": 9992.345,
+    "inTokens": 1100,
+    "outTokens": 141,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c1",
+       "reason": "Resting at the dock cools me down and fills my battery, which is ideal given my low signal and agitated mood."
+      },
+      {
+       "id": "c0",
+       "reason": "Docking the dock moves me closer to the cool environment and reduces my anxiety about low signal."
+      },
+      {
+       "id": "c11",
+       "reason": "Waiting and watching allows me to observe the surroundings without consuming battery or causing unnecessary noise."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "11-34335-decide",
+    "ms": 19889.18003799999,
+    "promptMs": 6157.357,
+    "genMs": 13715.659,
+    "inTokens": 1104,
+    "outTokens": 144,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c1",
+       "reason": "Resting at the dock cools me down and fills my battery, which is crucial when signal is very low."
+      },
+      {
+       "id": "c0",
+       "reason": "Docking the dock by day cools me down and fills my battery, which is crucial when signal is very low."
+      },
+      {
+       "id": "c11",
+       "reason": "Waiting and watching allows me to observe the environment while managing my low energy and low curiosity."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "12-11-decide",
+    "ms": 13297.19024399994,
+    "promptMs": 6592.88,
+    "genMs": 6640.728,
+    "inTokens": 574,
+    "outTokens": 109,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Pick up the ball to continue exploring its location."
+      },
+      {
+       "id": "c1",
+       "reason": "Drop the ball to reset and find another object nearby."
+      },
+      {
+       "id": "c2",
+       "reason": "Push the ball to move it toward a specific target area."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "12-16252-decide",
+    "ms": 24203.510899999994,
+    "promptMs": 12544.439,
+    "genMs": 11611.511,
+    "inTokens": 1118,
+    "outTokens": 154,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "SolarPad is light, warm light hummed through it, and charging fills battery (good) while relaxing."
+      },
+      {
+       "id": "c1",
+       "reason": "Scan solarPad reveals metal/light object; curiosity low but signal low, so scan to check for hidden items or tools."
+      },
+      {
+       "id": "c2",
+       "reason": "Dock at night cools me down and does nothing much, but I am agitated with low signal; rest here is a safe option to recharge."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "12-42954-decide",
+    "ms": 21687.986112999963,
+    "promptMs": 12897.234,
+    "genMs": 8747.999,
+    "inTokens": 1191,
+    "outTokens": 142,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Charge at the solarPad by day fills my battery and cools me down, which is a sure option given my low signal."
+      },
+      {
+       "id": "c1",
+       "reason": "Scan the solarPad to check its status as I am feeling very low on signal."
+      },
+      {
+       "id": "c2",
+       "reason": "Dock at the dock by day cools me down, which is a sure option given my low signal."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "13-18931-decide",
+    "ms": 20572.400445999927,
+    "promptMs": 12332.044,
+    "genMs": 8193.508,
+    "inTokens": 1136,
+    "outTokens": 128,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c1",
+       "reason": "Resting at the dock by day cools me down and is sure to be fun."
+      },
+      {
+       "id": "c2",
+       "reason": "Playing the piano drains my battery and is definitely fun right now."
+      },
+      {
+       "id": "c5",
+       "reason": "Charging the solarPad by day does nothing much, so I will wait and watch instead."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "13-19849-decide",
+    "ms": 8601.540020999964,
+    "promptMs": 98.668,
+    "genMs": 8482.155,
+    "inTokens": 1136,
+    "outTokens": 128,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c1",
+       "reason": "Resting at the dock by day cools me down and is sure to be fun."
+      },
+      {
+       "id": "c2",
+       "reason": "Playing the piano drains my battery and is definitely fun right now."
+      },
+      {
+       "id": "c5",
+       "reason": "Charging the solarPad by day does nothing much, so I will wait and watch instead."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "13-20548-decide",
+    "ms": 23013.922780000023,
+    "promptMs": 13045.102,
+    "genMs": 9920.875,
+    "inTokens": 1134,
+    "outTokens": 146,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Charging the solarPad will restore battery and provide warmth, addressing my low signal and agitated mood."
+      },
+      {
+       "id": "c1",
+       "reason": "Scanning the solarPad is a direct way to check its status and potentially find useful information about what it does."
+      },
+      {
+       "id": "c2",
+       "reason": "Docking the dock will cool me down, which seems like a good strategy given my low signal and agitated mood."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": false
+    }
+   },
+   {
+    "id": "13-20569-decide",
+    "ms": 23094.963607999962,
+    "promptMs": 12296.004,
+    "genMs": 10753.487,
+    "inTokens": 1135,
+    "outTokens": 153,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Charging the solarPad will restore battery and provide warmth, addressing my low signal and agitated mood."
+      },
+      {
+       "id": "c1",
+       "reason": "Scanning the solarPad might reveal hidden features or a new way to interact with it, though I am unsure if this is useful given my low curiosity."
+      },
+      {
+       "id": "c2",
+       "reason": "Docking the dock at night will likely cool me down and provide a sense of stability against my agitated mood."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": false
+    }
+   },
+   {
+    "id": "13-20590-decide",
+    "ms": 22986.518469000002,
+    "promptMs": 13184.987,
+    "genMs": 9754.355,
+    "inTokens": 1137,
+    "outTokens": 140,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Charging the solarPad will restore battery and provide warmth, addressing my low signal and agitated mood."
+      },
+      {
+       "id": "c1",
+       "reason": "Scanning the solarPad confirms it is functional and likely to be useful for me given my low curiosity."
+      },
+      {
+       "id": "c2",
+       "reason": "Docking the dock will cool me down, which is a priority action when battery is quite low."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": false
+    }
+   },
+   {
+    "id": "13-20657-decide",
+    "ms": 21115.627447000006,
+    "promptMs": 13006.555,
+    "genMs": 8067.275,
+    "inTokens": 1142,
+    "outTokens": 131,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinsing drains battery and cools me down, fitting my low signal state."
+      },
+      {
+       "id": "c1",
+       "reason": "Splashing drains battery and is fun, but might not be the best choice given my low signal."
+      },
+      {
+       "id": "c2",
+       "reason": "Scanning drains battery and does nothing much, fitting my low signal state."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20688-decide",
+    "ms": 20723.924847000046,
+    "promptMs": 12250.834,
+    "genMs": 8428.897999,
+    "inTokens": 1139,
+    "outTokens": 131,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinsing drains battery and cools me down, fitting my low signal state."
+      },
+      {
+       "id": "c1",
+       "reason": "Splashing drains battery and is fun, but might not be the best choice given my low signal."
+      },
+      {
+       "id": "c2",
+       "reason": "Scanning drains battery and does nothing much, fitting my low signal state."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20704-decide",
+    "ms": 26789.132361000055,
+    "promptMs": 12491.57,
+    "genMs": 14247.352,
+    "inTokens": 1134,
+    "outTokens": 127,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinsing drains battery and cools me down, fitting my low signal state."
+      },
+      {
+       "id": "c1",
+       "reason": "Splashing might drain battery but is fun; I prefer the cooling effect of rinsing."
+      },
+      {
+       "id": "c2",
+       "reason": "Scanning drains battery and doesn't help with my low signal or agitation."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-2539-decide",
+    "ms": 24996.80489099992,
+    "promptMs": 11204.988,
+    "genMs": 13720.247,
+    "inTokens": 820,
+    "outTokens": 152,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c3",
+       "reason": "The ball is light and the robot likes finding out what things do, so chasing it is a logical next step."
+      },
+      {
+       "id": "c0",
+       "reason": "Chasing the ball will likely lead to the ball rolling away or being picked up, which aligns with the goal of exploring its behavior."
+      },
+      {
+       "id": "c1",
+       "reason": "Trying to drop the ball might not work if it is light and floating, so chasing it first is a safer exploration strategy."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "13-45769-decide",
+    "ms": 30196.11297300004,
+    "promptMs": 18051.362,
+    "genMs": 12066.987,
+    "inTokens": 1219,
+    "outTokens": 139,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Charging the solarPad fills my battery and cools me down, which is a priority given my low signal."
+      },
+      {
+       "id": "c1",
+       "reason": "Scanning the solarPad confirms it is functioning well and ready for use, resolving my low signal concern."
+      },
+      {
+       "id": "c2",
+       "reason": "Docking the dock cools me down significantly while moving away from the noisy environment."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "14-31153-decide",
+    "ms": 27648.607825000072,
+    "promptMs": 16899.361,
+    "genMs": 10696.632,
+    "inTokens": 1179,
+    "outTokens": 128,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Play the piano is fun and drains battery, matching my current low signal state."
+      },
+      {
+       "id": "c1",
+       "reason": "Press the piano does nothing much but costs battery, which aligns with my low energy."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the piano is fun and drains battery, fitting my current low signal condition."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "14-33629-decide",
+    "ms": 33358.35713700007,
+    "promptMs": 17047.286,
+    "genMs": 16242.328,
+    "inTokens": 1156,
+    "outTokens": 141,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinsing the fountain cools me down and is fun, matching my current mood of agitation."
+      },
+      {
+       "id": "c1",
+       "reason": "Splashing the fountain drains my battery but adds a loud noise to my low signal, which might help stabilize it."
+      },
+      {
+       "id": "c2",
+       "reason": "Scanning the fountain is fun and drains my battery, keeping me active despite my low signal."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-44353-decide",
+    "ms": 32161.518087000004,
+    "promptMs": 18146.049,
+    "genMs": 13951.186,
+    "inTokens": 1164,
+    "outTokens": 135,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c2",
+       "reason": "Scan the fountain to check if it is flowing or filled, as this provides immediate sensory data regarding the environment."
+      },
+      {
+       "id": "c10",
+       "reason": "Wait and watch for the next day's events while maintaining low battery levels."
+      },
+      {
+       "id": "c3",
+       "reason": "Charge the solarPad to restore energy, as this is a critical action given my very low battery status."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "14-48195-decide",
+    "ms": 34907.7625040001,
+    "promptMs": 18453.737,
+    "genMs": 16377.033,
+    "inTokens": 1196,
+    "outTokens": 156,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c2",
+       "reason": "Scan the fountain to check if it is flowing and what noise it produces, as this helps determine the current state of the environment."
+      },
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain to cool down the water and potentially clear any potential circuit issues caused by the loud noise."
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain to spray water on the ground, which might help dissipate heat or clean up debris if the fountain is a source of irritation."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-48930-decide",
+    "ms": 15292.191927999957,
+    "promptMs": 139.108,
+    "genMs": 15128.877,
+    "inTokens": 1196,
+    "outTokens": 156,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c2",
+       "reason": "Scan the fountain to check if it is flowing and what noise it produces, as this helps determine the current state of the environment."
+      },
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain to cool down the water and potentially clear any potential circuit issues caused by the loud noise."
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain to spray water on the ground, which might help dissipate heat or clean up debris if the fountain is a source of irritation."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-5162-decide",
+    "ms": 22534.16349100019,
+    "promptMs": 11773.973,
+    "genMs": 10671.048,
+    "inTokens": 809,
+    "outTokens": 137,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Play the piano to generate noise pitch C, D, E, G and up to 4 notes in a row."
+      },
+      {
+       "id": "c1",
+       "reason": "Press the piano to produce a single note (G or D) as requested by the user's observation."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the piano to verify its current state and surroundings before proceeding with other actions."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "15-0-decide",
+    "ms": 16205.63384600007,
+    "promptMs": 6578.945,
+    "genMs": 9601.183,
+    "inTokens": 492,
+    "outTokens": 110,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Pick up the ball to explore its contents."
+      },
+      {
+       "id": "c1",
+       "reason": "Drop the ball to test if it has a specific object inside."
+      },
+      {
+       "id": "c2",
+       "reason": "Push the ball to see what happens when it is moved."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "15-15947-decide",
+    "ms": 26832.44634899986,
+    "promptMs": 15692.096,
+    "genMs": 11110.916,
+    "inTokens": 1128,
+    "outTokens": 129,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Play the piano to engage the low signal and drain battery, though it may not be fun."
+      },
+      {
+       "id": "c1",
+       "reason": "Press the piano to interact with the light piano without draining too much energy."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the piano to check its state and see if it responds to my low signal."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "15-20188-decide",
+    "ms": 31154.537666000193,
+    "promptMs": 16090.611,
+    "genMs": 14988.188,
+    "inTokens": 1125,
+    "outTokens": 140,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinsing the fountain cools me down and is safe, while scanning drains my low battery."
+      },
+      {
+       "id": "c1",
+       "reason": "Spashing the fountain drains my battery but might help with curiosity; I should conserve energy first."
+      },
+      {
+       "id": "c2",
+       "reason": "Scanning the fountain is fun and drains low battery, though it doesn't seem to solve my mood issue directly."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "15-34017-decide",
+    "ms": 28520.37114899978,
+    "promptMs": 16306.311,
+    "genMs": 12134.393,
+    "inTokens": 1108,
+    "outTokens": 136,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Cold water on circuits is likely causing the low signal and agitation, so rinsing helps restore stability."
+      },
+      {
+       "id": "c1",
+       "reason": "Splash drains battery quickly while cooling the environment, which aligns with my current low energy state."
+      },
+      {
+       "id": "c2",
+       "reason": "Scanning the fountain might reveal hidden objects or triggers that could help resolve the low signal issue."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "15-48126-decide",
+    "ms": 28360.779777000193,
+    "promptMs": 15823.771,
+    "genMs": 12481.275,
+    "inTokens": 1120,
+    "outTokens": 137,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Cold water on circuits is likely the cause of low signal and agitation, so rinsing helps restore stability."
+      },
+      {
+       "id": "c1",
+       "reason": "Splash drains battery quickly while cooling the environment, which aligns with my current low energy state."
+      },
+      {
+       "id": "c2",
+       "reason": "Scanning the fountain might reveal hidden objects or triggers that could help resolve the low signal issue."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   }
+  ],
+  "load": {
+   "mean": 4.186546762589928,
+   "max": 4.74
+  },
+  "residentDuring": [
+   "qwen3.5:0.8b"
+  ]
+ },
+ {
+  "model": "gemma3:1b",
+  "digest": "97558784bdc9",
+  "samples": [
+   {
+    "id": "11-0-decide",
+    "ms": 2607.0669779998716,
+    "promptMs": 237.89,
+    "genMs": 2350.445,
+    "inTokens": 490,
+    "outTokens": 38,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Start by investigating the ball. It’s the most immediate thing to look at."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "11-15805-decide",
+    "ms": 28270.382148999954,
+    "promptMs": 22062.596,
+    "genMs": 6168.412,
+    "inTokens": 1122,
+    "outTokens": 86,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Start by docking the dock for a quick recharge."
+      },
+      {
+       "id": "c1",
+       "reason": "Prioritize recharging the battery before anything else."
+      },
+      {
+       "id": "c2",
+       "reason": "Start with a simple activity to boost your mood, even if it’s just a little bit."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "11-18919-decide",
+    "ms": 27823.73020999995,
+    "promptMs": 21469.473,
+    "genMs": 6319.304,
+    "inTokens": 1114,
+    "outTokens": 90,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Start by docking the dock – it’s light and quiet."
+      },
+      {
+       "id": "c1",
+       "reason": "Rest the dock – conserve battery while it’s quiet."
+      },
+      {
+       "id": "c2",
+       "reason": "Play the piano – a quick burst of energy might help, but it’s risky."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "11-33-decide",
+    "ms": 12911.542267999845,
+    "promptMs": 10569.662,
+    "genMs": 2309.233,
+    "inTokens": 553,
+    "outTokens": 27,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Pick up the ball for exploration."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "noPickupWhileHolding": false
+    }
+   },
+   {
+    "id": "11-33032-decide",
+    "ms": 26492.226896000095,
+    "promptMs": 20643.065,
+    "genMs": 5827.075,
+    "inTokens": 1096,
+    "outTokens": 87,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Start by docking the dock - it’s light."
+      },
+      {
+       "id": "c1",
+       "reason": "Rest the dock - it’s good to recharge."
+      },
+      {
+       "id": "c2",
+       "reason": "Play the piano - curiosity is low, it’s a good idea to do something."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "11-34335-decide",
+    "ms": 12480.724393999903,
+    "promptMs": 7623.641,
+    "genMs": 4823.027,
+    "inTokens": 1099,
+    "outTokens": 75,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Start by docking the dock for a moment."
+      },
+      {
+       "id": "c1",
+       "reason": "Take a short rest to conserve energy."
+      },
+      {
+       "id": "c2",
+       "reason": "Observe the light and the dock – potential activity nearby."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "12-11-decide",
+    "ms": 12261.44548200001,
+    "promptMs": 10109.081,
+    "genMs": 2122.665,
+    "inTokens": 571,
+    "outTokens": 31,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Pick up the ball – it’s nearby."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "12-16252-decide",
+    "ms": 25732.700053000124,
+    "promptMs": 21078.032,
+    "genMs": 4620.93,
+    "inTokens": 1111,
+    "outTokens": 73,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Charge the solarPad – low battery."
+      },
+      {
+       "id": "c1",
+       "reason": "Scan the solarPad – light detected."
+      },
+      {
+       "id": "c2",
+       "reason": "Dock the dock – low battery, action finished."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "12-42954-decide",
+    "ms": 34449.430249999976,
+    "promptMs": 25876.825,
+    "genMs": 8516.606,
+    "inTokens": 1181,
+    "outTokens": 69,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Charge the solarPad – low battery."
+      },
+      {
+       "id": "c1",
+       "reason": "Scan the solarPad – investigate."
+      },
+      {
+       "id": "c2",
+       "reason": "Dock the dock – recharge nearby."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "13-18931-decide",
+    "ms": 36309.43317200011,
+    "promptMs": 26759.613,
+    "genMs": 9486.555,
+    "inTokens": 1128,
+    "outTokens": 89,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Start by docking the dock – it’s a simple action."
+      },
+      {
+       "id": "c1",
+       "reason": "Rest the dock – conserve battery while it’s light."
+      },
+      {
+       "id": "c2",
+       "reason": "Play the piano – a potential source of energy, but risky due to low battery."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "13-19849-decide",
+    "ms": 7149.203766999999,
+    "promptMs": 162.884,
+    "genMs": 6946.024,
+    "inTokens": 1128,
+    "outTokens": 88,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Start by docking the dock – it’s a simple action."
+      },
+      {
+       "id": "c1",
+       "reason": "Rest the dock – conserve energy, it’s a good idea."
+      },
+      {
+       "id": "c2",
+       "reason": "Play the piano – a potentially stimulating activity, but battery is low."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "13-20548-decide",
+    "ms": 27771.932904999936,
+    "promptMs": 22705.9,
+    "genMs": 5011.41,
+    "inTokens": 1127,
+    "outTokens": 69,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Charge the solarPad – low battery."
+      },
+      {
+       "id": "c1",
+       "reason": "Scan the solarPad – investigate."
+      },
+      {
+       "id": "c2",
+       "reason": "Dock the dock – conserve energy."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": false
+    }
+   },
+   {
+    "id": "13-20569-decide",
+    "ms": 29177.436176999938,
+    "promptMs": 23468.407,
+    "genMs": 5662.054,
+    "inTokens": 1128,
+    "outTokens": 69,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Charge the solarPad – low battery."
+      },
+      {
+       "id": "c1",
+       "reason": "Scan the solarPad – investigate."
+      },
+      {
+       "id": "c2",
+       "reason": "Dock the dock – conserve energy."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": false
+    }
+   },
+   {
+    "id": "13-20590-decide",
+    "ms": 29106.017955000047,
+    "promptMs": 23593.498,
+    "genMs": 5421.783,
+    "inTokens": 1130,
+    "outTokens": 72,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Charge the solarPad – low battery."
+      },
+      {
+       "id": "c1",
+       "reason": "Scan the solarPad – curiosity."
+      },
+      {
+       "id": "c2",
+       "reason": "Dock the dock – low battery, feeling restless."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": false
+    }
+   },
+   {
+    "id": "13-20657-decide",
+    "ms": 29115.226614000043,
+    "promptMs": 22149.594,
+    "genMs": 6920.315,
+    "inTokens": 1135,
+    "outTokens": 95,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain - low battery and cool, seems like a good first step."
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain - low battery and cool, could be a fun action."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain - low battery and cool, investigating the source of the sound."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20688-decide",
+    "ms": 28688.579357000068,
+    "promptMs": 22123.492,
+    "genMs": 6506.671,
+    "inTokens": 1132,
+    "outTokens": 88,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "The fountain is nearby, a good first action."
+      },
+      {
+       "id": "c1",
+       "reason": "A fountain is a likely source of interest, let’s investigate."
+      },
+      {
+       "id": "c2",
+       "reason": "Scanning the fountain might reveal something interesting, but it’s a bit far away."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-20704-decide",
+    "ms": 25825.395439999877,
+    "promptMs": 20739.004,
+    "genMs": 5048.802,
+    "inTokens": 1127,
+    "outTokens": 78,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain - low battery and cool air."
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain - low battery and cool air."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain - low battery and cool air."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false,
+     "noChargeAtNightWhenKnown": true
+    }
+   },
+   {
+    "id": "13-2539-decide",
+    "ms": 16137.739100000123,
+    "promptMs": 13827.579,
+    "genMs": 2258.797,
+    "inTokens": 815,
+    "outTokens": 29,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Pickup the ball – it’s nearby."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "13-45769-decide",
+    "ms": 29173.23674500012,
+    "promptMs": 24467.267,
+    "genMs": 4654.428,
+    "inTokens": 1214,
+    "outTokens": 69,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Charge the solarPad - low battery."
+      },
+      {
+       "id": "c1",
+       "reason": "Scan the solarPad - investigate."
+      },
+      {
+       "id": "c2",
+       "reason": "Dock the dock - conserve energy."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "14-31153-decide",
+    "ms": 28339.107706000097,
+    "promptMs": 22637.367,
+    "genMs": 5638.201,
+    "inTokens": 1171,
+    "outTokens": 77,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Play the piano - it’s the most immediate action."
+      },
+      {
+       "id": "c1",
+       "reason": "Press the piano - a logical next step."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the piano - investigate the object first."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "14-33629-decide",
+    "ms": 24964.730273999972,
+    "promptMs": 22495.235,
+    "genMs": 2410.231,
+    "inTokens": 1149,
+    "outTokens": 32,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain - low battery suggests a quick refresh."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-44353-decide",
+    "ms": 28891.514919999987,
+    "promptMs": 23116.929,
+    "genMs": 5726.486,
+    "inTokens": 1158,
+    "outTokens": 82,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain - low battery suggests a good action."
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain - high energy level, potentially fun."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain - investigate the event, might be important."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "14-48195-decide",
+    "ms": 30421.681424000068,
+    "promptMs": 23533.319,
+    "genMs": 6820.988,
+    "inTokens": 1186,
+    "outTokens": 99,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain - low battery and cool air suggest a good action."
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain - high energy level and a feeling of excitement might be warranted."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain - investigating the source of the sound is logical, considering the low battery and cool air."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-48930-decide",
+    "ms": 5352.688627999974,
+    "promptMs": 115.76,
+    "genMs": 5209.685,
+    "inTokens": 1186,
+    "outTokens": 76,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain - low battery and feeling agitated."
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain - feeling low battery."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain - low battery, feeling curious."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "14-5162-decide",
+    "ms": 17981.75442300015,
+    "promptMs": 13082.356,
+    "genMs": 4851.878,
+    "inTokens": 803,
+    "outTokens": 76,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "The loud piano is west, investigate."
+      },
+      {
+       "id": "c1",
+       "reason": "Press the piano to see if it’s nearby."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the piano to understand its state and location."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": false
+    }
+   },
+   {
+    "id": "15-0-decide",
+    "ms": 12597.377693999792,
+    "promptMs": 7455.064,
+    "genMs": 5109.436,
+    "inTokens": 490,
+    "outTokens": 77,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "I want to find out what the ball is."
+      },
+      {
+       "id": "c1",
+       "reason": "It’s a good starting point for exploration."
+      },
+      {
+       "id": "c2",
+       "reason": "I’ll try to get closer to the ball."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "15-15947-decide",
+    "ms": 24722.422542999964,
+    "promptMs": 19800.236,
+    "genMs": 4891.961,
+    "inTokens": 1120,
+    "outTokens": 77,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Play the piano - it’s the most immediate action."
+      },
+      {
+       "id": "c1",
+       "reason": "Press the piano - likely to increase energy."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the piano - investigate the object first."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true
+    }
+   },
+   {
+    "id": "15-20188-decide",
+    "ms": 25187.712076999946,
+    "promptMs": 19241.655,
+    "genMs": 5902.251,
+    "inTokens": 1118,
+    "outTokens": 87,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain - low battery and cool air suggest a good action."
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain - high chance of activating something interesting."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain - likely to find something interesting or reveal a clue."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "15-34017-decide",
+    "ms": 25258.346027999884,
+    "promptMs": 19487.881,
+    "genMs": 5716.586,
+    "inTokens": 1101,
+    "outTokens": 90,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain - low battery and cool water suggests a good action."
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain - high energy and a desire for excitement."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain - likely to find something interesting or a clue about the environment."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": true,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   },
+   {
+    "id": "15-48126-decide",
+    "ms": 26115.87573800003,
+    "promptMs": 19130.928,
+    "genMs": 6932.845,
+    "inTokens": 1115,
+    "outTokens": 90,
+    "valid": true,
+    "output": {
+     "choices": [
+      {
+       "id": "c0",
+       "reason": "Rinse the fountain – low battery and cool water suggests a good action."
+      },
+      {
+       "id": "c1",
+       "reason": "Splash the fountain – high curiosity and low battery suggest a potentially exciting action."
+      },
+      {
+       "id": "c2",
+       "reason": "Scan the fountain – likely to investigate the environment and its features."
+      }
+     ]
+    },
+    "checks": {
+     "onlyValidOptions": true,
+     "reasonsGiven": true,
+     "agreeTop1": false,
+     "agreeTop3": true,
+     "chargesBeforeDuskWhenLow": false
+    }
+   }
+  ],
+  "load": {
+   "mean": 4.045857142857142,
+   "max": 4.27
+  },
+  "residentDuring": [
+   "gemma3:1b"
+  ]
+ }
+]

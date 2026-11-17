@@ -1,0 +1,8 @@
+{
+  "type": "solarPad",
+  "tags": ["metal", "light"],
+  "verbs": {
+    "charge": { "range": 0, "durationTicks": 50, "handler": "basic.charge", "params": { "gain": 0.15 } },
+    "scan": { "range": 6, "durationTicks": 20, "handler": "basic.inspect" }
+  }
+}

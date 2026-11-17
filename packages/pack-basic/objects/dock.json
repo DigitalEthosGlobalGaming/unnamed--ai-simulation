@@ -1,0 +1,27 @@
+{
+  "type": "dock",
+  "tags": [
+    "metal",
+    "shelter"
+  ],
+  "verbs": {
+    "dock": {
+      "range": 0,
+      "durationTicks": 60,
+      "handler": "basic.dock",
+      "params": {
+        "energy": 0.02,
+        "cool": 0.05
+      }
+    },
+    "rest": {
+      "range": 0,
+      "durationTicks": 200,
+      "handler": "basic.dock",
+      "params": {
+        "energy": 0.004,
+        "cool": 0.05
+      }
+    }
+  }
+}

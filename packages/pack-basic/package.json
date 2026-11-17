@@ -1,0 +1,10 @@
+{
+  "name": "@uas/pack-basic",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": { "@uas/core": "0.1.0" },
+  "devDependencies": { "@uas/sim": "0.1.0" }
+}

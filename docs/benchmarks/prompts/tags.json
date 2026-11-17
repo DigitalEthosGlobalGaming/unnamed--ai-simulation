@@ -1,0 +1,1169 @@
+[
+ {
+  "id": "11-33-appraise",
+  "job": {
+   "jobId": "robot:33:4",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 33,
+   "energy": 0.749,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\nOn my mind:",
+    "state": "battery: okay\ncool: okay\nsignal: okay\ncuriosity: good\nmood: happy\nit is day (morning)",
+    "observations": "I notice:\n- a ball, right here\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried pickup at the ball by day: the ball sat snug in your grippers"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried pickup at the ball by day: the ball sat snug in your grippers",
+   "input": {
+    "observation": "the ball sat snug in your grippers",
+    "felt": {
+     "energy": 0,
+     "cool": -0.002,
+     "signal": 0,
+     "curiosity": 0.019
+    }
+   }
+  }
+ },
+ {
+  "id": "11-4385-appraise",
+  "job": {
+   "jobId": "robot:4385:532",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 4385,
+   "energy": 0.996,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried scan at the solarPad by day: a solarPad (metal, light)\n- I tried scan at the solarPad by day: a solarPad (metal, light)\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\nOn my mind:",
+    "state": "battery: good\ncool: good\nsignal: okay\ncuriosity: good\nmood: agitated\nit is day (afternoon)",
+    "observations": "I notice:\n- a piano, 1 tiles west\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried press at the piano by day: a single E rang out"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried press at the piano by day: a single E rang out",
+   "input": {
+    "observation": "a single E rang out",
+    "felt": {
+     "signal": 0
+    }
+   }
+  }
+ },
+ {
+  "id": "11-25049-appraise",
+  "job": {
+   "jobId": "robot:25049:1110",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 25049,
+   "energy": 0.226,
+   "isNight": true,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day does nothing much (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day cools me down (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day does nothing much (sure)\n- play at the piano at night is fun (not sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day is fun (sure)\n- rest at the dock by day drains my battery (not sure)\n- rest at the dock at night does nothing much (sure)\n- rinse at the fountain by day cools me down (not sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried chase at the ball by day: you scooted after the ball as it skittered off\n- I tried rinse at the fountain by day: the water was cold\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried play at the piano at night: a tumble of notes rang out\n- I tried play at the piano at night: a tumble of notes rang out\n- I rested at night: \n- I rested at night: \n- I rested at night: \n- I rested at night: \nOn my mind:\n- my signal feels quite low\n- my signal feels very low\n- my curiosity feels quite low",
+    "state": "battery: low\ncool: good\nsignal: very low\ncuriosity: very low\nmood: agitated\nit is night (night)",
+    "observations": "I notice:\n- a piano, 1 tiles west\n- it is dark",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I rested at night: "
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I rested at night: ",
+   "input": {
+    "observation": "",
+    "felt": {
+     "energy": -0.007,
+     "signal": 0,
+     "curiosity": 0
+    }
+   }
+  }
+ },
+ {
+  "id": "11-44970-appraise",
+  "job": {
+   "jobId": "robot:44970:1714",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 44970,
+   "energy": 0.242,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day does nothing much (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day cools me down (sure)\n- dock at the dock at night does nothing much (not sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day does nothing much (sure)\n- play at the piano at night is fun (sure)\n- press at the piano by day does nothing much (sure)\n- press at the piano at night is fun (not sure)\n- push at the ball by day does nothing much (sure)\n- rest at the dock by day drains my battery (not sure)\n- rest at the dock at night does nothing much (sure)\n- rest at night cools me down (sure)\n- rinse at the fountain by day cools me down (sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried play at the piano at night: a tumble of notes rang out\n- I tried dock at the dock at night: the dock clicked and hummed quietly\n- I tried play at the piano at night: a tumble of notes rang out\n- I tried press at the piano at night: a single C rang out\n- I rested at night: \n- I rested at night: \n- I rested at night: \n- I rested at night: \n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\nOn my mind:\n- my signal feels quite low\n- my signal feels very low\n- my curiosity feels quite low",
+    "state": "battery: low\ncool: good\nsignal: very low\ncuriosity: very low\nmood: agitated\nit is day (morning)",
+    "observations": "I notice:\n- a ball, right here\n- a fountain, 6 tiles north-east\n- a solarPad, 6 tiles north-west\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried push at the ball by day: the ball rolled away"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried push at the ball by day: the ball rolled away",
+   "input": {
+    "observation": "the ball rolled away",
+    "felt": {
+     "energy": 0,
+     "cool": -0.012,
+     "signal": 0,
+     "curiosity": 0.04
+    }
+   }
+  }
+ },
+ {
+  "id": "12-1858-appraise",
+  "job": {
+   "jobId": "robot:1858:241",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 1858,
+   "energy": 1,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried rinse at the fountain by day: the water was cold\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried push at the ball by day: the ball rolled away\n- I tried push at the ball by day: the ball rolled away\n- I tried chase at the ball by day: you scooted after the ball as it skittered off\n- I tried rinse at the fountain by day: the water was cold\n- I tried scan at the solarPad by day: a solarPad (metal, light)\nOn my mind:",
+    "state": "battery: good\ncool: good\nsignal: okay\ncuriosity: good\nmood: restless\nit is day (midday)",
+    "observations": "I notice:\n- a solarPad, right here\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad",
+   "input": {
+    "observation": "warm light hummed through the pad",
+    "felt": {
+     "energy": 0.032,
+     "cool": -0.008,
+     "signal": -0.002
+    }
+   }
+  }
+ },
+ {
+  "id": "12-10240-appraise",
+  "job": {
+   "jobId": "robot:10240:735",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 10240,
+   "energy": 0.279,
+   "isNight": true,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried push at the ball by day: the ball rolled away\n- I tried scan at the solarPad by day: a solarPad (metal, light)\n- I tried rinse at the fountain by day: the water was cold\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried dock at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\nOn my mind:",
+    "state": "battery: quite low\ncool: good\nsignal: quite low\ncuriosity: okay\nmood: agitated\nit is night (night)",
+    "observations": "I notice:\n- a dock, right here\n- it is dark",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly",
+   "input": {
+    "observation": "the dock clicked and hummed quietly",
+    "felt": {
+     "energy": -0.003,
+     "signal": -0.01,
+     "curiosity": -0.017
+    }
+   }
+  }
+ },
+ {
+  "id": "12-34733-appraise",
+  "job": {
+   "jobId": "robot:34733:1382",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 34733,
+   "energy": 0.743,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day does nothing much (sure)\n- dock at the dock at night cools me down (not sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day drains my battery (sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day is fun (sure)\n- rest at the dock by day cools me down (not sure)\n- rest at the dock at night cools me down (sure)\n- rest by day drains my battery (sure)\n- rinse at the fountain by day drains my battery and cools me down (sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I rested by day: \n- I rested by day: \n- I rested by day: \n- I rested by day: \n- I tried rest at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried rest at the dock by day: the dock clicked and hummed quietly\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\nOn my mind:\n- my signal feels quite low\n- my curiosity feels quite low\n- my signal feels very low",
+    "state": "battery: okay\ncool: good\nsignal: very low\ncuriosity: very low\nmood: agitated\nit is day (evening, dusk soon)",
+    "observations": "I notice:\n- a solarPad, right here\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad",
+   "input": {
+    "observation": "warm light hummed through the pad",
+    "felt": {
+     "energy": 0.148,
+     "cool": -0.008,
+     "signal": 0,
+     "curiosity": 0
+    }
+   }
+  }
+ },
+ {
+  "id": "12-56123-appraise",
+  "job": {
+   "jobId": "robot:56123:1918",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 56123,
+   "energy": 0.241,
+   "isNight": true,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.\n- I keep going back to charge at the solarPad.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (sure)\n- charge at the solarPad at night does nothing much (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day cools me down (sure)\n- dock at the dock at night cools me down (not sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day drains my battery (sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day is fun (sure)\n- rest at the dock by day drains my battery and cools me down (not sure)\n- rest at the dock at night cools me down (sure)\n- rest by day drains my battery (sure)\n- rinse at the fountain by day drains my battery and cools me down (sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried charge at the solarPad at night: the pad stayed dark and cold\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I rested at night: \n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\nOn my mind:\n- my signal feels quite low\n- my curiosity feels quite low\n- my signal feels very low",
+    "state": "battery: low\ncool: good\nsignal: very low\ncuriosity: very low\nmood: agitated\nit is night (night)",
+    "observations": "I notice:\n- a dock, right here\n- it is dark",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly",
+   "input": {
+    "observation": "the dock clicked and hummed quietly",
+    "felt": {
+     "energy": -0.003,
+     "signal": 0,
+     "curiosity": 0
+    }
+   }
+  }
+ },
+ {
+  "id": "13-3627-appraise",
+  "job": {
+   "jobId": "robot:3627:445",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 3627,
+   "energy": 0.943,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried scan at the piano by day: a piano (music, loud); lastKey: D, lastPlayedTick: 3238\n- I tried scan at the piano by day: a piano (music, loud); lastKey: D, lastPlayedTick: 3238\n- I tried push at the ball by day: the ball rolled away\n- I tried rinse at the fountain by day: the water was cold\n- I tried rinse at the fountain by day: the water was cold\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried chase at the ball by day: you scooted after the ball as it skittered off\nOn my mind:",
+    "state": "battery: good\ncool: good\nsignal: okay\ncuriosity: good\nmood: restless\nit is day (afternoon)",
+    "observations": "I notice:\n- a ball, 1 tiles west\n- a fountain, 6 tiles south\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried chase at the ball by day: you scooted after the ball as it skittered off"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried chase at the ball by day: you scooted after the ball as it skittered off",
+   "input": {
+    "observation": "you scooted after the ball as it skittered off",
+    "felt": {
+     "energy": -0.021,
+     "cool": -0.047,
+     "signal": -0.002
+    }
+   }
+  }
+ },
+ {
+  "id": "13-23820-appraise",
+  "job": {
+   "jobId": "robot:23820:1048",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 23820,
+   "energy": 0.267,
+   "isNight": true,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day does nothing much (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day cools me down (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day drains my battery and is fun (sure)\n- play at the piano at night does nothing much (not sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day is fun (sure)\n- rest at the dock at night does nothing much (sure)\n- rest by day does nothing much (not sure)\n- rinse at the fountain by day drains my battery and cools me down (sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried scan at the solarPad at night: a solarPad (metal, light)\n- I tried scan at the solarPad at night: a solarPad (metal, light)\n- I tried rinse at the fountain at night: the water was cold\n- I tried rinse at the fountain at night: the water was cold\n- I rested at night: \n- I rested at night: \n- I rested at night: \n- I rested at night: \nOn my mind:\n- my signal feels quite low\n- my curiosity feels quite low\n- my signal feels very low",
+    "state": "battery: quite low\ncool: good\nsignal: very low\ncuriosity: very low\nmood: agitated\nit is night (night)",
+    "observations": "I notice:\n- a fountain, 1 tiles east\n- it is dark",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I rested at night: "
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I rested at night: ",
+   "input": {
+    "observation": "",
+    "felt": {
+     "energy": -0.007,
+     "signal": 0,
+     "curiosity": 0
+    }
+   }
+  }
+ },
+ {
+  "id": "13-44217-appraise",
+  "job": {
+   "jobId": "robot:44217:1617",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 44217,
+   "energy": 0.763,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (sure)\n- charge at the solarPad at night does nothing much (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day cools me down (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day is fun (sure)\n- play at the piano at night is fun (not sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day is fun (sure)\n- rest at the dock by day cools me down (sure)\n- rest at the dock at night cools me down (sure)\n- rest by day does nothing much (not sure)\n- rest at night does nothing much (sure)\n- rinse at the fountain by day drains my battery and cools me down (sure)\n- rinse at the fountain at night cools me down (not sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day does nothing much (sure)\n- scan at the solarPad at night is fun (not sure)\n- splash at the fountain by day drains my battery (not sure)\n- splash at the fountain at night is fun and drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain at night: water sprayed everywhere and your circuits fizzed\n- I tried charge at the solarPad at night: the pad stayed dark and cold\n- I tried charge at the solarPad at night: the pad stayed dark and cold\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried push at the ball by day: the ball thudded against something\n- I tried push at the ball by day: the ball rolled away\n- I tried push at the ball by day: the ball rolled away\n- I tried chase at the ball by day: you scooted after the ball as it skittered off\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried play at the piano by day: a tumble of notes rang out\nOn my mind:\n- my signal feels quite low\n- my signal feels very low",
+    "state": "battery: good\ncool: good\nsignal: very low\ncuriosity: quite low\nmood: agitated\nit is day (morning)",
+    "observations": "I notice:\n- a piano, 1 tiles west\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I rested by day: "
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I rested by day: ",
+   "input": {
+    "observation": "",
+    "felt": {
+     "energy": -0.003,
+     "cool": 0.018,
+     "signal": 0,
+     "curiosity": -0.008
+    }
+   }
+  }
+ },
+ {
+  "id": "14-366-appraise",
+  "job": {
+   "jobId": "robot:366:59",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 366,
+   "energy": 0.998,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: the ball sat snug in your grippers\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: the ball bounced once and settled\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried push at the ball by day: the ball rolled away\n- I tried push at the ball by day: the ball thudded against something\n- I tried chase at the ball by day: you scooted after the ball as it skittered off\n- I tried chase at the ball by day: you scooted after the ball as it skittered off\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried scan at the solarPad by day: a solarPad (metal, light)\nOn my mind:",
+    "state": "battery: good\ncool: okay\nsignal: okay\ncuriosity: good\nmood: happy\nit is day (morning)",
+    "observations": "I notice:\n- a solarPad, right here\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the solarPad by day: a solarPad (metal, light)"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the solarPad by day: a solarPad (metal, light)",
+   "input": {
+    "observation": "a solarPad (metal, light)",
+    "felt": {
+     "cool": -0.003,
+     "signal": -0.001
+    }
+   }
+  }
+ },
+ {
+  "id": "14-4955-appraise",
+  "job": {
+   "jobId": "robot:4955:587",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 4955,
+   "energy": 0.91,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried press at the piano by day: a single D rang out\n- I tried scan at the piano by day: a piano (music, loud); lastKey: D, lastPlayedTick: 4431\n- I tried scan at the piano by day: a piano (music, loud); lastKey: D, lastPlayedTick: 4431\n- I tried scan at the solarPad by day: a solarPad (metal, light)\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\nOn my mind:",
+    "state": "battery: good\ncool: good\nsignal: okay\ncuriosity: good\nmood: agitated\nit is day (evening, dusk soon)",
+    "observations": "I notice:\n- a dock, right here\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried dock at the dock by day: the dock clicked and hummed quietly"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried dock at the dock by day: the dock clicked and hummed quietly",
+   "input": {
+    "observation": "the dock clicked and hummed quietly",
+    "felt": {
+     "energy": 0.018,
+     "cool": 0.025,
+     "signal": -0.003
+    }
+   }
+  }
+ },
+ {
+  "id": "14-20128-appraise",
+  "job": {
+   "jobId": "robot:20128:1128",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 20128,
+   "energy": 0.597,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (sure)\n- chase at the ball by day is fun and heats me up and drains my battery (not sure)\n- dock at the dock by day drains my battery and cools me down (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day is fun (sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day is fun (not sure)\n- rest at the dock at night does nothing much (sure)\n- rest by day does nothing much (not sure)\n- rinse at the fountain by day cools me down (sure)\n- scan at the fountain by day is fun (sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day drains my battery and is fun (sure)\n- scan at the solarPad at night does nothing much (not sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried rinse at the fountain by day: the water was cold\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried rinse at the fountain by day: the water was cold\n- I tried rest at the dock by day: the dock clicked and hummed quietly\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\nOn my mind:\n- my signal feels quite low\n- my signal feels very low",
+    "state": "battery: okay\ncool: good\nsignal: very low\ncuriosity: good\nmood: agitated\nit is day (evening, dusk soon)",
+    "observations": "I notice:\n- a solarPad, right here\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad",
+   "input": {
+    "observation": "warm light hummed through the pad",
+    "felt": {
+     "energy": 0.148,
+     "cool": -0.008,
+     "signal": -0.003,
+     "curiosity": -0.004
+    }
+   }
+  }
+ },
+ {
+  "id": "14-42042-appraise",
+  "job": {
+   "jobId": "robot:42042:1686",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 42042,
+   "energy": 0.14,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.\n- I keep going back to charge at the solarPad.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day drains my battery (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day drains my battery and cools me down (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day is fun (sure)\n- play at the piano at night is fun (not sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day is fun (sure)\n- rest at the dock by day drains my battery (not sure)\n- rest at the dock at night cools me down (sure)\n- rest by day does nothing much (sure)\n- rest at night cools me down (sure)\n- rinse at the fountain by day cools me down (sure)\n- scan at the fountain by day fills my battery and is fun (not sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day drains my battery and is fun (sure)\n- scan at the solarPad at night does nothing much (not sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried rinse at the fountain by day: the water was cold\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I rested at night: \n- I rested at night: \n- I rested at night: \n- I rested at night: \n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\nOn my mind:\n- my signal feels quite low\n- my signal feels very low\n- my battery feels low",
+    "state": "battery: low\ncool: good\nsignal: very low\ncuriosity: quite low\nmood: agitated\nit is day (morning)",
+    "observations": "I notice:\n- a fountain, 1 tiles east\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the fountain by day: a fountain (water, loud); flowing: true"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the fountain by day: a fountain (water, loud); flowing: true",
+   "input": {
+    "observation": "a fountain (water, loud); flowing: true",
+    "felt": {
+     "energy": -0.001,
+     "signal": 0,
+     "curiosity": 0.024
+    }
+   }
+  }
+ },
+ {
+  "id": "14-44290-appraise",
+  "job": {
+   "jobId": "robot:44290:2220",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 44290,
+   "energy": 0.065,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.\n- I keep going back to charge at the solarPad.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day drains my battery (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day drains my battery and cools me down (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day is fun (sure)\n- play at the piano at night is fun (not sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day is fun (sure)\n- rest at the dock by day drains my battery (not sure)\n- rest at the dock at night cools me down (sure)\n- rest by day does nothing much (sure)\n- rest at night cools me down (sure)\n- rinse at the fountain by day cools me down (sure)\n- scan at the fountain by day fills my battery and is fun (not sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day drains my battery and is fun (sure)\n- scan at the solarPad at night does nothing much (not sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried rinse at the fountain by day: the water was cold\n- I tried play at the piano by day: a tumble of notes rang out\n- I rested at night: \n- I rested at night: \n- I rested at night: \n- I rested at night: \n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\nOn my mind:\n- my signal feels quite low\n- my signal feels very low\n- my battery feels low",
+    "state": "battery: very low\ncool: okay\nsignal: very low\ncuriosity: low\nmood: agitated\nit is day (morning)",
+    "observations": "I notice:\n- a fountain, 1 tiles east\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the fountain by day: a fountain (water, loud); flowing: true"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the fountain by day: a fountain (water, loud); flowing: true",
+   "input": {
+    "observation": "a fountain (water, loud); flowing: true",
+    "felt": {
+     "energy": -0.001,
+     "cool": -0.003,
+     "signal": 0,
+     "curiosity": -0.002
+    }
+   }
+  }
+ },
+ {
+  "id": "14-48195-appraise",
+  "job": {
+   "jobId": "robot:48195:2785",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 48195,
+   "energy": 0.288,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.\n- I keep going back to charge at the solarPad.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day drains my battery (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day drains my battery and cools me down (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day is fun (sure)\n- play at the piano at night is fun (not sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day is fun (sure)\n- rest at the dock by day drains my battery (not sure)\n- rest at the dock at night cools me down (sure)\n- rest by day does nothing much (sure)\n- rest at night cools me down (sure)\n- rinse at the fountain by day cools me down (sure)\n- scan at the fountain by day fills my battery and is fun (not sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day drains my battery and is fun (sure)\n- scan at the solarPad at night does nothing much (not sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried rinse at the fountain by day: the water was cold\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried rinse at the fountain by day: the water was cold\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried rinse at the fountain by day: the water was cold\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried rinse at the fountain by day: the water was cold\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\nOn my mind:\n- my signal feels quite low\n- my signal feels very low",
+    "state": "battery: quite low\ncool: good\nsignal: very low\ncuriosity: quite low\nmood: agitated\nit is day (evening, dusk soon)",
+    "observations": "I notice:\n- a fountain, 1 tiles east\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the fountain by day: a fountain (water, loud); flowing: true"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the fountain by day: a fountain (water, loud); flowing: true",
+   "input": {
+    "observation": "a fountain (water, loud); flowing: true",
+    "felt": {
+     "energy": -0.001,
+     "cool": -0.003,
+     "signal": -0.001,
+     "curiosity": -0.002
+    }
+   }
+  }
+ },
+ {
+  "id": "15-254-appraise",
+  "job": {
+   "jobId": "robot:254:49",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 254,
+   "energy": 0.702,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: the ball sat snug in your grippers\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: the ball bounced once and settled\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried push at the ball by day: the ball rolled away\n- I tried push at the ball by day: the ball rolled away\n- I tried chase at the ball by day: you scooted after the ball as it skittered off\n- I tried chase at the ball by day: you scooted after the ball as it skittered off\n- I tried rinse at the fountain by day: the water was cold\nOn my mind:",
+    "state": "battery: okay\ncool: good\nsignal: okay\ncuriosity: good\nmood: happy\nit is day (morning)",
+    "observations": "I notice:\n- a ball, 5 tiles south\n- a fountain, 1 tiles north\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rinse at the fountain by day: the water was cold"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rinse at the fountain by day: the water was cold",
+   "input": {
+    "observation": "the water was cold",
+    "felt": {
+     "energy": -0.001,
+     "cool": 0.136,
+     "signal": -0.001
+    }
+   }
+  }
+ },
+ {
+  "id": "15-5027-appraise",
+  "job": {
+   "jobId": "robot:5027:571",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 5027,
+   "energy": 0.996,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried rinse at the fountain by day: the water was cold\n- I tried rinse at the fountain by day: the water was cold\nOn my mind:",
+    "state": "battery: good\ncool: good\nsignal: okay\ncuriosity: good\nmood: restless\nit is day (evening, dusk soon)",
+    "observations": "I notice:\n- a fountain, 1 tiles east\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the fountain by day: a fountain (water, loud); flowing: true"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the fountain by day: a fountain (water, loud); flowing: true",
+   "input": {
+    "observation": "a fountain (water, loud); flowing: true",
+    "felt": {
+     "signal": -0.001,
+     "curiosity": 0.024
+    }
+   }
+  }
+ },
+ {
+  "id": "15-28233-appraise",
+  "job": {
+   "jobId": "robot:28233:1161",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 28233,
+   "energy": 0.119,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day does nothing much (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day drains my battery and cools me down (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day is fun (sure)\n- press at the piano by day does nothing much (sure)\n- press at the piano at night does nothing much (not sure)\n- push at the ball by day is fun (sure)\n- rest at the dock at night does nothing much (sure)\n- rest by day does nothing much (not sure)\n- rest at night cools me down (sure)\n- rinse at the fountain by day cools me down (sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried rinse at the fountain by day: the water was cold\n- I rested by day: \n- I rested at night: \n- I rested at night: \n- I rested at night: \n- I rested at night: \n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried rinse at the fountain by day: the water was cold\nOn my mind:\n- my signal feels quite low\n- my signal feels very low\n- my curiosity feels quite low",
+    "state": "battery: low\ncool: good\nsignal: very low\ncuriosity: quite low\nmood: agitated\nit is day (morning)",
+    "observations": "I notice:\n- a piano, 1 tiles west\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried play at the piano by day: a tumble of notes rang out"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried play at the piano by day: a tumble of notes rang out",
+   "input": {
+    "observation": "a tumble of notes rang out",
+    "felt": {
+     "energy": -0.001,
+     "cool": -0.007,
+     "signal": 0.011,
+     "curiosity": 0.061
+    }
+   }
+  }
+ },
+ {
+  "id": "16-135-appraise",
+  "job": {
+   "jobId": "robot:135:34",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 135,
+   "energy": 0.726,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: the ball sat snug in your grippers\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: the ball bounced once and settled\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried push at the ball by day: the ball rolled away\n- I tried push at the ball by day: the ball rolled away\nOn my mind:",
+    "state": "battery: okay\ncool: okay\nsignal: okay\ncuriosity: good\nmood: happy\nit is day (morning)",
+    "observations": "I notice:\n- a ball, 2 tiles south\n- a fountain, 5 tiles north-east\n- a solarPad, 5 tiles west\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried chase at the ball by day: you scooted after the ball as it skittered off"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried chase at the ball by day: you scooted after the ball as it skittered off",
+   "input": {
+    "observation": "you scooted after the ball as it skittered off",
+    "felt": {
+     "energy": -0.021,
+     "cool": -0.047,
+     "signal": -0.002,
+     "curiosity": 0.077
+    }
+   }
+  }
+ },
+ {
+  "id": "16-4811-appraise",
+  "job": {
+   "jobId": "robot:4811:561",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 4811,
+   "energy": 0.464,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried press at the piano by day: a single D rang out\n- I tried press at the piano by day: a single G rang out\n- I tried scan at the piano by day: a piano (music, loud); lastKey: G, lastPlayedTick: 4599\n- I tried dock at the dock by day: the dock clicked and hummed quietly\nOn my mind:",
+    "state": "battery: okay\ncool: good\nsignal: okay\ncuriosity: good\nmood: agitated\nit is day (evening, dusk soon)",
+    "observations": "I notice:\n- a solarPad, right here\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad",
+   "input": {
+    "observation": "warm light hummed through the pad",
+    "felt": {
+     "energy": 0.148,
+     "cool": -0.008,
+     "signal": -0.002
+    }
+   }
+  }
+ },
+ {
+  "id": "16-21683-appraise",
+  "job": {
+   "jobId": "robot:21683:1091",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 21683,
+   "energy": 0.294,
+   "isNight": true,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (sure)\n- charge at the solarPad at night does nothing much (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day cools me down (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day is fun (sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day is fun (sure)\n- rest at the dock by day drains my battery and cools me down (not sure)\n- rest at the dock at night does nothing much (sure)\n- rinse at the fountain by day cools me down (not sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day drains my battery (sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day is fun and drains my battery (not sure)\nWhat I remember well:\n- I tried charge at the solarPad at night: the pad stayed dark and cold\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried rinse at the fountain by day: the water was cold\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\nOn my mind:\n- my signal feels quite low\n- my signal feels very low",
+    "state": "battery: quite low\ncool: good\nsignal: very low\ncuriosity: good\nmood: agitated\nit is night (night)",
+    "observations": "I notice:\n- a dock, right here\n- it is dark",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly",
+   "input": {
+    "observation": "the dock clicked and hummed quietly",
+    "felt": {
+     "energy": -0.003,
+     "signal": -0.001,
+     "curiosity": -0.017
+    }
+   }
+  }
+ },
+ {
+  "id": "16-41513-appraise",
+  "job": {
+   "jobId": "robot:41513:1620",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 41513,
+   "energy": 0.245,
+   "isNight": true,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.\n- I keep going back to charge at the solarPad.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (sure)\n- charge at the solarPad at night does nothing much (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day cools me down (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day is fun (sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day is fun (sure)\n- rest at the dock by day drains my battery and cools me down (not sure)\n- rest at the dock at night cools me down (sure)\n- rinse at the fountain by day cools me down (sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day drains my battery (sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day is fun and cools me down and drains my battery (sure)\nWhat I remember well:\n- I tried charge at the solarPad at night: the pad stayed dark and cold\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried charge at the solarPad at night: the pad stayed dark and cold\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried rinse at the fountain by day: the water was cold\n- I tried rinse at the fountain by day: the water was cold\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried rinse at the fountain by day: the water was cold\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\nOn my mind:\n- my signal feels quite low\n- my signal feels very low\n- my curiosity feels quite low",
+    "state": "battery: low\ncool: good\nsignal: very low\ncuriosity: low\nmood: agitated\nit is night (night)",
+    "observations": "I notice:\n- a dock, right here\n- it is dark",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly",
+   "input": {
+    "observation": "the dock clicked and hummed quietly",
+    "felt": {
+     "energy": -0.003,
+     "signal": 0,
+     "curiosity": -0.017
+    }
+   }
+  }
+ },
+ {
+  "id": "17-258-appraise",
+  "job": {
+   "jobId": "robot:258:49",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 258,
+   "energy": 0.701,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: the ball sat snug in your grippers\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: the ball bounced once and settled\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried push at the ball by day: the ball rolled away\n- I tried push at the ball by day: the ball rolled away\n- I tried chase at the ball by day: you scooted after the ball as it skittered off\n- I tried chase at the ball by day: you scooted after the ball as it skittered off\n- I tried rinse at the fountain by day: the water was cold\nOn my mind:",
+    "state": "battery: okay\ncool: good\nsignal: okay\ncuriosity: good\nmood: happy\nit is day (morning)",
+    "observations": "I notice:\n- a fountain, 1 tiles north\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rinse at the fountain by day: the water was cold"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rinse at the fountain by day: the water was cold",
+   "input": {
+    "observation": "the water was cold",
+    "felt": {
+     "energy": -0.001,
+     "cool": 0.137,
+     "signal": -0.001
+    }
+   }
+  }
+ },
+ {
+  "id": "17-5090-appraise",
+  "job": {
+   "jobId": "robot:5090:573",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 5090,
+   "energy": 0.609,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried press at the piano by day: a single E rang out\n- I tried press at the piano by day: a single D rang out\n- I tried scan at the piano by day: a piano (music, loud); lastKey: D, lastPlayedTick: 4626\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried rest at the dock by day: the dock clicked and hummed quietly\n- I tried charge at the solarPad by day: warm light hummed through the pad\nOn my mind:",
+    "state": "battery: okay\ncool: good\nsignal: okay\ncuriosity: good\nmood: agitated\nit is day (evening, dusk soon)",
+    "observations": "I notice:\n- a solarPad, right here\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad",
+   "input": {
+    "observation": "warm light hummed through the pad",
+    "felt": {
+     "energy": 0.148,
+     "cool": -0.008,
+     "signal": -0.002,
+     "curiosity": -0.004
+    }
+   }
+  }
+ },
+ {
+  "id": "17-22891-appraise",
+  "job": {
+   "jobId": "robot:22891:1135",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 22891,
+   "energy": 0.302,
+   "isNight": true,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day does nothing much (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day is fun (sure)\n- press at the piano by day drains my battery (sure)\n- push at the ball by day is fun (sure)\n- rest at the dock by day cools me down (not sure)\n- rest at the dock at night does nothing much (sure)\n- rest by day does nothing much (not sure)\n- rinse at the fountain by day cools me down (not sure)\n- rinse at the fountain at night cools me down (not sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day drains my battery (sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried push at the ball by day: the ball rolled away\n- I tried push at the ball by day: the ball rolled away\n- I tried push at the ball by day: the ball rolled away\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I rested by day: \n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\nOn my mind:\n- my signal feels quite low\n- my signal feels very low\n- my curiosity feels quite low",
+    "state": "battery: quite low\ncool: good\nsignal: very low\ncuriosity: low\nmood: agitated\nit is night (night)",
+    "observations": "I notice:\n- a dock, right here\n- it is dark",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly",
+   "input": {
+    "observation": "the dock clicked and hummed quietly",
+    "felt": {
+     "energy": 0.021,
+     "signal": 0,
+     "curiosity": -0.017
+    }
+   }
+  }
+ },
+ {
+  "id": "17-42138-appraise",
+  "job": {
+   "jobId": "robot:42138:1679",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 42138,
+   "energy": 0.533,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.\n- I keep going back to charge at the solarPad.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day does nothing much (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day drains my battery and is fun (sure)\n- press at the piano by day drains my battery (sure)\n- push at the ball by day is fun (sure)\n- rest at the dock by day cools me down (not sure)\n- rest at the dock at night cools me down (sure)\n- rest by day does nothing much (sure)\n- rinse at the fountain by day cools me down (sure)\n- rinse at the fountain at night cools me down (not sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day drains my battery (sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried rinse at the fountain by day: the water was cold\n- I tried push at the ball by day: the ball rolled away\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried rinse at the fountain at night: the water was cold\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried charge at the solarPad by day: warm light hummed through the pad\nOn my mind:\n- my signal feels quite low\n- my signal feels very low\n- my curiosity feels quite low",
+    "state": "battery: okay\ncool: good\nsignal: very low\ncuriosity: very low\nmood: agitated\nit is day (morning)",
+    "observations": "I notice:\n- a solarPad, right here\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad",
+   "input": {
+    "observation": "warm light hummed through the pad",
+    "felt": {
+     "energy": 0.148,
+     "cool": -0.008,
+     "signal": 0,
+     "curiosity": -0.004
+    }
+   }
+  }
+ },
+ {
+  "id": "18-312-appraise",
+  "job": {
+   "jobId": "robot:312:64",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 312,
+   "energy": 0.64,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: the ball sat snug in your grippers\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: the ball bounced once and settled\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried push at the ball by day: the ball rolled away\n- I tried push at the ball by day: the ball rolled away\n- I tried chase at the ball by day: you scooted after the ball as it skittered off\n- I tried chase at the ball by day: you scooted after the ball as it skittered off\n- I tried rinse at the fountain by day: the water was cold\n- I tried rinse at the fountain by day: the water was cold\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\nOn my mind:",
+    "state": "battery: okay\ncool: good\nsignal: okay\ncuriosity: good\nmood: happy\nit is day (morning)",
+    "observations": "I notice:\n- a ball, 4 tiles south\n- a fountain, 1 tiles east\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the fountain by day: a fountain (water, loud); flowing: true"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the fountain by day: a fountain (water, loud); flowing: true",
+   "input": {
+    "observation": "a fountain (water, loud); flowing: true",
+    "felt": {
+     "energy": -0.001,
+     "signal": -0.001
+    }
+   }
+  }
+ },
+ {
+  "id": "18-4991-appraise",
+  "job": {
+   "jobId": "robot:4991:591",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 4991,
+   "energy": 0.777,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried scan at the solarPad by day: a solarPad (metal, light)\n- I tried scan at the solarPad by day: a solarPad (metal, light)\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried dock at the dock by day: the dock clicked and hummed quietly\nOn my mind:",
+    "state": "battery: good\ncool: good\nsignal: okay\ncuriosity: good\nmood: agitated\nit is day (evening, dusk soon)",
+    "observations": "I notice:\n- a piano, 1 tiles west\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried play at the piano by day: a tumble of notes rang out"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried play at the piano by day: a tumble of notes rang out",
+   "input": {
+    "observation": "a tumble of notes rang out",
+    "felt": {
+     "energy": -0.001,
+     "cool": -0.007,
+     "signal": 0.004
+    }
+   }
+  }
+ },
+ {
+  "id": "18-21516-appraise",
+  "job": {
+   "jobId": "robot:21516:1149",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 21516,
+   "energy": 0.295,
+   "isNight": true,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (sure)\n- charge at the solarPad at night does nothing much (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day does nothing much (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day drains my battery (sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day is fun (sure)\n- rest at the dock at night does nothing much (sure)\n- rinse at the fountain by day cools me down (not sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried charge at the solarPad at night: the pad stayed dark and cold\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried rinse at the fountain by day: the water was cold\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried push at the ball by day: the ball rolled away\n- I tried rinse at the fountain by day: the water was cold\n- I tried chase at the ball at night: you scooted after the ball as it skittered off\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\nOn my mind:\n- my signal feels quite low\n- my signal feels very low",
+    "state": "battery: quite low\ncool: good\nsignal: very low\ncuriosity: quite low\nmood: agitated\nit is night (night)",
+    "observations": "I notice:\n- a dock, right here\n- it is dark",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly",
+   "input": {
+    "observation": "the dock clicked and hummed quietly",
+    "felt": {
+     "energy": -0.003,
+     "signal": 0,
+     "curiosity": -0.017
+    }
+   }
+  }
+ },
+ {
+  "id": "18-41500-appraise",
+  "job": {
+   "jobId": "robot:41500:1687",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 41500,
+   "energy": 0.245,
+   "isNight": true,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.\n- I keep going back to charge at the solarPad.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (sure)\n- charge at the solarPad at night does nothing much (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- chase at the ball at night is fun and heats me up and drains my battery (not sure)\n- dock at the dock by day does nothing much (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day drains my battery (sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day drains my battery and is fun (sure)\n- rest at the dock at night cools me down (sure)\n- rest by day does nothing much (not sure)\n- rinse at the fountain by day cools me down (sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried charge at the solarPad at night: the pad stayed dark and cold\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried rinse at the fountain by day: the water was cold\n- I tried rinse at the fountain by day: the water was cold\n- I tried rinse at the fountain by day: the water was cold\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\nOn my mind:\n- my signal feels quite low\n- my signal feels very low\n- my curiosity feels quite low",
+    "state": "battery: low\ncool: good\nsignal: very low\ncuriosity: very low\nmood: agitated\nit is night (night)",
+    "observations": "I notice:\n- a ball, in your grippers, right here\n- a dock, right here\n- it is dark",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly",
+   "input": {
+    "observation": "the dock clicked and hummed quietly",
+    "felt": {
+     "energy": -0.003,
+     "signal": 0,
+     "curiosity": 0
+    }
+   }
+  }
+ },
+ {
+  "id": "19-1001-appraise",
+  "job": {
+   "jobId": "robot:1001:153",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 1001,
+   "energy": 0.998,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried rinse at the fountain by day: the water was cold\n- I tried rinse at the fountain by day: the water was cold\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried scan at the fountain by day: a fountain (water, loud); flowing: true\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried scan at the solarPad by day: a solarPad (metal, light)\nOn my mind:",
+    "state": "battery: good\ncool: good\nsignal: okay\ncuriosity: good\nmood: restless\nit is day (morning)",
+    "observations": "I notice:\n- a ball, right here\n- a fountain, 5 tiles east\n- a solarPad, 3 tiles south-west\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried push at the ball by day: the ball rolled away"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried push at the ball by day: the ball rolled away",
+   "input": {
+    "observation": "the ball rolled away",
+    "felt": {
+     "cool": -0.012,
+     "signal": 0
+    }
+   }
+  }
+ },
+ {
+  "id": "19-5428-appraise",
+  "job": {
+   "jobId": "robot:5428:673",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 5428,
+   "energy": 0.763,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried scan at the solarPad by day: a solarPad (metal, light)\n- I tried scan at the solarPad by day: a solarPad (metal, light)\n- I tried chase at the ball by day: you scooted after the ball as it skittered off\n- I tried push at the ball by day: the ball rolled away\n- I tried push at the ball by day: the ball rolled away\n- I tried dock at the dock by day: the dock clicked and hummed quietly\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\nOn my mind:",
+    "state": "battery: good\ncool: quite low\nsignal: okay\ncuriosity: good\nmood: agitated\nit is day (evening, dusk soon)",
+    "observations": "I notice:\n- a ball, 2 tiles west\n- a solarPad, right here\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad",
+   "input": {
+    "observation": "warm light hummed through the pad",
+    "felt": {
+     "energy": 0.148,
+     "cool": -0.008,
+     "signal": -0.002,
+     "curiosity": -0.004
+    }
+   }
+  }
+ },
+ {
+  "id": "19-22076-appraise",
+  "job": {
+   "jobId": "robot:22076:1212",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 22076,
+   "energy": 0.289,
+   "isNight": true,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (sure)\n- chase at the ball by day drains my battery and heats me up and is fun (sure)\n- dock at the dock by day drains my battery and cools me down (not sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day does nothing much (not sure)\n- press at the piano by day does nothing much (not sure)\n- push at the ball by day is fun (sure)\n- rest at the dock at night cools me down (sure)\n- rest by day does nothing much (not sure)\n- rinse at the fountain by day does nothing much (sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day does nothing much (not sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried push at the ball by day: the ball rolled away\n- I rested by day: \n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried push at the ball by day: the ball rolled away\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried push at the ball by day: the ball rolled away\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\nOn my mind:\n- my signal feels quite low\n- my signal feels very low\n- my curiosity feels quite low",
+    "state": "battery: quite low\ncool: good\nsignal: very low\ncuriosity: low\nmood: agitated\nit is night (night)",
+    "observations": "I notice:\n- a dock, right here\n- it is dark",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly",
+   "input": {
+    "observation": "the dock clicked and hummed quietly",
+    "felt": {
+     "energy": -0.003,
+     "signal": 0,
+     "curiosity": -0.017
+    }
+   }
+  }
+ },
+ {
+  "id": "19-45768-appraise",
+  "job": {
+   "jobId": "robot:45768:1812",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 45768,
+   "energy": 1,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.\n- I keep going back to charge at the solarPad.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (sure)\n- charge at the solarPad at night does nothing much (not sure)\n- chase at the ball by day drains my battery and is fun and heats me up (sure)\n- dock at the dock by day drains my battery and cools me down (not sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day does nothing much (not sure)\n- press at the piano by day does nothing much (not sure)\n- push at the ball by day is fun (sure)\n- rest at the dock by day cools me down (not sure)\n- rest at the dock at night cools me down (sure)\n- rest by day drains my battery (sure)\n- rest at night does nothing much (not sure)\n- rinse at the fountain by day does nothing much (sure)\n- scan at the fountain by day does nothing much (sure)\n- scan at the piano by day does nothing much (not sure)\n- scan at the solarPad by day does nothing much (sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried charge at the solarPad at night: the pad stayed dark and cold\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I rested at night: \n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried push at the ball by day: the ball thudded against something\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I rested by day: \n- I rested by day: \nOn my mind:\n- my signal feels quite low\n- my signal feels very low\n- my curiosity feels quite low",
+    "state": "battery: good\ncool: okay\nsignal: very low\ncuriosity: very low\nmood: agitated\nit is day (midday)",
+    "observations": "I notice:\n- a solarPad, right here\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried charge at the solarPad by day: warm light hummed through the pad",
+   "input": {
+    "observation": "warm light hummed through the pad",
+    "felt": {
+     "energy": 0.11,
+     "cool": -0.008,
+     "signal": 0,
+     "curiosity": 0
+    }
+   }
+  }
+ },
+ {
+  "id": "20-869-appraise",
+  "job": {
+   "jobId": "robot:869:126",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 869,
+   "energy": 0.929,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried press at the piano by day: a single C rang out\n- I tried press at the piano by day: a single D rang out\n- I tried scan at the piano by day: a piano (music, loud); lastKey: D, lastPlayedTick: 639\n- I tried scan at the piano by day: a piano (music, loud); lastKey: D, lastPlayedTick: 639\n- I tried rinse at the fountain by day: the water was cold\n- I tried rinse at the fountain by day: the water was cold\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\nOn my mind:",
+    "state": "battery: good\ncool: good\nsignal: okay\ncuriosity: good\nmood: happy\nit is day (morning)",
+    "observations": "I notice:\n- a fountain, 1 tiles east\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the fountain by day: a fountain (water, loud); flowing: true"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the fountain by day: a fountain (water, loud); flowing: true",
+   "input": {
+    "observation": "a fountain (water, loud); flowing: true",
+    "felt": {
+     "energy": -0.001,
+     "signal": -0.001
+    }
+   }
+  }
+ },
+ {
+  "id": "20-5551-appraise",
+  "job": {
+   "jobId": "robot:5551:648",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 5551,
+   "energy": 0.91,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+    "shortTerm": "Recently:\n- I tried pickup at the ball by day: it would not come loose\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried press at the piano by day: a single E rang out\n- I tried scan at the piano by day: a piano (music, loud); lastKey: E, lastPlayedTick: 5129\n- I tried scan at the piano by day: a piano (music, loud); lastKey: E, lastPlayedTick: 5129\n- I tried scan at the solarPad by day: a solarPad (metal, light)\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\nOn my mind:",
+    "state": "battery: good\ncool: good\nsignal: okay\ncuriosity: good\nmood: agitated\nit is day (evening, dusk soon)",
+    "observations": "I notice:\n- a dock, right here\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried dock at the dock by day: the dock clicked and hummed quietly"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried dock at the dock by day: the dock clicked and hummed quietly",
+   "input": {
+    "observation": "the dock clicked and hummed quietly",
+    "felt": {
+     "energy": 0.018,
+     "cool": 0.025,
+     "signal": -0.003
+    }
+   }
+  }
+ },
+ {
+  "id": "20-23084-appraise",
+  "job": {
+   "jobId": "robot:23084:1195",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 23084,
+   "energy": 0.3,
+   "isNight": true,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (sure)\n- chase at the ball by day is fun and heats me up and drains my battery (not sure)\n- dock at the dock by day does nothing much (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day is fun (sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day is fun (not sure)\n- rest at the dock at night does nothing much (sure)\n- rinse at the fountain by day cools me down (not sure)\n- scan at the fountain by day does nothing much (not sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day drains my battery and is fun (sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried rinse at the fountain by day: the water was cold\n- I tried push at the ball by day: the ball rolled away\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried rinse at the fountain by day: the water was cold\n- I tried scan at the solarPad at night: a solarPad (metal, light)\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\nOn my mind:\n- my signal feels quite low\n- my signal feels very low\n- my curiosity feels quite low",
+    "state": "battery: quite low\ncool: good\nsignal: very low\ncuriosity: quite low\nmood: agitated\nit is night (night)",
+    "observations": "I notice:\n- a dock, right here\n- it is dark",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried rest at the dock at night: the dock clicked and hummed quietly",
+   "input": {
+    "observation": "the dock clicked and hummed quietly",
+    "felt": {
+     "energy": -0.003,
+     "signal": 0,
+     "curiosity": -0.017
+    }
+   }
+  }
+ },
+ {
+  "id": "20-42221-appraise",
+  "job": {
+   "jobId": "robot:42221:1741",
+   "job": "appraise",
+   "characterId": "robot",
+   "tick": 42221,
+   "energy": 0.23,
+   "isNight": false,
+   "context": {
+    "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+    "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.\n- I keep going back to charge at the solarPad.",
+    "beliefs": "What I believe:\n- charge at the solarPad by day fills my battery (sure)\n- charge at the solarPad at night does nothing much (not sure)\n- chase at the ball by day is fun and heats me up and drains my battery (sure)\n- dock at the dock by day does nothing much (sure)\n- drop at the ball by day does nothing much (not sure)\n- pickup at the ball by day does nothing much (not sure)\n- play at the piano by day is fun (sure)\n- press at the piano by day does nothing much (sure)\n- push at the ball by day drains my battery and is fun (sure)\n- rest at the dock at night cools me down (sure)\n- rest by day drains my battery (sure)\n- rinse at the fountain by day cools me down (sure)\n- scan at the fountain by day does nothing much (not sure)\n- scan at the piano by day does nothing much (sure)\n- scan at the solarPad by day is fun (sure)\n- scan at the solarPad at night is fun (not sure)\n- splash at the fountain by day drains my battery (not sure)\nWhat I remember well:\n- I tried charge at the solarPad at night: the pad stayed dark and cold\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed\n- I tried drop at the ball by day: there was nothing to let go of\n- I tried pickup at the ball by day: it would not come loose",
+    "shortTerm": "Recently:\n- I tried rinse at the fountain by day: the water was cold\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried charge at the solarPad by day: warm light hummed through the pad\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried rest at the dock at night: the dock clicked and hummed quietly\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\n- I tried play at the piano by day: a tumble of notes rang out\nOn my mind:\n- my signal feels quite low\n- my signal feels very low\n- my curiosity feels quite low",
+    "state": "battery: low\ncool: good\nsignal: very low\ncuriosity: quite low\nmood: agitated\nit is day (morning)",
+    "observations": "I notice:\n- a solarPad, right here\n- it is light",
+    "question": "Trigger: action-finished. How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the solarPad by day: a solarPad (metal, light)"
+   },
+   "question": "How good was this outcome for you? 0 = very bad, 0.5 = neutral, 1 = very good. Outcome: I tried scan at the solarPad by day: a solarPad (metal, light)",
+   "input": {
+    "observation": "a solarPad (metal, light)",
+    "felt": {
+     "energy": -0.001,
+     "cool": -0.003,
+     "signal": -0.001,
+     "curiosity": 0.028
+    }
+   }
+  }
+ }
+]

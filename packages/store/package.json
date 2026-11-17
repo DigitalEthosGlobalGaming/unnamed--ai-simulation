@@ -1,0 +1,20 @@
+{
+  "name": "@uas/store",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@uas/core": "0.1.0",
+    "better-sqlite3": "^13.2.0",
+    "drizzle-orm": "^0.45.4"
+  },
+  "devDependencies": {
+    "@uas/sim": "0.1.0",
+    "@uas/pack-basic": "0.1.0",
+    "@types/better-sqlite3": "^9.6.0",
+    "@uas/mind": "0.1.0"
+  }
+}

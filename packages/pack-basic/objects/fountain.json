@@ -1,0 +1,29 @@
+{
+  "type": "fountain",
+  "tags": [
+    "water",
+    "loud"
+  ],
+  "solid": true,
+  "verbs": {
+    "rinse": {
+      "range": 1,
+      "durationTicks": 30,
+      "handler": "basic.rinse"
+    },
+    "splash": {
+      "range": 1,
+      "durationTicks": 15,
+      "handler": "basic.splash",
+      "boredomStep": 0.35
+    },
+    "scan": {
+      "range": 6,
+      "durationTicks": 20,
+      "handler": "basic.inspect"
+    }
+  },
+  "state": {
+    "flowing": true
+  }
+}

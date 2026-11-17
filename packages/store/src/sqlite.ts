@@ -1,0 +1,155 @@
+import Database from 'better-sqlite3';
+import { and, asc, desc, eq, gte, lt, lte, sql } from 'drizzle-orm';
+import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { zstdCompressSync, zstdDecompressSync } from 'node:zlib';
+import type { Delta, FeedEntry, InputEvent, WorldId } from '@uas/core';
+import type { InputLog } from './log.ts';
+import type { Snapshot, SnapshotStore } from './snapshots.ts';
+import * as schema from './schema.ts';
+
+export type Db = BetterSQLite3Database<typeof schema>;
+
+/** Open (and create) the SQLite database in WAL mode. Each worker opens its own connection. */
+export function openDb(path: string): Db {
+  const sqlite = new Database(path);
+  sqlite.pragma('journal_mode = WAL');
+  sqlite.pragma('synchronous = NORMAL');
+  sqlite.pragma('busy_timeout = 5000');
+  sqlite.exec(schema.DDL);
+  return drizzle(sqlite, { schema });
+}
+
+export class SqliteInputLog implements InputLog {
+  private readonly db: Db;
+  constructor(db: Db) {
+    this.db = db;
+  }
+
+  append(e: InputEvent): void {
+    const expected = this.lastSeq(e.worldId) + 1;
+    if (e.seq !== expected) throw new Error(`world ${e.worldId}: expected seq ${expected}, got ${e.seq}`);
+    this.db
+      .insert(schema.inputEvents)
+      .values({ worldId: e.worldId, seq: e.seq, tick: e.tick, type: e.type, payload: e.payload as object, packVersions: e.packVersions, causedBy: e.causedBy ?? null })
+      .run();
+  }
+
+  read(worldId: WorldId, { fromTick = 0, toTick = Number.MAX_SAFE_INTEGER } = {}): InputEvent[] {
+    return this.db
+      .select()
+      .from(schema.inputEvents)
+      .where(and(eq(schema.inputEvents.worldId, worldId), gte(schema.inputEvents.tick, fromTick), lt(schema.inputEvents.tick, toTick)))
+      .orderBy(asc(schema.inputEvents.seq))
+      .all()
+      .map(rowToEvent);
+  }
+
+  page(worldId: WorldId, fromSeq: number, limit: number): InputEvent[] {
+    return this.db
+      .select()
+      .from(schema.inputEvents)
+      .where(and(eq(schema.inputEvents.worldId, worldId), gte(schema.inputEvents.seq, fromSeq)))
+      .orderBy(asc(schema.inputEvents.seq))
+      .limit(limit)
+      .all()
+      .map(rowToEvent);
+  }
+
+  lastSeq(worldId: WorldId): number {
+    const row = this.db
+      .select({ seq: sql<number | null>`max(${schema.inputEvents.seq})` })
+      .from(schema.inputEvents)
+      .where(eq(schema.inputEvents.worldId, worldId))
+      .get();
+    return row?.seq ?? -1;
+  }
+}
+
+function rowToEvent(r: typeof schema.inputEvents.$inferSelect): InputEvent {
+  return { worldId: r.worldId, seq: r.seq, tick: r.tick, type: r.type, payload: r.payload, packVersions: r.packVersions, ...(r.causedBy ? { causedBy: r.causedBy as InputEvent['causedBy'] } : {}) };
+}
+
+/** zstd-compressed snapshots. */
+export class SqliteSnapshotStore<S = unknown> implements SnapshotStore<S> {
+  private readonly db: Db;
+  constructor(db: Db) {
+    this.db = db;
+  }
+
+  put(s: Snapshot<S>): void {
+    const data = zstdCompressSync(Buffer.from(JSON.stringify(s.state)));
+    this.db
+      .insert(schema.snapshots)
+      .values({ worldId: s.worldId, tick: s.tick, seq: s.seq, packVersions: s.packVersions, data, createdAt: new Date().toISOString() })
+      .onConflictDoUpdate({ target: [schema.snapshots.worldId, schema.snapshots.tick], set: { seq: s.seq, packVersions: s.packVersions, data } })
+      .run();
+  }
+
+  nearest(worldId: WorldId, tick: number): Snapshot<S> | undefined {
+    const r = this.db
+      .select()
+      .from(schema.snapshots)
+      .where(and(eq(schema.snapshots.worldId, worldId), lte(schema.snapshots.tick, tick)))
+      .orderBy(desc(schema.snapshots.tick))
+      .limit(1)
+      .get();
+    return r && this.decode(r);
+  }
+
+  latest(worldId: WorldId): Snapshot<S> | undefined {
+    return this.nearest(worldId, Number.MAX_SAFE_INTEGER);
+  }
+
+  list(worldId: WorldId): Snapshot<S>[] {
+    return this.db.select().from(schema.snapshots).where(eq(schema.snapshots.worldId, worldId)).orderBy(asc(schema.snapshots.tick)).all().map((r) => this.decode(r));
+  }
+
+  private decode(r: typeof schema.snapshots.$inferSelect): Snapshot<S> {
+    return { worldId: r.worldId, tick: r.tick, seq: r.seq, packVersions: r.packVersions, state: JSON.parse(zstdDecompressSync(r.data).toString()) as S };
+  }
+}
+
+/** Read models derived from the delta stream: deltas per tick, brain feed and diary. */
+export class SqliteReadModels {
+  private readonly db: Db;
+  constructor(db: Db) {
+    this.db = db;
+  }
+
+  write(worldId: WorldId, tick: number, changes: readonly Delta[]): void {
+    if (changes.length === 0) return;
+    this.db.transaction((tx) => {
+      tx.insert(schema.deltas).values({ worldId, tick, changes: changes as object[] }).onConflictDoNothing().run();
+      for (const d of changes) {
+        if (d.kind === 'feed') tx.insert(schema.feed).values({ worldId, tick, characterId: d.entry.characterId, entry: d.entry as object }).run();
+        if (d.kind === 'diary') tx.insert(schema.diary).values({ worldId, characterId: d.id, day: d.day, tick, text: d.text }).run();
+      }
+    });
+  }
+
+  deltas(worldId: WorldId, fromTick: number, toTick: number): { tick: number; changes: Delta[] }[] {
+    return this.db
+      .select()
+      .from(schema.deltas)
+      .where(and(eq(schema.deltas.worldId, worldId), gte(schema.deltas.tick, fromTick), lt(schema.deltas.tick, toTick)))
+      .orderBy(asc(schema.deltas.tick))
+      .all()
+      .map((r) => ({ tick: r.tick, changes: r.changes as Delta[] }));
+  }
+
+  feed(worldId: WorldId, characterId: string | undefined, limit = 100, beforeTick = Number.MAX_SAFE_INTEGER): FeedEntry[] {
+    const where = characterId
+      ? and(eq(schema.feed.worldId, worldId), eq(schema.feed.characterId, characterId), lt(schema.feed.tick, beforeTick))
+      : and(eq(schema.feed.worldId, worldId), lt(schema.feed.tick, beforeTick));
+    return this.db.select().from(schema.feed).where(where).orderBy(desc(schema.feed.id)).limit(limit).all().map((r) => r.entry as FeedEntry).reverse();
+  }
+
+  diary(worldId: WorldId, characterId: string, day: number): { tick: number; text: string }[] {
+    return this.db
+      .select({ tick: schema.diary.tick, text: schema.diary.text })
+      .from(schema.diary)
+      .where(and(eq(schema.diary.worldId, worldId), eq(schema.diary.characterId, characterId), eq(schema.diary.day, day)))
+      .orderBy(asc(schema.diary.id))
+      .all();
+  }
+}

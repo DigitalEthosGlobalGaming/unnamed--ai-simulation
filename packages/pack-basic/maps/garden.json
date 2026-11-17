@@ -1,0 +1,28 @@
+{
+  "comment": "24 x 16 garden: hut (#, door at the bottom), pond (~) on the east edge, gravel paths (:).",
+  "legend": {
+    ".": { "walkable": true, "blocksSight": false, "soundDamping": 0 },
+    ":": { "walkable": true, "blocksSight": false, "soundDamping": 0 },
+    "#": { "walkable": false, "blocksSight": true, "soundDamping": 0.8 },
+    "~": { "walkable": false, "blocksSight": false, "soundDamping": 0.1 },
+    "*": { "walkable": false, "blocksSight": true, "soundDamping": 0.3 }
+  },
+  "rows": [
+    "........................",
+    ".######..........*.....~",
+    ".#....#...............~~",
+    ".#....#..............~~~",
+    ".#....#..............~~~",
+    ".###:##...............~~",
+    "....:..................~",
+    "....::::::::::::::......",
+    "...............:........",
+    "..*............:......~~",
+    "...............:.....~~~",
+    "...............:.....~~~",
+    "....*..........:......~~",
+    "...............:........",
+    "........*..............*",
+    "........................"
+  ]
+}

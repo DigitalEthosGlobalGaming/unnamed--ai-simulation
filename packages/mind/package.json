@@ -1,0 +1,9 @@
+{
+  "name": "@uas/mind",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": { "@uas/core": "0.1.0", "@uas/sim": "0.1.0" },
+  "devDependencies": { "@uas/pack-basic": "0.1.0" }
+}

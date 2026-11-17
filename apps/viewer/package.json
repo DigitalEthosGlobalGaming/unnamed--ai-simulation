@@ -1,0 +1,25 @@
+{
+  "name": "@uas/viewer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Unnamed AI Simulation viewer: blueprint world scene, inspector and brain feed, on @uas/client (or an offline sample with ?source=sample).",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview",
+    "screenshots": "node scripts/screenshots.mjs"
+  },
+  "dependencies": {
+    "@fontsource/atkinson-hyperlegible-next": "^5.3.0",
+    "@fontsource/overpass": "^5.3.0",
+    "@uas/client": "0.1.0",
+    "pixi.js": "^8.6.0"
+  },
+  "devDependencies": {
+    "playwright": "1.49.1",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.7"
+  }
+}

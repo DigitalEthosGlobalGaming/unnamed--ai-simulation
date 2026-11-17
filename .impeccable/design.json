@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-17T00:00:00Z",
+  "title": "Design System: Unnamed AI Simulation",
+  "extensions": {
+    "colorMeta": {
+      "sheet": { "role": "primary", "displayName": "Blueprint Sheet", "canonical": "oklch(30.8% 0.086 257)", "tonalRamp": ["#080b11", "#162539", "#254065", "#3c5f8e", "#5e82b3", "#86a7d4", "#b9cce7", "#e9eff8"] },
+      "red-pen": { "role": "secondary", "displayName": "Red Pen", "canonical": "oklch(75.9% 0.144 27)", "tonalRamp": ["#130806", "#401310", "#721c19", "#9f332d", "#c8584f", "#e98479", "#f6b9b1", "#fde9e6"] },
+      "red-wash": { "role": "secondary", "displayName": "Red Wash", "canonical": "rgb(255 138 126 / 0.1)" },
+      "focus": { "role": "tertiary", "displayName": "Drafting Yellow", "canonical": "oklch(96.2% 0.062 95)", "tonalRamp": ["#0c0b07", "#292412", "#48401e", "#685d33", "#8b8055", "#afa57f", "#d0cbb5", "#f0efe7"] },
+      "sheet-deep": { "role": "neutral", "displayName": "Deep Sheet", "canonical": "oklch(26.7% 0.075 257)", "tonalRamp": ["#080b10", "#182536", "#2a4060", "#425f87", "#6382ad", "#8ba7ce", "#bccce3", "#eaeff6"] },
+      "sheet-raise": { "role": "neutral", "displayName": "Raised Sheet", "canonical": "oklch(36.1% 0.099 256)", "tonalRamp": ["#070b12", "#13253b", "#1f406b", "#355f94", "#5782bb", "#81a7da", "#b6cdeb", "#e8eff9"] },
+      "sheet-press": { "role": "neutral", "displayName": "Pressed Sheet", "canonical": "oklch(40.2% 0.107 255)", "tonalRamp": ["#070b12", "#11253d", "#1b406e", "#315e98", "#5382bf", "#7da7de", "#b4cded", "#e7effa"] },
+      "ink": { "role": "neutral", "displayName": "Line Ink", "canonical": "oklch(95.9% 0.019 260)", "tonalRamp": ["#070b13", "#1f242e", "#3a404a", "#575e69", "#7a818c", "#9ea5b1", "#c3cbd8", "#e7effc"] },
+      "ink-2": { "role": "neutral", "displayName": "Secondary Ink", "canonical": "oklch(85.1% 0.065 242)", "tonalRamp": ["#080c0f", "#152632", "#24435a", "#3b627f", "#5d85a4", "#86aac5", "#b9cede", "#e9eff5"] },
+      "ink-3": { "role": "neutral", "displayName": "Muted Ink", "canonical": "oklch(75.3% 0.078 247)", "tonalRamp": ["#070c10", "#132636", "#204360", "#366187", "#5885ad", "#82a9cd", "#b7cee3", "#e8eff6"] },
+      "rule": { "role": "neutral", "displayName": "Rule", "canonical": "rgb(169 212 245 / 0.22)" },
+      "rule-strong": { "role": "neutral", "displayName": "Strong Rule", "canonical": "rgb(169 212 245 / 0.5)" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Sheet/day number in the title block. One per screen." },
+      "headline": { "displayName": "Headline", "purpose": "Selected robot's name in the inspector, uppercase; 1.25rem on phones." },
+      "title": { "displayName": "Title", "purpose": "Section headings with a drafted double underline, uppercase." },
+      "action": { "displayName": "Action", "purpose": "The robot's current action, the one sentence-case lettering role." },
+      "body": { "displayName": "Body", "purpose": "Decision reasons and running text in Atkinson Hyperlegible Next." },
+      "body-sm": { "displayName": "Body small", "purpose": "Meta lines, hints, alerts and schedule cells." },
+      "control": { "displayName": "Control", "purpose": "Buttons, status chip and selects, uppercase." },
+      "label": { "displayName": "Label", "purpose": "Legend entries, scale labels, table headings and title-block keys, uppercase with tabular numerals." },
+      "scene-label": { "displayName": "Scene label", "purpose": "Pixi lettering on the plan, fixed screen pixels at every zoom, never below about 12px." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "All CSS transitions." },
+      { "name": "control", "value": "160ms", "purpose": "Button background and border colour changes." },
+      { "name": "drawer", "value": "320ms", "purpose": "Phone drawer transform between closed, peek and full." },
+      { "name": "camera", "value": "exponential smoothing, rate 6 (pan/zoom) and 14", "purpose": "Scene camera easing; instant under reduced motion." },
+      { "name": "reduced-motion", "value": "transitions 0ms; camera and robot positions jump; sound arcs static at fixed radii, 90% alpha", "purpose": "prefers-reduced-motion: reduce." }
+    ],
+    "breakpoints": [
+      { "name": "phone", "value": "max-width: 719px" },
+      { "name": "plan-rotation", "value": "available height > 1.15 x available width" }
+    ],
+    "sceneLineWeights": [
+      { "name": "grid", "value": "1px Secondary Ink at 11%, every fifth line 30%" },
+      { "name": "map-border", "value": "1.5px Secondary Ink at 70%" },
+      { "name": "path-edge", "value": "1px Secondary Ink at 55%, dashed 4/4" },
+      { "name": "hatch", "value": "0.75px Secondary Ink at 45%" },
+      { "name": "wall-water", "value": "1.75px Line Ink at 85%" },
+      { "name": "object-outline", "value": "2-2.5px Line Ink" },
+      { "name": "callout-frame", "value": "1.5px Line Ink on 94% Blueprint Sheet; leader 1.25px" },
+      { "name": "construction-circle", "value": "1.25px Secondary Ink at 70%, dashed 6/5" },
+      { "name": "sound-arc", "value": "1.75px Line Ink, fading" },
+      { "name": "revision-cloud", "value": "2px Red Pen, 3.5px when linked" },
+      { "name": "label-knockout", "value": "Blueprint Sheet at 90% under every scene label" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Standard button in drafting lettering; hover raises the sheet tone.",
+      "html": "<button class=\"ds-btn\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M8.5 5.5v13M15.5 5.5v13\"/></svg>Pause</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border: 1px solid rgb(169 212 245 / 0.5); border-radius: 4px; background: #0e2f5a; color: #eaf2ff; font-family: Overpass, sans-serif; font-weight: 600; font-size: 0.9375rem; letter-spacing: 0.03em; text-transform: uppercase; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), border-color 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn:hover { background: #143d70; border-color: #a9d4f5; } .ds-btn:active { background: #1a4880; } .ds-btn:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }"
+    },
+    {
+      "name": "Toggle Button (pressed)",
+      "kind": "button",
+      "refersTo": "button-pressed",
+      "description": "aria-pressed toggle; inverts to ink when on.",
+      "html": "<button class=\"ds-btn-toggle\" aria-pressed=\"true\">Legend</button>",
+      "css": ".ds-btn-toggle { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border: 1px solid rgb(169 212 245 / 0.5); border-radius: 4px; background: #0e2f5a; color: #eaf2ff; font-family: Overpass, sans-serif; font-weight: 600; font-size: 0.9375rem; letter-spacing: 0.03em; text-transform: uppercase; cursor: pointer; } .ds-btn-toggle[aria-pressed='true'] { background: #eaf2ff; color: #0a2549; border-color: #eaf2ff; } .ds-btn-toggle:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "Connection state: filled ring live, dashed box replay, red pen disconnected.",
+      "html": "<span class=\"ds-status ds-live\">Live</span> <span class=\"ds-status ds-replay\">Replay</span> <span class=\"ds-status ds-off\">Disconnected</span>",
+      "css": ".ds-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid rgb(169 212 245 / 0.5); border-radius: 3px; color: #eaf2ff; font-family: Overpass, sans-serif; font-weight: 700; font-size: 0.9375rem; letter-spacing: 0.05em; text-transform: uppercase; } .ds-status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid currentColor; } .ds-live::before { background: currentColor; } .ds-replay { border-style: dashed; } .ds-off { color: #ff8a7e; border-color: #ff8a7e; }"
+    },
+    {
+      "name": "Tabs",
+      "kind": "nav",
+      "refersTo": "tab",
+      "description": "Inspector tabs with an ink underline on the selected tab and an outlined count.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">Brain feed</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">Beliefs <span class=\"ds-count\">7</span></button></div>",
+      "css": ".ds-tabs { display: flex; gap: 4px; border-bottom: 1px solid rgb(169 212 245 / 0.5); background: #0e2f5a; padding: 0 16px; } .ds-tab { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; color: #86b4de; font-family: Overpass, sans-serif; font-weight: 700; font-size: 1rem; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; } .ds-tab:hover { color: #eaf2ff; } .ds-tab[aria-selected='true'] { color: #eaf2ff; border-bottom-color: #eaf2ff; } .ds-tab:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; } .ds-count { padding: 0 5px; border: 1px solid currentColor; border-radius: 3px; font-size: 0.8125rem; line-height: 1.3; }"
+    },
+    {
+      "name": "Speed Select",
+      "kind": "input",
+      "refersTo": "select",
+      "description": "Native select in drafting lettering.",
+      "html": "<select class=\"ds-select\"><option>1x</option><option>4x</option></select>",
+      "css": ".ds-select { min-height: 30px; padding: 0 6px; border: 1px solid rgb(169 212 245 / 0.5); border-radius: 4px; background: #0e2f5a; color: #eaf2ff; font-family: Overpass, sans-serif; font-size: 0.9375rem; font-weight: 600; } .ds-select:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }"
+    },
+    {
+      "name": "Alert",
+      "kind": "card",
+      "refersTo": "alert",
+      "description": "Red-pen attention box in the inspector.",
+      "html": "<div class=\"ds-alert\"><strong>Low battery</strong> RB-02 is below its charge threshold.</div>",
+      "css": ".ds-alert { display: flex; gap: 8px; padding: 8px 12px; border: 1.5px solid #ff8a7e; border-radius: 4px; background: rgb(255 138 126 / 0.1); color: #eaf2ff; font-family: 'Atkinson Hyperlegible Next', system-ui, sans-serif; font-size: 0.8125rem; } .ds-alert strong { color: #ff8a7e; font-family: Overpass, sans-serif; font-size: 0.9375rem; letter-spacing: 0.03em; }"
+    },
+    {
+      "name": "Need Gauge",
+      "kind": "custom",
+      "description": "Tick-strip gauge; turns red pen below threshold.",
+      "html": "<div class=\"ds-gauge\"><span class=\"ds-gl\">Battery</span><span class=\"ds-gt\"><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i></i><i></i></span><span class=\"ds-gv\">79%</span></div><div class=\"ds-gauge is-low\"><span class=\"ds-gl\">Cool</span><span class=\"ds-gt\"><i class=\"on\"></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class=\"ds-gv\">14%</span></div>",
+      "css": ".ds-gauge { display: grid; grid-template-columns: 78px minmax(0, 1fr) 44px; align-items: center; gap: 12px; padding: 3px 0; background: #0e2f5a; color: #eaf2ff; } .ds-gl { font-family: Overpass, sans-serif; font-weight: 600; font-size: 0.9375rem; letter-spacing: 0.04em; text-transform: uppercase; color: #a9d4f5; } .ds-gt { display: flex; align-items: flex-end; justify-content: space-between; height: 18px; border-bottom: 1px solid #a9d4f5; } .ds-gt i { width: 3px; height: 5px; background: #86b4de; } .ds-gt i.on { height: 15px; background: #eaf2ff; } .ds-gv { font-family: Overpass, sans-serif; font-weight: 700; font-size: 1rem; text-align: right; font-variant-numeric: tabular-nums; } .ds-gauge.is-low .ds-gl, .ds-gauge.is-low .ds-gv { color: #ff8a7e; } .ds-gauge.is-low .ds-gt { border-color: #ff8a7e; } .ds-gauge.is-low .ds-gt i.on { background: #ff8a7e; }"
+    },
+    {
+      "name": "Title Block",
+      "kind": "custom",
+      "description": "Drawing title block: ruled cells, label keys, lettered values, sheet number.",
+      "html": "<div class=\"ds-tb\"><div class=\"ds-c ds-proj\"><span class=\"ds-k\">Project</span><span class=\"ds-v\">Unnamed AI Simulation</span></div><div class=\"ds-c ds-sheet\"><span class=\"ds-k\">Day</span><span class=\"ds-big\">4</span></div><div class=\"ds-c\"><span class=\"ds-k\">World</span><span class=\"ds-v\">Garden 01</span></div><div class=\"ds-c\"><span class=\"ds-k\">In-world time</span><span class=\"ds-v\">15:11</span></div><div class=\"ds-c\"><span class=\"ds-k\">Tick</span><span class=\"ds-v\">52,311</span></div></div>",
+      "css": ".ds-tb { display: grid; grid-template-columns: 1fr 1fr 1fr 74px; width: 460px; border: 1.5px solid #eaf2ff; background: #0e2f5a; color: #eaf2ff; font-family: Overpass, sans-serif; text-transform: uppercase; } .ds-c { display: flex; flex-direction: column; padding: 4px 8px 5px; border-right: 1px solid rgb(169 212 245 / 0.5); border-bottom: 1px solid rgb(169 212 245 / 0.5); } .ds-proj { grid-column: span 3; } .ds-sheet { grid-row: span 2; grid-column: 4; border-right: 0; border-left: 1.5px solid #eaf2ff; align-items: center; justify-content: center; } .ds-k { color: #86b4de; font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.05em; } .ds-v { font-size: 1rem; font-weight: 600; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; } .ds-big { font-size: 2.5rem; line-height: 1; font-weight: 700; }"
+    },
+    {
+      "name": "Revision Table",
+      "kind": "custom",
+      "description": "Brain feed as a ruled revision table with linkable revision buttons.",
+      "html": "<table class=\"ds-rev\"><thead><tr><th>Rev</th><th>Decision</th><th>Conf</th></tr></thead><tbody><tr><td><button class=\"ds-revbtn\">&#9651; 656</button></td><td><b>rest at dock</b><br>running warm, the dock cools me</td><td class=\"n\">0.90</td></tr><tr class=\"warn\"><td><button class=\"ds-revbtn\">&#9651; 655</button></td><td><b>charge at solar pad</b> <span class=\"st\">Failed</span></td><td class=\"n\">0.40</td></tr></tbody></table>",
+      "css": ".ds-rev { border-collapse: collapse; border: 1.5px solid #eaf2ff; background: #0e2f5a; color: #eaf2ff; font-family: 'Atkinson Hyperlegible Next', system-ui, sans-serif; font-size: 0.8125rem; font-variant-numeric: tabular-nums; } .ds-rev th { background: #0a2549; padding: 6px 4px; border-bottom: 1.5px solid #eaf2ff; border-right: 1px solid rgb(169 212 245 / 0.5); font-family: Overpass, sans-serif; font-weight: 700; font-size: 0.8125rem; letter-spacing: 0.04em; text-transform: uppercase; text-align: left; color: #a9d4f5; } .ds-rev td { padding: 5px 4px; border-bottom: 1px solid rgb(169 212 245 / 0.22); border-right: 1px solid rgb(169 212 245 / 0.22); vertical-align: top; } .ds-rev .n { text-align: right; } .ds-rev tr.warn td { background: rgb(255 138 126 / 0.1); } .ds-rev .st { font-family: Overpass, sans-serif; font-size: 0.8125rem; text-transform: uppercase; color: #ff8a7e; } .ds-revbtn { min-height: 30px; padding: 0 4px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #eaf2ff; font-family: Overpass, sans-serif; font-weight: 700; font-size: 0.8125rem; cursor: pointer; } .ds-revbtn:hover { border-color: rgb(169 212 245 / 0.5); background: #143d70; } .ds-revbtn:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Annotated Ground Plan",
+    "overview": "The viewer is one sheet of a drawing set. The world is a top-down ground plan on deep blueprint paper: a fine tile grid, near-white line work, drafted symbols, dimensions, a north arrow, a scale bar and a numbered drawing title. A robot's mind is drafted onto that plan as annotation: callout boxes on leaders, dashed sight and hearing circles, sound arcs labelled with their notes, and red-pen revision clouds where something needs attention. The inspector is the same paper, drawn as an attached sheet with a framed border, ruled schedules and a revision table.\n\nThe drawing is the only place that is diegetic. Every control is an ordinary web control (button, range slider, select, tab, table, drawer) dressed in the blueprint's type and colours, so it behaves the way the browser and assistive technology expect. The density is that of a working drawing: lots of information, kept legible by strict hierarchy of line weight and lettering rather than by cards or shadows.\n\nThe system rejects the default monitoring dashboard: a dark UI with a map widget and a sidebar of floating cards.",
+    "keyCharacteristics": [
+      "Flat blueprint paper in four close blues; depth comes from line weight and ruled frames, not shadow.",
+      "Upright, tracked, uppercase drafting lettering (Overpass) for anything the drawing would letter; a plain, very legible sans (Atkinson Hyperlegible Next) for running text.",
+      "One strong accent, the red pen, reserved for attention.",
+      "Scene lettering is a fixed on-screen size at every zoom, never below about 12px, and hides rather than overprints.",
+      "Phones turn the plan 90° to fill a tall screen and carry the inspector in a three-position drawer."
+    ],
+    "rules": [
+      { "name": "The One Red Pen Rule", "body": "Red Pen is the only saturated colour and it marks something the owner should look at. If removing the red would not lose information, it should not be red.", "section": "colors" },
+      { "name": "The Ink Ladder Rule", "body": "Text and lines step down Ink, Secondary Ink, Muted Ink; nothing goes below Muted Ink. All three, Red Pen and Drafting Yellow clear WCAG 2.2 AA on every sheet blue used behind text (Muted Ink is lowest at 4.97:1 on Raised Sheet).", "section": "colors" },
+      { "name": "The Constant Lettering Rule", "body": "Scene text is set in screen pixels, not world units: zooming the plan never scales it. Minimum about 12px. When labels would collide at a zoom, they move to a clear candidate position on a leader, and if none is clear they hide; zooming in brings them back. Noise note labels always show; other labels make way for them.", "section": "typography" },
+      { "name": "The Lettering vs Writing Rule", "body": "If a draughtsman would letter it on the drawing (names, keys, values, headings, controls), it is Overpass uppercase. If it is a sentence, it is Atkinson in sentence case.", "section": "typography" },
+      { "name": "The Paper-on-Paper Rule", "body": "Nothing floats. If something needs to stand apart, draw a frame around it; do not lift it with a shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "**Do** build every control from a native element (button, input range, select, table, tab with roles) and style it in Overpass and the sheet blues.",
+      "**Do** keep scene lettering at a constant screen size, 12px or larger, on a 90% Blueprint Sheet knockout, and hide a label rather than shrink or overlap it.",
+      "**Do** use Red Pen only for something that needs attention, and pair it with a shape or word so it never relies on colour alone.",
+      "**Do** keep every text colour at 4.5:1 or better against the sheet blue behind it.",
+      "**Do** give every played noise a lettered note chain on the plan.",
+      "**Do** honour prefers-reduced-motion: transitions drop to 0ms, the camera jumps instead of easing, robots move without interpolation, and sound arcs draw as static concentric arcs at fixed radii instead of expanding.",
+      "**Do** rotate the plan 90° on tall phone screens and put the inspector in the closed / peek / full drawer."
+    ],
+    "donts": [
+      "**Don't** make controls diegetic: no drawn knobs, stamps or callouts that act as buttons outside the plan itself.",
+      "**Don't** use Red Pen for decoration, branding, hover or selection.",
+      "**Don't** lift anything with a drop shadow or put content in floating cards; frame it with rules instead.",
+      "**Don't** scale scene text with zoom or let labels overprint.",
+      "**Don't** introduce a second saturated hue."
+    ]
+  }
+}

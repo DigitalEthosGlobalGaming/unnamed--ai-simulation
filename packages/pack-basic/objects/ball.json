@@ -1,0 +1,11 @@
+{
+  "type": "ball",
+  "tags": ["toy", "round"],
+  "portable": true,
+  "verbs": {
+    "pickup": { "range": 1, "durationTicks": 10, "handler": "basic.pickup" },
+    "drop": { "range": 0, "durationTicks": 5, "handler": "basic.drop" },
+    "push": { "range": 1, "durationTicks": 10, "handler": "basic.push" },
+    "chase": { "range": 3, "durationTicks": 40, "handler": "basic.chase" }
+  }
+}

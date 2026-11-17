@@ -1,0 +1,1795 @@
+[
+ {
+  "model": "llama3.2:1b",
+  "digest": "baf6a787fdff",
+  "samples": [
+   {
+    "id": "11-33-appraise",
+    "ms": 2902.1951990000016,
+    "promptMs": 97.225,
+    "genMs": 2781.384,
+    "inTokens": 341,
+    "outTokens": 19,
+    "valid": true,
+    "output": {
+     "tags": [
+      "grip",
+      "grip",
+      "grip"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "11-4385-appraise",
+    "ms": 12873.883354999998,
+    "promptMs": 11621.145,
+    "genMs": 1235.457,
+    "inTokens": 556,
+    "outTokens": 17,
+    "valid": true,
+    "output": {
+     "tags": [
+      "piano",
+      "single",
+      "E"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "11-25049-appraise",
+    "ms": 15383.295902999998,
+    "promptMs": 14287.241,
+    "genMs": 1064.609999,
+    "inTokens": 802,
+    "outTokens": 16,
+    "valid": true,
+    "output": {
+     "tags": [
+      "relaxation",
+      "rest",
+      "sleep"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "11-44970-appraise",
+    "ms": 14711.253712999998,
+    "promptMs": 13490.265,
+    "genMs": 1188.411,
+    "inTokens": 871,
+    "outTokens": 14,
+    "valid": true,
+    "output": {
+     "tags": [
+      "ball",
+      "roll",
+      "away"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "12-1858-appraise",
+    "ms": 7411.542337999999,
+    "promptMs": 6324.736,
+    "genMs": 1046.183,
+    "inTokens": 558,
+    "outTokens": 14,
+    "valid": true,
+    "output": {
+     "tags": [
+      "charge",
+      "warm",
+      "light"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "12-10240-appraise",
+    "ms": 9459.522708000004,
+    "promptMs": 8241.576999,
+    "genMs": 1194.715,
+    "inTokens": 556,
+    "outTokens": 15,
+    "valid": true,
+    "output": {
+     "tags": [
+      "dock",
+      "quietly",
+      "rest"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "12-34733-appraise",
+    "ms": 17452.655672999987,
+    "promptMs": 16070.284,
+    "genMs": 1309.752,
+    "inTokens": 849,
+    "outTokens": 19,
+    "valid": true,
+    "output": {
+     "tags": [
+      "charge",
+      "solarPad",
+      "warm light hummed"
+     ]
+    },
+    "checks": {
+     "shortTags": false,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "12-56123-appraise",
+    "ms": 17925.374423,
+    "promptMs": 16753.494999,
+    "genMs": 1126.073,
+    "inTokens": 924,
+    "outTokens": 15,
+    "valid": true,
+    "output": {
+     "tags": [
+      "rest",
+      "dock",
+      "quietly"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "13-3627-appraise",
+    "ms": 8544.167457000003,
+    "promptMs": 7377.1,
+    "genMs": 1113.13,
+    "inTokens": 602,
+    "outTokens": 15,
+    "valid": true,
+    "output": {
+     "tags": [
+      "chase",
+      "ball",
+      "day"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "13-23820-appraise",
+    "ms": 14617.968787999998,
+    "promptMs": 13305.228,
+    "genMs": 1277.848,
+    "inTokens": 804,
+    "outTokens": 19,
+    "valid": true,
+    "output": {
+     "tags": [
+      "rested",
+      "night",
+      "relaxation"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "13-44217-appraise",
+    "ms": 17532.444957,
+    "promptMs": 16124.058,
+    "genMs": 1371.373,
+    "inTokens": 976,
+    "outTokens": 18,
+    "valid": true,
+    "output": {
+     "tags": [
+      "relaxation",
+      "rest",
+      "relaxation"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "14-366-appraise",
+    "ms": 8165.236645000026,
+    "promptMs": 7084.224,
+    "genMs": 1023.529,
+    "inTokens": 547,
+    "outTokens": 16,
+    "valid": true,
+    "output": {
+     "tags": [
+      "solarPad",
+      "metal",
+      "light"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "14-4955-appraise",
+    "ms": 7253.158200000005,
+    "promptMs": 6213.874,
+    "genMs": 1016.261,
+    "inTokens": 586,
+    "outTokens": 15,
+    "valid": true,
+    "output": {
+     "tags": [
+      "dock",
+      "click",
+      "quietly"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "14-20128-appraise",
+    "ms": 15537.600028999994,
+    "promptMs": 14280.748,
+    "genMs": 1239.204,
+    "inTokens": 866,
+    "outTokens": 19,
+    "valid": true,
+    "output": {
+     "tags": [
+      "charge",
+      "solarPad",
+      "warm light hummed"
+     ]
+    },
+    "checks": {
+     "shortTags": false,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "14-42042-appraise",
+    "ms": 15859.336546999984,
+    "promptMs": 14516.861,
+    "genMs": 1294.444,
+    "inTokens": 890,
+    "outTokens": 18,
+    "valid": true,
+    "output": {
+     "tags": [
+      "Scan",
+      "Fountain",
+      "Flowing"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "14-44290-appraise",
+    "ms": 8463.02253800002,
+    "promptMs": 6972.709,
+    "genMs": 1470.134,
+    "inTokens": 894,
+    "outTokens": 18,
+    "valid": true,
+    "output": {
+     "tags": [
+      "Scan",
+      "Fountain",
+      "Flowing"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "14-48195-appraise",
+    "ms": 9188.655740999995,
+    "promptMs": 7784.291,
+    "genMs": 1383.763,
+    "inTokens": 926,
+    "outTokens": 18,
+    "valid": true,
+    "output": {
+     "tags": [
+      "Scan",
+      "Fountain",
+      "Flowing"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "15-254-appraise",
+    "ms": 5608.735572999984,
+    "promptMs": 4425.425,
+    "genMs": 1119.086,
+    "inTokens": 505,
+    "outTokens": 17,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cold",
+      "fountain",
+      "water"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "15-5027-appraise",
+    "ms": 7190.818710000021,
+    "promptMs": 5917.746,
+    "genMs": 1253.853,
+    "inTokens": 564,
+    "outTokens": 17,
+    "valid": true,
+    "output": {
+     "tags": [
+      "fountain",
+      "water",
+      "loud"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "15-28233-appraise",
+    "ms": 14299.569332999992,
+    "promptMs": 13191.079,
+    "genMs": 1088.51,
+    "inTokens": 816,
+    "outTokens": 16,
+    "valid": true,
+    "output": {
+     "tags": [
+      "tumble",
+      "note",
+      "piano"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "16-135-appraise",
+    "ms": 4762.241395999998,
+    "promptMs": 3458.087,
+    "genMs": 1264.359,
+    "inTokens": 471,
+    "outTokens": 17,
+    "valid": true,
+    "output": {
+     "tags": [
+      "chase",
+      "ball",
+      "scoot"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "16-4811-appraise",
+    "ms": 7046.962244999973,
+    "promptMs": 5651.383,
+    "genMs": 1372.433,
+    "inTokens": 568,
+    "outTokens": 19,
+    "valid": true,
+    "output": {
+     "tags": [
+      "charge",
+      "solarPad",
+      "warm light hummed"
+     ]
+    },
+    "checks": {
+     "shortTags": false,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "16-21683-appraise",
+    "ms": 17438.444392000005,
+    "promptMs": 16293.073,
+    "genMs": 1124.82,
+    "inTokens": 883,
+    "outTokens": 14,
+    "valid": true,
+    "output": {
+     "tags": [
+      "quiet",
+      "dock",
+      "night"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "16-41513-appraise",
+    "ms": 15376.934612000012,
+    "promptMs": 14330.875,
+    "genMs": 987.055,
+    "inTokens": 938,
+    "outTokens": 14,
+    "valid": true,
+    "output": {
+     "tags": [
+      "quiet",
+      "dock",
+      "night"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "17-258-appraise",
+    "ms": 5538.681356999965,
+    "promptMs": 4311.929,
+    "genMs": 1176.402,
+    "inTokens": 496,
+    "outTokens": 15,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cold",
+      "fountain",
+      "water"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "17-5090-appraise",
+    "ms": 7586.530116000038,
+    "promptMs": 6273.017,
+    "genMs": 1289.987,
+    "inTokens": 569,
+    "outTokens": 19,
+    "valid": true,
+    "output": {
+     "tags": [
+      "charge",
+      "solarPad",
+      "warm light hummed"
+     ]
+    },
+    "checks": {
+     "shortTags": false,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "17-22891-appraise",
+    "ms": 15772.202028000029,
+    "promptMs": 14657.455,
+    "genMs": 1093.304,
+    "inTokens": 861,
+    "outTokens": 14,
+    "valid": true,
+    "output": {
+     "tags": [
+      "quiet",
+      "dock",
+      "night"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "17-42138-appraise",
+    "ms": 14536.587005999987,
+    "promptMs": 13315.89,
+    "genMs": 1170.75,
+    "inTokens": 890,
+    "outTokens": 19,
+    "valid": true,
+    "output": {
+     "tags": [
+      "charge",
+      "solarPad",
+      "warm light hummed"
+     ]
+    },
+    "checks": {
+     "shortTags": false,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "18-312-appraise",
+    "ms": 4781.8606100000325,
+    "promptMs": 3717.859,
+    "genMs": 1014.136,
+    "inTokens": 570,
+    "outTokens": 17,
+    "valid": true,
+    "output": {
+     "tags": [
+      "fountain",
+      "water",
+      "loud"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "18-4991-appraise",
+    "ms": 6092.806643000047,
+    "promptMs": 5135.967,
+    "genMs": 921.586,
+    "inTokens": 565,
+    "outTokens": 16,
+    "valid": true,
+    "output": {
+     "tags": [
+      "tumble",
+      "notes",
+      "outbreak"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   }
+  ],
+  "load": {
+   "mean": 4.071492537313431,
+   "max": 4.17
+  },
+  "residentDuring": [
+   "llama3.2:1b"
+  ]
+ },
+ {
+  "model": "qwen3.5:0.8b",
+  "digest": "de63045f2975",
+  "samples": [
+   {
+    "id": "11-33-appraise",
+    "ms": 1254.4879490000312,
+    "promptMs": 98.368,
+    "genMs": 1146.811,
+    "inTokens": 349,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "pickup",
+      "ball"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "11-4385-appraise",
+    "ms": 8422.405984999961,
+    "promptMs": 7055.5,
+    "genMs": 1355.01,
+    "inTokens": 566,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "neutral",
+      "good"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "11-25049-appraise",
+    "ms": 12285.592782000022,
+    "promptMs": 10710.833,
+    "genMs": 1535.496,
+    "inTokens": 826,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cool",
+      "signal"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "11-44970-appraise",
+    "ms": 14504.290949999995,
+    "promptMs": 12675.042,
+    "genMs": 1772.243,
+    "inTokens": 898,
+    "outTokens": 24,
+    "valid": true,
+    "output": {
+     "tags": [
+      "neutral",
+      "low_battery"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "12-1858-appraise",
+    "ms": 8614.371744000004,
+    "promptMs": 6717.16,
+    "genMs": 1833.295,
+    "inTokens": 567,
+    "outTokens": 25,
+    "valid": true,
+    "output": {
+     "tags": [
+      "solarPad",
+      "metal"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "12-10240-appraise",
+    "ms": 8290.406185999978,
+    "promptMs": 6934.588,
+    "genMs": 1312.239,
+    "inTokens": 565,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "quiet",
+      "night"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "12-34733-appraise",
+    "ms": 12628.320079999976,
+    "promptMs": 10971.539,
+    "genMs": 1620.209,
+    "inTokens": 874,
+    "outTokens": 24,
+    "valid": true,
+    "output": {
+     "tags": [
+      "neutral",
+      "low_battery"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "12-56123-appraise",
+    "ms": 12773.337383999955,
+    "promptMs": 11464.387,
+    "genMs": 1260.64,
+    "inTokens": 951,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cool",
+      "night"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "13-3627-appraise",
+    "ms": 8386.255666000012,
+    "promptMs": 6967.469,
+    "genMs": 1360.996,
+    "inTokens": 614,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "neutral",
+      "good"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "13-23820-appraise",
+    "ms": 14442.520370999991,
+    "promptMs": 12142.827,
+    "genMs": 2252.825,
+    "inTokens": 830,
+    "outTokens": 24,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cool",
+      "low_signal"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "13-44217-appraise",
+    "ms": 21459.046854000015,
+    "promptMs": 19610.402,
+    "genMs": 1781.67,
+    "inTokens": 1006,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cool",
+      "neutral"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "14-366-appraise",
+    "ms": 7772.284935000003,
+    "promptMs": 6402.902,
+    "genMs": 1323.437,
+    "inTokens": 558,
+    "outTokens": 25,
+    "valid": true,
+    "output": {
+     "tags": [
+      "solarPad",
+      "metal"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "14-4955-appraise",
+    "ms": 8367.656206000014,
+    "promptMs": 6315.47,
+    "genMs": 2007.791,
+    "inTokens": 599,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "neutral",
+      "good"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "14-20128-appraise",
+    "ms": 14822.391174999997,
+    "promptMs": 12815.248,
+    "genMs": 1932.301,
+    "inTokens": 890,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cool",
+      "signal"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "14-42042-appraise",
+    "ms": 16764.415298000036,
+    "promptMs": 14914.115,
+    "genMs": 1774.837,
+    "inTokens": 918,
+    "outTokens": 24,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cool",
+      "low_battery"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "14-44290-appraise",
+    "ms": 10256.570335000055,
+    "promptMs": 8655.374,
+    "genMs": 1577.853,
+    "inTokens": 922,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cool",
+      "low"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "14-48195-appraise",
+    "ms": 14941.305002000066,
+    "promptMs": 12355.101,
+    "genMs": 2556.032,
+    "inTokens": 954,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cool",
+      "low"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "15-254-appraise",
+    "ms": 9976.095578000066,
+    "promptMs": 8236.156999,
+    "genMs": 1651.953,
+    "inTokens": 513,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cold",
+      "water"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "15-5027-appraise",
+    "ms": 10211.866030999925,
+    "promptMs": 8188.253,
+    "genMs": 1977.68,
+    "inTokens": 572,
+    "outTokens": 24,
+    "valid": true,
+    "output": {
+     "tags": [
+      "fountain",
+      "water"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "15-28233-appraise",
+    "ms": 12285.093602000037,
+    "promptMs": 10302.221,
+    "genMs": 1953.482,
+    "inTokens": 841,
+    "outTokens": 24,
+    "valid": true,
+    "output": {
+     "tags": [
+      "fun",
+      "low_battery"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "16-135-appraise",
+    "ms": 8699.573554000002,
+    "promptMs": 6395.719,
+    "genMs": 2249.779,
+    "inTokens": 479,
+    "outTokens": 24,
+    "valid": true,
+    "output": {
+     "tags": [
+      "chase",
+      "ball"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "16-4811-appraise",
+    "ms": 10646.284757000045,
+    "promptMs": 8259.209,
+    "genMs": 2358.973,
+    "inTokens": 578,
+    "outTokens": 25,
+    "valid": true,
+    "output": {
+     "tags": [
+      "solarPad",
+      "charging"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "16-21683-appraise",
+    "ms": 13963.773414000054,
+    "promptMs": 12526.087,
+    "genMs": 1391.791,
+    "inTokens": 907,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cool",
+      "signal"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "16-41513-appraise",
+    "ms": 16250.37075100001,
+    "promptMs": 14410.003,
+    "genMs": 1783.635,
+    "inTokens": 963,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cool",
+      "night"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "17-258-appraise",
+    "ms": 10457.322114999988,
+    "promptMs": 7625.598,
+    "genMs": 2769.115,
+    "inTokens": 504,
+    "outTokens": 24,
+    "valid": true,
+    "output": {
+     "tags": [
+      "cold",
+      "fountain"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "17-5090-appraise",
+    "ms": 11784.61035600002,
+    "promptMs": 9645.336,
+    "genMs": 2101.496999,
+    "inTokens": 579,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "neutral",
+      "good"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "17-22891-appraise",
+    "ms": 17333.794874999905,
+    "promptMs": 14766.069,
+    "genMs": 2506.682,
+    "inTokens": 886,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "neutral",
+      "low"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   },
+   {
+    "id": "17-42138-appraise",
+    "ms": 16265.381688999943,
+    "promptMs": 13690.673,
+    "genMs": 2511.677,
+    "inTokens": 916,
+    "outTokens": 25,
+    "valid": true,
+    "output": {
+     "tags": [
+      "solarPad",
+      "charging"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "18-312-appraise",
+    "ms": 11746.222094999976,
+    "promptMs": 8866.97,
+    "genMs": 2818.198,
+    "inTokens": 578,
+    "outTokens": 24,
+    "valid": true,
+    "output": {
+     "tags": [
+      "fountain",
+      "cold"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "18-4991-appraise",
+    "ms": 9719.829930000007,
+    "promptMs": 7751.952,
+    "genMs": 1849.68,
+    "inTokens": 575,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "neutral",
+      "good"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": false
+    }
+   }
+  ],
+  "load": {
+   "mean": 4.104383561643835,
+   "max": 4.43
+  },
+  "residentDuring": [
+   "qwen3.5:0.8b"
+  ]
+ },
+ {
+  "model": "gemma3:1b",
+  "digest": "97558784bdc9",
+  "samples": [
+   {
+    "id": "11-33-appraise",
+    "ms": 1424.2780779999448,
+    "promptMs": 259.469,
+    "genMs": 1142.18,
+    "inTokens": 343,
+    "outTokens": 14,
+    "valid": true,
+    "output": {
+     "tags": [
+      "picking",
+      "ball",
+      "gripers"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "11-4385-appraise",
+    "ms": 13348.50815800007,
+    "promptMs": 12253.044,
+    "genMs": 1074.711,
+    "inTokens": 560,
+    "outTokens": 13,
+    "valid": true,
+    "output": {
+     "tags": [
+      "music",
+      "piano",
+      "sound"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "11-25049-appraise",
+    "ms": 17274.87775700004,
+    "promptMs": 16114.666,
+    "genMs": 1123.093,
+    "inTokens": 824,
+    "outTokens": 14,
+    "valid": true,
+    "output": {
+     "tags": [
+      "rest",
+      "dark",
+      "low battery"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "11-44970-appraise",
+    "ms": 19847.831929999986,
+    "promptMs": 18862.826,
+    "genMs": 957.561,
+    "inTokens": 894,
+    "outTokens": 14,
+    "valid": true,
+    "output": {
+     "tags": [
+      "ball",
+      "rolling"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "12-1858-appraise",
+    "ms": 11524.014987000031,
+    "promptMs": 10123.149,
+    "genMs": 1372.399,
+    "inTokens": 562,
+    "outTokens": 24,
+    "valid": true,
+    "output": {
+     "tags": [
+      "solarPad",
+      "light"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "12-10240-appraise",
+    "ms": 11478.779230999993,
+    "promptMs": 9814.1,
+    "genMs": 1638.343,
+    "inTokens": 559,
+    "outTokens": 23,
+    "valid": true,
+    "output": {
+     "tags": [
+      "dock",
+      "quiet"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "12-34733-appraise",
+    "ms": 18693.868858999922,
+    "promptMs": 17591.451,
+    "genMs": 1075.412,
+    "inTokens": 867,
+    "outTokens": 16,
+    "valid": true,
+    "output": {
+     "tags": [
+      "solarPad"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "12-56123-appraise",
+    "ms": 18969.796617999906,
+    "promptMs": 18153.257,
+    "genMs": 779.734,
+    "inTokens": 941,
+    "outTokens": 12,
+    "valid": true,
+    "output": {
+     "tags": [
+      "dock",
+      "quietly"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "13-3627-appraise",
+    "ms": 12002.609494999982,
+    "promptMs": 11187.646,
+    "genMs": 784.147,
+    "inTokens": 609,
+    "outTokens": 11,
+    "valid": true,
+    "output": {
+     "tags": [
+      "chase",
+      "ball"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "13-23820-appraise",
+    "ms": 16715.71586300002,
+    "promptMs": 15672.924,
+    "genMs": 1003.956,
+    "inTokens": 828,
+    "outTokens": 13,
+    "valid": true,
+    "output": {
+     "tags": [
+      "rest",
+      "dark",
+      "cold"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "13-44217-appraise",
+    "ms": 20039.810773000005,
+    "promptMs": 19228.62,
+    "genMs": 768.691,
+    "inTokens": 997,
+    "outTokens": 10,
+    "valid": true,
+    "output": {
+     "tags": [
+      "rest",
+      "quiet"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "14-366-appraise",
+    "ms": 11278.384814999998,
+    "promptMs": 10387.548,
+    "genMs": 862.52,
+    "inTokens": 553,
+    "outTokens": 13,
+    "valid": true,
+    "output": {
+     "tags": [
+      "solar",
+      "light",
+      "scan"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "14-4955-appraise",
+    "ms": 10920.098922000034,
+    "promptMs": 9651.891,
+    "genMs": 1236.804,
+    "inTokens": 592,
+    "outTokens": 18,
+    "valid": true,
+    "output": {
+     "tags": [
+      "dock",
+      "hum",
+      "click"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "14-20128-appraise",
+    "ms": 16864.255100000068,
+    "promptMs": 15821.854,
+    "genMs": 1008.54,
+    "inTokens": 881,
+    "outTokens": 15,
+    "valid": true,
+    "output": {
+     "tags": [
+      "charge",
+      "solarPad",
+      "warm light"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "14-42042-appraise",
+    "ms": 17305.868478000048,
+    "promptMs": 16146.592,
+    "genMs": 1127.605,
+    "inTokens": 911,
+    "outTokens": 15,
+    "valid": true,
+    "output": {
+     "tags": [
+      "fountain",
+      "water",
+      "sound"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "14-44290-appraise",
+    "ms": 8190.897704000003,
+    "promptMs": 7000.55,
+    "genMs": 1165.168,
+    "inTokens": 915,
+    "outTokens": 15,
+    "valid": true,
+    "output": {
+     "tags": [
+      "fountain",
+      "water",
+      "sound"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "14-48195-appraise",
+    "ms": 9211.209105999907,
+    "promptMs": 8106.416,
+    "genMs": 1073.089999,
+    "inTokens": 943,
+    "outTokens": 18,
+    "valid": true,
+    "output": {
+     "tags": [
+      "fountain",
+      "water",
+      "sound"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "15-254-appraise",
+    "ms": 9451.468928999966,
+    "promptMs": 8739.505,
+    "genMs": 687.049,
+    "inTokens": 507,
+    "outTokens": 11,
+    "valid": true,
+    "output": {
+     "tags": [
+      "fountain",
+      "cold"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "15-5027-appraise",
+    "ms": 10815.035786999972,
+    "promptMs": 9248.485,
+    "genMs": 1528.855,
+    "inTokens": 566,
+    "outTokens": 24,
+    "valid": true,
+    "output": {
+     "tags": [
+      "fountain",
+      "water"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "15-28233-appraise",
+    "ms": 15362.701289000106,
+    "promptMs": 14554.559,
+    "genMs": 776.832,
+    "inTokens": 836,
+    "outTokens": 11,
+    "valid": true,
+    "output": {
+     "tags": [
+      "piano",
+      "music"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "16-135-appraise",
+    "ms": 12025.744441000046,
+    "promptMs": 10927.833,
+    "genMs": 1058.636,
+    "inTokens": 474,
+    "outTokens": 16,
+    "valid": true,
+    "output": {
+     "tags": [
+      "chase",
+      "skittered",
+      "ball"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "16-4811-appraise",
+    "ms": 11012.908991000033,
+    "promptMs": 9965.037,
+    "genMs": 1017.262,
+    "inTokens": 571,
+    "outTokens": 13,
+    "valid": true,
+    "output": {
+     "tags": [
+      "charge",
+      "solar",
+      "light"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "16-21683-appraise",
+    "ms": 16581.910157000064,
+    "promptMs": 15694.397,
+    "genMs": 852.128,
+    "inTokens": 898,
+    "outTokens": 12,
+    "valid": true,
+    "output": {
+     "tags": [
+      "dock",
+      "quietly"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "16-41513-appraise",
+    "ms": 18666.035450000083,
+    "promptMs": 17750.898,
+    "genMs": 871.748,
+    "inTokens": 952,
+    "outTokens": 11,
+    "valid": true,
+    "output": {
+     "tags": [
+      "dock",
+      "hum"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "17-258-appraise",
+    "ms": 9852.561033000005,
+    "promptMs": 9195.108,
+    "genMs": 627.646,
+    "inTokens": 498,
+    "outTokens": 11,
+    "valid": true,
+    "output": {
+     "tags": [
+      "fountain",
+      "cold"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "17-5090-appraise",
+    "ms": 10439.452257000143,
+    "promptMs": 9556.351,
+    "genMs": 835.354,
+    "inTokens": 572,
+    "outTokens": 13,
+    "valid": true,
+    "output": {
+     "tags": [
+      "solar",
+      "charge",
+      "light"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "17-22891-appraise",
+    "ms": 16706.073402000125,
+    "promptMs": 15734.137,
+    "genMs": 940.157,
+    "inTokens": 878,
+    "outTokens": 12,
+    "valid": true,
+    "output": {
+     "tags": [
+      "dock",
+      "quietly"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "17-42138-appraise",
+    "ms": 16824.622250000015,
+    "promptMs": 15790.637,
+    "genMs": 1006.88,
+    "inTokens": 905,
+    "outTokens": 14,
+    "valid": true,
+    "output": {
+     "tags": [
+      "solarPad",
+      "light",
+      "charging"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "18-312-appraise",
+    "ms": 13069.47687299992,
+    "promptMs": 11303.293,
+    "genMs": 1732.818,
+    "inTokens": 572,
+    "outTokens": 24,
+    "valid": true,
+    "output": {
+     "tags": [
+      "fountain",
+      "water"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   },
+   {
+    "id": "18-4991-appraise",
+    "ms": 10268.351901999908,
+    "promptMs": 9355.093,
+    "genMs": 882.756,
+    "inTokens": 568,
+    "outTokens": 14,
+    "valid": true,
+    "output": {
+     "tags": [
+      "music",
+      "piano",
+      "rumble"
+     ]
+    },
+    "checks": {
+     "shortTags": true,
+     "groundedInText": true
+    }
+   }
+  ],
+  "load": {
+   "mean": 3.9825301204819272,
+   "max": 4.13
+  },
+  "residentDuring": [
+   "gemma3:1b"
+  ]
+ }
+]

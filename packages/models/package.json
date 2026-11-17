@@ -1,0 +1,15 @@
+{
+  "name": "@uas/models",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.105",
+    "@uas/core": "0.1.0",
+    "ai": "^7.0.173",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.0"
+  },
+  "devDependencies": { "@uas/sim": "0.1.0", "@uas/mind": "0.1.0", "@uas/pack-basic": "0.1.0" }
+}
