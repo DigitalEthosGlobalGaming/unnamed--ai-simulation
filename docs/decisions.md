@@ -2,7 +2,7 @@
 
 ## Decision log
 
-The design decisions (1 to 38) and open questions are recorded in the spec: [Decision log and open questions](../Unnamed%20AI%20Simulation%20—%20Spec.md#decision-log-and-open-questions). This table records how far each one is built. "Partly" links to the deviation that explains the gap.
+The design decisions (1 to 41) and open questions are recorded in the spec: [Decision log and open questions](../Unnamed%20AI%20Simulation%20—%20Spec.md#decision-log-and-open-questions). This table records how far each one is built. "Partly" links to the deviation that explains the gap.
 
 | # | Decision | Built? |
 | --- | --- | --- |
@@ -19,7 +19,7 @@ The design decisions (1 to 38) and open questions are recorded in the spec: [Dec
 | 11 | Boredom per (verb, object type) with reward scaling and mood penalty | Yes |
 | 12 | Needs data-defined per archetype; energy built in | Yes |
 | 13 | Energy sources in-world only | Yes |
-| 14 | No text speech; `vocalize`; humans join as visitor characters | Yes |
+| 14 | No text speech; `vocalize`; humans join as visitor characters | Speech and noises yes; visitor characters removed by decision 39 |
 | 15 | Mood as valence and arousal in code | Yes |
 | 16 | Content packs: folders, hot reload, npm-publishable | Partly: folders only ([D21](#deviations-from-the-spec)) |
 | 17 | `tev1:0.8b` for decisions, `llama3.2:1b` for text, via Ollama | Changed: decisions use Laya (`laya:421m-typed-decisions-bf16` as `uas-laya`) at the owner's request, with Tev1 kept as an option; text stays `llama3.2:1b` after a bake-off ([D29](#deviations-from-the-spec)) |
@@ -40,10 +40,13 @@ The design decisions (1 to 38) and open questions are recorded in the spec: [Dec
 | 32 | AUD with a fixed `audPerUsd` | Yes |
 | 33 | No gossip | Yes |
 | 34 | Noises: 4 pitches, chains up to 4, Web Audio | Yes |
-| 35 | Per-character visitor queue, weighted pick favouring the oldest | Yes ([D13](#deviations-from-the-spec) on logging) |
+| 35 | Per-character visitor queue, weighted pick favouring the oldest | Superseded by decision 39; the queue is removed |
 | 36 | MIT code, CC BY 4.0 pack media | Yes (stated in `pack.json`) |
 | 37 | Blueprint viewer with diegetic UI | Yes; the switch to live server data is in progress ([viewer.md](architecture/viewer.md#data-sources)) |
 | 38 | Little robots as the first character | Yes |
+| 39 | Visitors are not characters: they airdrop catalogue items (blocks, 24×24 icon language) and post to a per-world mailbox | Yes, backend ([visitors.md](architecture/visitors.md)) |
+| 40 | Mailbox only, oldest first, one per `read`; a quoted stranger's note; hearsay beliefs | Yes ([mind.md](architecture/mind.md#beliefs)) |
+| 41 | Visitor limits per world, unlimited by default, admins exempt | Yes ([server-and-api.md](architecture/server-and-api.md#live-world-settings)) |
 
 ### Decisions made while building
 
@@ -57,6 +60,9 @@ Choices the spec didn't make, recorded so they aren't mistaken for accidents.
 | Outcomes appraised in code by default | CPU-only Tev1 takes seconds per call; two extra jobs per action made decisions queue and time out | [`garden.yaml`](../worlds/garden.yaml), [`docker-compose.yml`](../docker-compose.yml) |
 | Model job queue with per-endpoint lanes and stale drops | Local models share one CPU; unordered concurrent calls made decisions arrive too late to matter | [`host.ts`](../packages/models/src/host.ts), [models.md](architecture/models.md#job-queue) |
 | `models.load` input event | The mind needs to know the queue is busy, and replays must see the same signal | [`runtime.ts`](../packages/server/src/runtime.ts) |
+| Airdrops perceived as `thing-<tags>` | The robot isn't told names or behaviours (decision 6), and beliefs about one "metal small thing" carry over to similar drops | [`catalog.ts`](../packages/core/src/catalog.ts) |
+| `pack.loaded` input and pack upgrades on start | Adding the airdrop and mailbox objects changed the basic pack's hash, which would have stopped existing worlds from loading | [`runtime.ts`](../packages/server/src/runtime.ts), [events-and-replay.md](architecture/events-and-replay.md#input-events) |
+| Visitor cooldowns counted in real time, in memory | They are admission control outside the sim; nothing deterministic depends on them | [`runtime.ts`](../packages/server/src/runtime.ts) |
 | `uas-laya` and `uas-tev1` derived models | `/v1/systemone` ignores request options, so the thread count (and Tev1's 2k context) must be baked into a Modelfile | [`ollama-pull.sh`](../scripts/ollama-pull.sh) |
 | Ollama capped to 4 CPUs with a low CPU weight, and 4 threads | Uncapped, a model call used about 7 cores and made the owner's laptop unusable. The cap costs about 40% latency. | [`ollama-up.sh`](../scripts/ollama-up.sh), [operations.md](operations.md#local-models-with-ollama-podman-or-docker) |
 | Laya as the default decision model | The owner asked for it. It is twice as fast as Tev1 but agrees less with the reference ranking. | [benchmarks](benchmarks/2026-11-17-decide.md) |
@@ -82,10 +88,10 @@ Where the code does something different from [the spec](../Unnamed%20AI%20Simula
 | D10 | Beliefs | Keyed `verb:objectType`; change only during sleep; unsupported for N days are replaced | Keyed `verb:objectType@day` / `@night`; updated on every admitted outcome memory (prompts only see them after waking, through the cached prefix); dropped after 5 days without support | [`memory.ts`](../packages/mind/src/memory.ts), [`system.ts`](../packages/mind/src/system.ts) |
 | D11 | Memory worth and recall | `e^(−Δt/τ)`; a memory placed in a prompt counts as a recall | `0.5^(Δt/halfLife)`; STM in prompts is not counted as a recall (it would freeze STM against newcomers); recall happens on first sight of an object type; recalls within 600 ticks don't add to the count | [`memory.ts`](../packages/mind/src/memory.ts), [`system.ts`](../packages/mind/src/system.ts) |
 | D12 | Sleep | Separate Consolidate, Reflect and EditSheet states; drowsy when "rest need low or night"; wake when rest restored or dawn | Three phases (`awake`, `drowsy`, `asleep`); night work runs in one tick and reflection is an async job; drowsy when night or `cool` low; wake when daylight and `cool` ≥ 0.6. Reflection can only reword existing beliefs, not change their numbers | [`system.ts`](../packages/mind/src/system.ts) |
-| D13 | Visitor queue | The pick is logged as an input event | The pick is made by the seeded `visitors` RNG stream inside the sim, which replays identically; it is emitted as a `visitorPick` delta, not logged as an input | [`system.ts`](../packages/mind/src/system.ts) |
+| D13 | Visitor queue | The pick is logged as an input event | Removed with the visitor queue (decision 39) | |
 | D14 | Snapshots | Retention: all from the last 24 real hours, then one per in-world day | Every snapshot is kept | [`sqlite.ts`](../packages/store/src/sqlite.ts) |
 | D15 | Forks | The fork's reads before `forkTick` resolve through the parent | The fork starts from the parent's state at the fork tick with an empty log; nothing resolves through the parent. Forks are not restarted after a server restart | [`app.ts`](../packages/server/src/app.ts), [`main.ts`](../packages/server/src/main.ts) |
-| D16 | Input log contents | Also logs content pack loads, config changes and external signals | Logs model answers, admin edits and pokes, visitor commands and `models.load`; pack loads and config changes are not events (packs are fixed per world at start) | [`events.ts`](../packages/core/src/events.ts) |
+| D16 | Input log contents | Also logs content pack loads, config changes and external signals | Logs model answers, admin edits and pokes, settings and clock changes, airdrops, mail and `models.load`. A pack change is logged only when a world is upgraded to new pack versions on start (`pack.loaded`); there is no hot reload | [`events.ts`](../packages/core/src/events.ts) |
 | D17 | Cost cap and usage | Hard AUD cap per world per day; usage in `usage_daily` | Cap per world per real UTC day (default A$0.50). Every call is upserted into `usage_daily` and today's rows are reloaded at start, so the cap survives restarts. | [`meter.ts`](../packages/models/src/meter.ts), [`runtime.ts`](../packages/server/src/runtime.ts) |
 | D18 | Adapters | Jev hosted adapter; AI SDK with any provider; `LlmAsDecisionModel` uses logprobs when available | Jev is a stub that throws; only Anthropic is wired; `LlmAsDecisionModel` always reports confidence 1 | [`jev.ts`](../packages/models/src/adapters/jev.ts), [`ai-sdk.ts`](../packages/models/src/adapters/ai-sdk.ts), [`llm-as-decision.ts`](../packages/models/src/adapters/llm-as-decision.ts) |
 | D19 | Determinism enforcement | A lint rule; a CI test replays recorded worlds | A vitest test scans sources for forbidden calls; the replay test runs in vitest (no CI configured in the repo) | [`determinism-rules.test.ts`](../packages/sim/test/determinism-rules.test.ts), [`m2-replay.test.ts`](../packages/store/test/m2-replay.test.ts) |
@@ -108,5 +114,6 @@ Where the code does something different from [the spec](../Unnamed%20AI%20Simula
 Open questions from the spec that are still open, with the provisional values in use:
 
 - `energyPerAud`: 2 (in [`garden.yaml`](../worlds/garden.yaml) and the defaults).
-- Visitor queue tuning: `maxLength` 5, `ttlTicks` 1,200, `cooldownTicks` 150, weight `1 / position²`.
+- Catalogue item JSON is schema 1, provisional ([visitors.md](architecture/visitors.md)).
+- The mail word filter is a small local list; hearsay firmness is 0.15.
 - The robot's name and silhouette, and synth tuning by ear.

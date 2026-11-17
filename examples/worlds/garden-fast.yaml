@@ -15,7 +15,6 @@ idleTicksPerRealSecond: 0.75   # when nobody is watching
 timeScale: 1
 snapshotEveryTicks: 1000
 publicRead: true
-visitorArchetype: robot
 sim:
   secondsPerTick: 2
   dayLengthSeconds: 86400
@@ -25,7 +24,6 @@ mind:
   brain: ${UAS_BRAIN:-models}
   jobTimeoutTicks: 600
   appraiseOutcomes: ${UAS_APPRAISE:-false}
-  visitorQueue: { maxLength: 5, ttlTicks: 1200, cooldownTicks: 150 }
 entities:
   - { id: robot, type: robot, pos: [10, 10], state: { name: Robot } }   # TODO(open question): the robot's name
   - { id: pad, type: solarPad, pos: [8, 8] }
@@ -33,6 +31,7 @@ entities:
   - { id: ball, type: ball, pos: [12, 12] }
   - { id: fountain, type: fountain, pos: [14, 6] }
   - { id: piano, type: piano, pos: [3, 3] }
+  - { id: mailbox, type: mailbox, pos: [17, 8] }   # visitors' notes; the flag shows when one is waiting
 
 models:
   audPerUsd: 1.55          # fixed config rate, never fetched (replays stay deterministic)

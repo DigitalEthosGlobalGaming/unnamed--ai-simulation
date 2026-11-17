@@ -1,4 +1,5 @@
-import type { Character, Delta, InputEvent, JobName, Json, TickDeltas } from '@uas/core';
+import { randomBytes } from 'node:crypto';
+import { cleanMailText, mailTextProblem, parseDurationSeconds, type CatalogItem, type Character, type Delta, type InputEvent, type JobName, type Json, type Pos, type Sender, type TickDeltas } from '@uas/core';
 import { MindSystem, mindConfigOf } from '@uas/mind';
 import { PERSISTED, SETTINGS_SCHEMA, SettingsPatchSchema, type SettingsPatch, type SettingsValues } from './settings.ts';
 import { ModelGateway, ModelHost, parseModelsConfig, type GatewayOptions, type QueueStats, type UsageRow } from '@uas/models';
@@ -7,6 +8,7 @@ import { World, type WorldState } from '@uas/sim';
 import { Recorder, SqliteInputLog, SqliteReadModels, SqliteSnapshotStore, openDb, schema, type Db } from '@uas/store';
 import { loadMap, loadPacks } from './catalog.ts';
 import { tzOffsetMinutes, type WorldFile } from './config.ts';
+import { DEFAULT_LIMITS, airdropView, beliefsAbout, mailStatus, refuse, type Airdrop, type MailStatus, type Refusal, type VisitorLimits } from './visitors.ts';
 
 export interface RuntimeOptions {
   dbPath: string;
@@ -30,7 +32,8 @@ export interface WorldStatus {
   watched: boolean;
   effectiveTicksPerRealSecond: number;
   pendingJobs: number;
-  visitorQueueDepth: number;
+  /** Messages waiting in the world's mailbox. */
+  mailWaiting: number;
   costAudToday: number;
   modelLatencyMs: number;
   tickLagMs: number;
@@ -69,6 +72,11 @@ export class WorldRuntime {
   private modelsBusy = false;
   private latencies: number[] = [];
   private readonly opts: RuntimeOptions;
+  /** Visitor limits (world settings, persisted through `settings.change`). */
+  limits: VisitorLimits = structuredClone(DEFAULT_LIMITS);
+  /** Last drop / post per user (real ms): cooldowns are admission control, outside the sim. */
+  private readonly lastDrop = new Map<string, number>();
+  private readonly lastPost = new Map<string, number>();
 
   constructor(config: WorldFile, opts: RuntimeOptions) {
     this.config = config;
@@ -102,7 +110,8 @@ export class WorldRuntime {
     const id = this.config.id;
     const latest = this.snapshots.latest(id);
     if (latest) {
-      this.world = World.fromSnapshot(latest.state, registry, this.minds);
+      // Older pack versions load for an upgrade: the log replays as recorded, then `pack.loaded` (below).
+      this.world = World.fromSnapshot(latest.state, registry, this.minds, { allowPackUpgrade: true });
       const events = this.log.read(id, { fromTick: latest.tick });
       for (const e of events) this.world.enqueue(e);
       // Re-simulate to where the log ends, without calling models (their answers are logged).
@@ -116,7 +125,7 @@ export class WorldRuntime {
       if (this.opts.initialState) {
         const state = structuredClone(this.opts.initialState);
         state.config.worldId = id;
-        this.world = World.fromSnapshot(state, registry, this.minds);
+        this.world = World.fromSnapshot(state, registry, this.minds, { allowPackUpgrade: true });
       } else {
         this.world = World.create(
           { worldId: id, seed: this.config.seed, grid: loadMap(this.config.map), ...simConfig(this.config) },
@@ -137,10 +146,17 @@ export class WorldRuntime {
     }
     this.recorder = new Recorder(this.world, this.log, this.snapshots, {
       worldId: id,
-      packVersions: this.world.state.packVersions,
+      packVersions: () => this.world.state.packVersions,
       snapshotEveryTicks: this.config.snapshotEveryTicks,
     });
     this.lastDay = this.world.day;
+    // Content packs changed since the last snapshot (e.g. the airdrop and mailbox objects): logged.
+    if (this.world.state.packVersions !== registry.packVersions) {
+      this.opts.log?.(`content packs changed: ${this.world.state.packVersions} -> ${registry.packVersions}`);
+      this.recorder.submit('pack.loaded', { packVersions: registry.packVersions });
+    }
+    // Visitor characters are gone (visitors drop items and post mail now): remove leftovers, logged.
+    for (const e of this.world.entities()) if (e.kind === 'character' && e.state.visitor === true) this.recorder.submit('admin.despawn', { id: e.id });
     this.restoreSettings();
     if (this.config.clock.mode === 'realtime') {
       // A world switching to real time (e.g. from an older scaled config) gets the configured
@@ -210,7 +226,6 @@ export class WorldRuntime {
   }
 
   status(tickLagMs = 0): WorldStatus {
-    const queue = this.world.characters().reduce((a, c) => a + (c.mind?.visitorQueue.length ?? 0), 0);
     return {
       worldId: this.config.id,
       tick: this.world.tick,
@@ -230,7 +245,7 @@ export class WorldRuntime {
       inWorldSecondsPerRealSecond: this.world.state.config.secondsPerTick * this.ticksPerRealSecond() * this.timeScale,
       queue: this.host.stats(),
       pendingJobs: this.host.pending,
-      visitorQueueDepth: queue,
+      mailWaiting: this.world.state.mailbox?.queue.length ?? 0,
       costAudToday: this.gateway.meter.spentTodayAud(),
       modelLatencyMs: this.latencies.length ? this.latencies.reduce((a, b) => a + b, 0) / this.latencies.length : 0,
       tickLagMs,
@@ -268,6 +283,7 @@ export class WorldRuntime {
       hostedModels: this.gateway.hostedEnabled,
       needDecayMultiplier: mind.needDecayMultiplier,
       escalateBelow: this.gateway.config.escalateBelow,
+      ...structuredClone(this.limits),
     };
   }
 
@@ -307,7 +323,7 @@ export class WorldRuntime {
     const r = SettingsPatchSchema.safeParse(raw);
     if (!r.success) throw new Error(`settings: ${r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`);
     const before = this.settingsValues();
-    const patch = Object.fromEntries(Object.entries(r.data).filter(([k, v]) => before[k as keyof SettingsValues] !== v)) as SettingsPatch;
+    const patch = Object.fromEntries(Object.entries(r.data).filter(([k, v]) => JSON.stringify(before[k as keyof SettingsValues]) !== JSON.stringify(v))) as SettingsPatch;
     const effects: string[] = [];
     if (Object.keys(patch).length === 0) return { values: before, derived: this.settingsDerived(), effects: ['no change'] };
     this.recorder.submit('settings.change', { changes: patch }, userId ? { userId } : undefined);
@@ -322,7 +338,7 @@ export class WorldRuntime {
     }
     for (const k of Object.keys(patch) as (keyof SettingsPatch)[]) {
       if (k === 'paused' || k === 'timeScale') continue;
-      effects.push(`${k}: ${before[k]} → ${patch[k]}`);
+      effects.push(`${k}: ${JSON.stringify(before[k])} → ${JSON.stringify(patch[k])}`);
     }
     const pending: Pending = {
       ...(timing && { timing }),
@@ -343,6 +359,9 @@ export class WorldRuntime {
     if (patch.escalateBelow !== undefined) this.gateway.config.escalateBelow = patch.escalateBelow;
     if (patch.energyPerAud !== undefined) this.gateway.config.energyPerAud = patch.energyPerAud;
     if (patch.hostedModels !== undefined) this.gateway.hostedEnabled = patch.hostedModels;
+    for (const k of Object.keys(DEFAULT_LIMITS) as (keyof VisitorLimits)[]) {
+      if (patch[k] !== undefined) (this.limits as unknown as Record<string, unknown>)[k] = structuredClone(patch[k]);
+    }
     if (patch.ticksPerRealSecond === undefined && patch.moveSecondsPerTile === undefined) return undefined;
     const sc = this.world.state.config;
     const realtime = this.config.clock.mode === 'realtime';
@@ -401,7 +420,6 @@ export class WorldRuntime {
       queue: c.queue,
       current: c.current ?? null,
       pendingJobs: m.pendingJobs.map((j) => ({ jobId: j.jobId, job: j.job, tick: j.tick })),
-      visitorQueue: m.visitorQueue,
     };
   }
 
@@ -409,6 +427,118 @@ export class WorldRuntime {
     const m = this.character(id)?.mind;
     if (!m) return undefined;
     return { stm: m.stm, ltm: m.ltm, beliefs: m.beliefs, sheet: m.sheet };
+  }
+
+  // ------------------------------------------------------------------ visitors: airdrops and the mailbox
+
+  airdrops(): Airdrop[] {
+    return this.world.entities().filter((e) => e.type === 'airdrop').map((e) => airdropView(e));
+  }
+
+  /** One drop, with what the world's characters believe about things like it. */
+  airdrop(dropId: string): (Airdrop & { beliefs: ReturnType<typeof beliefsAbout> }) | Refusal {
+    const e = this.world.entities().find((x) => x.type === 'airdrop' && x.state.dropId === dropId);
+    if (!e) return refuse(404, `no airdrop ${dropId}`);
+    return { ...airdropView(e), beliefs: beliefsAbout(this.world.state, e) };
+  }
+
+  /**
+   * Drop a catalogue item (already validated by the server). Limits apply to visitors, not admins.
+   * Logged as `airdrop.drop` with a copy of the item JSON; the sim lands it on the nearest free tile.
+   */
+  dropItem(item: CatalogItem, pos: Pos, by: Sender): Airdrop | Refusal {
+    const L = this.limits;
+    if (!L.catalogEnabled.includes('*') && !L.catalogEnabled.includes(item.id)) return refuse(403, `${item.name} is not enabled in this world`);
+    if (!Number.isFinite(pos?.x) || !Number.isFinite(pos?.y)) return refuse(400, 'pos must be { x, y }');
+    const drops = this.airdrops();
+    const at = this.world.nearestFreeTile(pos);
+    if (!at) return refuse(409, 'there is no free tile to land on');
+    if (!by.admin) {
+      if (drops.length >= L.airdropWorldCap) return refuse(409, `the world already holds ${drops.length} dropped items (limit ${L.airdropWorldCap})`);
+      const mine = this.world.entities().filter((e) => e.type === 'airdrop' && (e.state.droppedBy as { userKey?: string } | undefined)?.userKey === by.userKey).length;
+      if (mine >= L.airdropMaxActivePerVisitor) return refuse(429, `you already have ${mine} items in this world (limit ${L.airdropMaxActivePerVisitor})`);
+      const wait = this.cooldownLeft(this.lastDrop, by.userKey, L.airdropCooldownSeconds);
+      if (wait > 0) return refuse(429, `please wait ${wait} s before dropping again`);
+    }
+    const expires = item.expiresAfter ? parseDurationSeconds(item.expiresAfter) : L.airdropDefaultExpiry;
+    const dropId = randomBytes(6).toString('hex');
+    const e = this.submit('airdrop.drop', { dropId, item: item as unknown as Json, pos: at, by, ...(expires > 0 && { expiresAfterSeconds: expires }) }, { userId: by.userKey });
+    if (!by.admin) this.lastDrop.set(by.userKey, Date.now());
+    const ticks = expires > 0 ? Math.max(1, Math.round(expires / this.world.state.config.secondsPerTick)) : 0;
+    const uses = item.behaviours.find((b) => b.block === 'consumable');
+    return {
+      id: dropId,
+      entityId: `drop-${dropId}`,
+      itemId: item.id,
+      item,
+      pos: at,
+      droppedBy: { username: by.username, admin: by.admin },
+      droppedTick: e.tick,
+      ...(ticks && { expiresTick: e.tick + ticks }),
+      ...(uses?.block === 'consumable' && { usesLeft: uses.uses }),
+    };
+  }
+
+  removeAirdrop(dropId: string, userId?: string): { ok: true } | Refusal {
+    if (!this.world.entities().some((x) => x.type === 'airdrop' && x.state.dropId === dropId)) return refuse(404, `no airdrop ${dropId}`);
+    this.submit('airdrop.remove', { dropId, reason: 'deleted' }, userId ? { userId } : undefined);
+    return { ok: true };
+  }
+
+  /** Post a note to the mailbox: cleaned, length-capped and filtered; limits for visitors only. */
+  postMail(raw: unknown, by: Sender): MailStatus | Refusal {
+    if (typeof raw !== 'string') return refuse(400, 'text must be a string');
+    const problem = mailTextProblem(raw);
+    if (problem) return refuse(400, problem);
+    const text = cleanMailText(raw);
+    const L = this.limits;
+    const queue = this.world.state.mailbox?.queue ?? [];
+    if (!by.admin) {
+      if (queue.length >= L.mailCapacity) return refuse(429, 'the mailbox is full; try again later');
+      const mine = queue.filter((m) => m.by.userKey === by.userKey).length;
+      if (mine >= L.mailMaxWaitingPerVisitor) return refuse(429, `you already have ${mine} unread messages waiting (limit ${L.mailMaxWaitingPerVisitor})`);
+      const wait = this.cooldownLeft(this.lastPost, by.userKey, L.mailCooldownSeconds);
+      if (wait > 0) return refuse(429, `please wait ${wait} s before posting again`);
+    }
+    const mailId = randomBytes(6).toString('hex');
+    const e = this.submit('mail.post', { mailId, text, by, ...(L.mailExpirySeconds > 0 && { expiresAfterSeconds: L.mailExpirySeconds }) }, { userId: by.userKey });
+    if (!by.admin) this.lastPost.set(by.userKey, Date.now());
+    const row = { worldId: this.config.id, mailId, text, username: by.username, admin: by.admin, userKey: by.userKey, postedTick: e.tick, postedAt: new Date().toISOString(), status: 'waiting', statusTick: null, readerId: null };
+    this.reads.addMail(row);
+    return mailStatus(row, { position: queue.length + 1, showText: true });
+  }
+
+  removeMail(mailId: string, userId?: string): { ok: true } | Refusal {
+    if (!this.world.state.mailbox?.queue.some((m) => m.mailId === mailId)) return refuse(404, `no waiting message ${mailId}`);
+    this.submit('mail.remove', { mailId }, userId ? { userId } : undefined);
+    return { ok: true };
+  }
+
+  /** The mailbox for one viewer: the count for everyone, own messages for a sender, everything for admins. */
+  mail(viewer: { userKey?: string; admin: boolean }): { waiting: number; mine?: MailStatus[]; all?: MailStatus[] } {
+    const queue = this.world.state.mailbox?.queue ?? [];
+    const view = (rows: ReturnType<SqliteReadModels['mail']>) =>
+      rows.map((r) => {
+        const i = queue.findIndex((m) => m.mailId === r.mailId);
+        const status = i >= 0 ? { ...r, status: 'waiting' } : r;
+        let reaction: MailStatus['reaction'];
+        if (status.status === 'read' && status.readerId && status.statusTick !== null) {
+          const f = this.reads.feedAfter(this.config.id, status.readerId, status.statusTick);
+          if (f) reaction = { feedTick: f.tick, summary: f.actions.map((a) => `${a.verb}${a.reason ? `: ${a.reason}` : ''}`).join('; '), ...(f.notes && { notes: f.notes }) };
+        }
+        return mailStatus(status, { ...(i >= 0 && { position: i + 1 }), showText: true, ...(reaction && { reaction }) });
+      });
+    return {
+      waiting: queue.length,
+      ...(viewer.userKey && { mine: view(this.reads.mail(this.config.id, { userKey: viewer.userKey })) }),
+      ...(viewer.admin && { all: view(this.reads.mail(this.config.id)) }),
+    };
+  }
+
+  private cooldownLeft(map: Map<string, number>, key: string, seconds: number): number {
+    const last = map.get(key);
+    if (last === undefined || seconds <= 0) return 0;
+    return Math.max(0, Math.ceil(seconds - (Date.now() - last) / 1000));
   }
 
   /** Persist usage totals and take a final snapshot. */

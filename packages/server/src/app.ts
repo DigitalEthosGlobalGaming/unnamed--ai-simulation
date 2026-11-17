@@ -1,6 +1,6 @@
 import { createServer, type Server } from 'node:http';
 import express, { type NextFunction, type Request, type Response } from 'express';
-import type { Action, EntityDef, InputEvent } from '@uas/core';
+import { CATALOG_TEMPLATES, type CatalogItem, type EntityDef, type InputEvent, type Pos, type Sender } from '@uas/core';
 import { MindSystem } from '@uas/mind';
 import { World, type WorldState } from '@uas/sim';
 import { SqliteInputLog, SqliteReadModels, SqliteSnapshotStore, openDb, replay } from '@uas/store';
@@ -11,6 +11,7 @@ import { Hub } from './hub.ts';
 import { VercelAuth, type AuthEnv } from './session.ts';
 import type { WorldStatus } from './runtime.ts';
 import { Supervisor, type WorldHandle } from './supervisor.ts';
+import { Catalog, isRefusal, itemRules, redactEvent, redactState, validateCatalogItem } from './visitors.ts';
 
 export interface AppOptions {
   dbPath: string;
@@ -48,8 +49,7 @@ export function createApp(opts: AppOptions): App {
   const reads = new SqliteReadModels(db);
   const auth = new VercelAuth(db, opts.authEnv ?? {}, opts.authFetch);
   const hub = new Hub(supervisor, inputLog, snaps, opts.keys, (cookie) => auth.principalFor(cookie));
-  /** visitor key → visitor entity, per world: one visitor per key per world. */
-  const visitors = new Map<string, string>();
+  const catalog = new Catalog(db);
 
   const app = express();
   app.use(express.json({ limit: '256kb' }));
@@ -95,6 +95,20 @@ export function createApp(opts: AppOptions): App {
       next(e);
     }
   };
+  const isAdmin = (req: Request) => principal(req)?.role === 'admin';
+  /** Who a visitor action is from: public username, admin flag, and the key that limits apply to. */
+  const sender = (req: Request): Sender => {
+    const p = principal(req)!;
+    const userKey = p.keyId ?? 'anonymous';
+    return { username: p.username ?? (p.role === 'admin' ? 'admin' : `visitor-${userKey.slice(0, 6)}`), admin: p.role === 'admin', userKey };
+  };
+  /** Worker results that are refusals become HTTP errors. */
+  const settle = <T>(v: T) => {
+    if (isRefusal(v)) throw new HttpError(v.status, v.error);
+    return v;
+  };
+  /** Need keys and noises an item may use: from every pack the server knows (validation is server-wide). */
+  const rules = () => itemRules(loadPacks(listPacks().map((p) => p.name)).registry);
   const summary = (w: WorldHandle) => ({ id: w.config.id, name: w.config.name, packs: w.config.packs, map: w.config.map, publicRead: w.config.publicRead, status: w.status });
 
   async function startWorld(config: WorldFile, extra: { initialState?: WorldState; parent?: { worldId: string; forkTick: number } } = {}) {
@@ -129,7 +143,7 @@ export function createApp(opts: AppOptions): App {
     metric('uas_model_jobs_dropped_superseded', 'Queued decisions replaced by newer ones', (s) => s.queue.dropped.superseded);
     metric('uas_model_jobs_failed', 'Jobs no model answered', (s) => s.queue.dropped.failed);
     metric('uas_model_timeouts', 'Model calls that hit their timeout (from start)', (s) => s.queue.timeouts);
-    metric('uas_visitor_queue_depth', 'Visitor requests waiting across characters', (s) => s.visitorQueueDepth);
+    metric('uas_mail_waiting', 'Messages waiting in the mailbox', (s) => s.mailWaiting);
     res.type('text/plain; version=0.0.4').send(`${lines.join('\n')}\n`);
   });
 
@@ -188,30 +202,12 @@ export function createApp(opts: AppOptions): App {
   }));
   app.post('/worlds/:id/characters/:cid/poke', need('admin'), route((req) => submit(world(req), 'admin.poke', { characterId: req.params.cid }, { userId: principal(req)?.keyId })));
 
-  // ---- visitors
-  app.post('/worlds/:id/visitors', need('visitor'), route(async (req) => {
-    const w = world(req);
-    const p = principal(req)!;
-    const key = `${w.config.id}|${p.keyId}`;
-    const existing = visitors.get(key);
-    if (existing) return { visitorId: existing };
-    const visitorId = `visitor-${p.keyId!.slice(0, 8)}`;
-    const pos = (req.body as { pos?: { x: number; y: number } })?.pos ?? { x: 0, y: 0 };
-    await submit(w, 'admin.spawn', { id: visitorId, type: w.config.visitorArchetype, pos, state: { visitor: true } }, { userId: p.keyId });
-    visitors.set(key, visitorId);
-    return { visitorId };
-  }));
-  app.post('/worlds/:id/visitors/:vid/actions', need('visitor'), route((req) => {
-    const w = world(req);
-    const p = principal(req)!;
-    if (p.role !== 'admin' && visitors.get(`${w.config.id}|${p.keyId}`) !== req.params.vid) throw new HttpError(403, 'not your visitor');
-    const actions = (req.body as { actions?: Action[] }).actions;
-    if (!Array.isArray(actions) || actions.length === 0 || actions.length > 3) throw new HttpError(400, 'actions: 1 to 3 actions');
-    return submit(w, 'visitor.command', { visitorId: req.params.vid, actions }, { userId: p.keyId });
-  }));
-
   // ---- log, feed, replay, fork
-  app.get('/worlds/:id/events', need('spectator'), route((req) => inputLog.page(world(req).config.id, Number(req.query.fromSeq ?? 0), Math.min(1000, Number(req.query.limit ?? 100)))));
+  app.get('/worlds/:id/events', need('spectator'), route((req) => {
+    const page = inputLog.page(world(req).config.id, Number(req.query.fromSeq ?? 0), Math.min(1000, Number(req.query.limit ?? 100)));
+    const admin = isAdmin(req);
+    return page.map((e) => redactEvent(e, admin));
+  }));
   app.get('/worlds/:id/feed', need('spectator'), route((req) => reads.feed(world(req).config.id, req.query.characterId ? String(req.query.characterId) : undefined, Math.min(500, Number(req.query.limit ?? 100)))));
   app.get('/worlds/:id/deltas', need('spectator'), route((req) => {
     const rows = reads.deltas(world(req).config.id, Number(req.query.fromTick ?? 0), Number(req.query.toTick ?? Number.MAX_SAFE_INTEGER));
@@ -222,7 +218,7 @@ export function createApp(opts: AppOptions): App {
   }));
   app.post('/worlds/:id/seek', need('spectator'), route((req) => {
     const { id, state } = hub.openSession(world(req).config.id, Number((req.body as { tick: number }).tick));
-    return { sessionId: id, tick: state.tick, state };
+    return { sessionId: id, tick: state.tick, state: redactState(state, isAdmin(req)) };
   }));
   app.post('/worlds/:id/fork', need('admin'), route(async (req) => {
     const parent = world(req);
@@ -233,7 +229,7 @@ export function createApp(opts: AppOptions): App {
       worldId: parent.config.id,
       log: inputLog,
       snapshots: snaps,
-      restore: (s) => World.fromSnapshot(s.state, registry, minds),
+      restore: (s) => World.fromSnapshot(s.state, registry, minds, { allowPackUpgrade: true }),
       toTick: Number(body.tick),
       onTick: () => minds.drain(),
     });
@@ -241,6 +237,52 @@ export function createApp(opts: AppOptions): App {
     const config = parseWorldFile({ ...parent.config, ...body.config, id, entities: [] });
     return summary(await startWorld(config, { initialState: at.snapshot(), parent: { worldId: parent.config.id, forkTick: Number(body.tick) } }));
   }));
+
+  // ---- the airdrop catalogue (server-wide)
+  app.get('/catalog', need('spectator'), route((req) => {
+    const rows = catalog.list();
+    if (isAdmin(req)) return rows.map((r) => ({ ...r.item, disabled: r.disabled, updatedAt: r.updatedAt, updatedBy: r.updatedBy }));
+    return rows.filter((r) => !r.disabled).map((r) => r.item);
+  }));
+  app.get('/catalog/templates', need('admin'), route(() => CATALOG_TEMPLATES));
+  app.post('/catalog/validate', need('admin'), route((req) => validateCatalogItem((req.body as { item?: unknown })?.item, rules())));
+  app.put('/catalog/:itemId', need('admin'), route((req) => {
+    const body = (req.body ?? {}) as { item?: unknown; disabled?: unknown };
+    const r = validateCatalogItem(body.item, rules());
+    if (!r.ok) throw Object.assign(new HttpError(400, `invalid item: ${r.errors.map((e) => `${e.path || 'item'}: ${e.message}`).join('; ')}`), { errors: r.errors });
+    if (r.item.id !== req.params.itemId) throw new HttpError(400, `item id ${r.item.id} does not match the URL (${req.params.itemId})`);
+    const row = catalog.put(r.item, body.disabled === true, sender(req).username);
+    return { ...row.item, disabled: row.disabled, updatedAt: row.updatedAt, updatedBy: row.updatedBy };
+  }));
+  app.delete('/catalog/:itemId', need('admin'), route((req) => {
+    if (!catalog.delete(String(req.params.itemId))) throw new HttpError(404, `no catalogue item ${req.params.itemId}`);
+    return { ok: true };
+  }));
+
+  // ---- airdrops
+  app.get('/worlds/:id/airdrops', need('spectator'), route((req) => world(req).call({ method: 'airdrops' })));
+  app.get('/worlds/:id/airdrops/:dropId', need('spectator'), route(async (req) => settle(await world(req).call({ method: 'airdrop', dropId: String(req.params.dropId) }))));
+  app.post('/worlds/:id/airdrops', need('visitor'), route(async (req) => {
+    const w = world(req);
+    const body = (req.body ?? {}) as { itemId?: unknown; pos?: Pos };
+    const row = typeof body.itemId === 'string' ? catalog.get(body.itemId) : undefined;
+    if (!row || (row.disabled && !isAdmin(req))) throw new HttpError(404, `no catalogue item ${String(body.itemId)}`);
+    if (!body.pos || typeof body.pos.x !== 'number' || typeof body.pos.y !== 'number') throw new HttpError(400, 'pos must be { x, y }');
+    return settle(await w.call({ method: 'drop', item: row.item as CatalogItem, pos: { x: body.pos.x, y: body.pos.y }, by: sender(req) }));
+  }));
+  app.delete('/worlds/:id/airdrops/:dropId', need('admin'), route(async (req) =>
+    settle(await world(req).call({ method: 'removeAirdrop', dropId: String(req.params.dropId), ...(principal(req)?.keyId && { userId: principal(req)!.keyId }) })),
+  ));
+
+  // ---- the mailbox
+  app.get('/worlds/:id/mail', need('spectator'), route((req) => {
+    const p = principal(req);
+    return world(req).call({ method: 'mail', admin: p?.role === 'admin', ...(p && p.role !== 'spectator' && p.keyId && { userKey: p.keyId }) });
+  }));
+  app.post('/worlds/:id/mail', need('visitor'), route(async (req) => settle(await world(req).call({ method: 'postMail', text: (req.body as { text?: unknown })?.text, by: sender(req) }))));
+  app.delete('/worlds/:id/mail/:mailId', need('admin'), route(async (req) =>
+    settle(await world(req).call({ method: 'removeMail', mailId: String(req.params.mailId), ...(principal(req)?.keyId && { userId: principal(req)!.keyId }) })),
+  ));
 
   // ---- packs and usage
   app.get('/packs', need('admin'), route(() => listPacks()));
@@ -262,7 +304,8 @@ export function createApp(opts: AppOptions): App {
 
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     const status = err instanceof HttpError ? err.status : 400;
-    res.status(status).json({ error: err.message });
+    const errors = (err as { errors?: unknown }).errors;
+    res.status(status).json({ error: err.message, ...(errors !== undefined && { errors }) });
   });
 
   const server = createServer(app);

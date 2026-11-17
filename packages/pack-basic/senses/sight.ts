@@ -1,4 +1,4 @@
-import { manhattan, type Observation, type Sense } from '@uas/core';
+import { manhattan, perceivedType, type Observation, type Sense } from '@uas/core';
 import { direction, lineOfSight } from './geometry.ts';
 
 /** Sight: archetype `sightRange`, halved at night, blocked by `blocksSight` tiles. */
@@ -19,8 +19,9 @@ export const sight: Sense = {
         sense: 'basic.sight',
         subjectId: e.id,
         kind: 'seen',
-        summary: `a ${e.type}${held}, ${d === 0 ? 'right here' : `${d} tiles ${direction(self.pos, e.pos)}`}`,
-        affordances: world.verbsOf(e.type),
+        // The mailbox flag is visible; what it means is for the robot to find out.
+        summary: `a ${perceivedType(e)}${e.type === 'mailbox' && Number(e.state.waiting) > 0 ? ' with its flag up' : ''}${held}, ${d === 0 ? 'right here' : `${d} tiles ${direction(self.pos, e.pos)}`}`,
+        affordances: world.verbsFor(e),
         salience: e.kind === 'character' ? 0.4 : 0.2,
         features: { distance: d, dx: e.pos.x - self.pos.x, dy: e.pos.y - self.pos.y },
       });

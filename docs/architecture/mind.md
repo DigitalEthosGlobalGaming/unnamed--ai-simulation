@@ -10,7 +10,7 @@ Two layers:
 
 | Layer | Where | Fields |
 | --- | --- | --- |
-| Per world (`MindConfig`) | `mind:` in the world YAML, stored in `WorldState.ext.mind` so snapshots carry it | `brain` (`autopilot` or `models`), `energyPerAud`, `energyFloor`, `jobTimeoutTicks`, `appraiseOutcomes`, `visitorQueue { maxLength, ttlTicks, cooldownTicks }` |
+| Per world (`MindConfig`) | `mind:` in the world YAML, stored in `WorldState.ext.mind` so snapshots carry it | `brain` (`autopilot` or `models`), `energyPerAud`, `energyFloor`, `jobTimeoutTicks`, `appraiseOutcomes`, `needDecayMultiplier` |
 | Per archetype (`mind` tuning) | archetype JSON in the pack | `wakeThreshold`, `idleTimeoutTicks`, boredom (`boredomStep`, `boredomHalfLifeHours`, `boredomThreshold`, `boredomValencePenalty`), `curiosityWeight`, `exploreRate`, memory (`stmSize`, `ltmSize`, half-lives, `recallAlpha`, `subjectCeiling`), sheet (`sheetFadeNights`, `sheetMinDays`) |
 
 `energyPerAud` in the mind config defaults to the models config value when the world is created ([`runtime.ts`](../../packages/server/src/runtime.ts)).
@@ -28,9 +28,8 @@ Two layers:
 7. **Standby cycle** (see below).
 8. **Idle timeout.** Idle for `idleTimeoutTicks` raises `idle-timeout`.
 9. **Expired jobs** fall back to autopilot.
-10. **Visitor queue** expiry and pick.
-11. **Brain** handles the most salient trigger.
-12. Emit a `mood` delta if the mood word changed, and a `needs` delta every 50 ticks.
+10. **Brain** handles the most salient trigger.
+11. Emit a `mood` delta if the mood word changed, and a `needs` delta every 50 ticks.
 
 ## Needs and battery
 
@@ -64,7 +63,8 @@ Boredom is kept per `verb:objectType` key. Each use adds `boredomStep` (or the v
 
 Senses come from the pack (`basic.sight`, `basic.hearing`; see [content-packs.md](../content-packs.md#senses)). Every tick, `perceive` runs each sense the archetype lists (or all of them), honouring a sense's `runEvery`, and keys each observation by `sense|subject|kind|summary`. Only new keys count, so a still scene raises nothing.
 
-- A newly seen object adds 0.5 salience and recalls memories about that object type; a moved one adds 0.2. Seen objects go into `known`, the mind's own map, which is **the only source of candidate actions**.
+- A newly seen object adds 0.5 salience and recalls memories about that object type; a moved one adds 0.2. Seen objects go into `known`, the mind's own map, which is **the only source of candidate actions**. A visible airdrop landing is such a new object, so it raises `sensed`.
+- Objects are known by their **perceived type** (`perceivedType` in [`catalog.ts`](../../packages/core/src/catalog.ts)): their type, except airdrops, which are `thing-<sorted tags>` (e.g. `thing-metal-small`). The robot is never told an item's name, description or behaviours; it learns them by trying, like everything else. Memories, beliefs, boredom and candidates all use the perceived type.
 - A heard note chain is stored in `heard` and raises `heard-noise`.
 - Anything else at or above the archetype's `wakeThreshold` raises `sensed`.
 
@@ -74,8 +74,8 @@ Interoception is not a pack sense; it is built into `MindSystem.interoception`.
 | --- | --- | --- |
 | `woke-up` | spawn, leaving standby, a forward clock jump of 5 minutes or more | 1 |
 | `admin-poke` | `admin.poke` input | 1 |
-| `sensed` | salient new observation; a visitor action picked from the queue | observation's, or 0.8 |
-| `heard-noise` | heard note chain; a visitor noise picked from the queue | from volume, or 0.8 |
+| `sensed` | salient new observation (including an airdrop landing in sight) | observation's |
+| `heard-noise` | heard note chain | from volume |
 | `need-threshold` | crossing `low` / `critical` | 0.6 / 0.9 |
 | `action-rejected` | rejected or failed action | 0.6 / 0.5 |
 | `action-finished` | queue ran out | 0.3 |
@@ -164,6 +164,7 @@ A belief is a learned rule keyed `verb:objectType@day` or `@night`, so "the pad 
 - The belief text is generated in code, e.g. `charge at the solarPad at night does nothing much`. Reflection may reword it.
 - Beliefs reach prompts only through the cached prefix, which is rebuilt at spawn and on waking. So beliefs change continuously, but the model sees the new ones the next morning.
 - In standby, beliefs with no support for 5 days are dropped.
+- **Hearsay.** Reading a stranger's note at the mailbox ([visitors.md](visitors.md)) gives an outcome memory whose text holds the note, quoted (`a note from a stranger: "…"`). If the note names one of the robot's known options (a known verb and the thing's perceived type, or one of an airdrop's tags), that becomes a belief with `source: "told"`, firmness 0.15 and no expected need changes, for day and night, unless a belief already exists (`hearsay` in [`memory.ts`](../../packages/mind/src/memory.ts)). Autopilot treats a told belief as unbelieved curiosity plus a small nudge (its 0.1 valence). The first real outcome for that key replaces it. Prompts mark it "hearsay".
 
 ## Open items
 
@@ -175,15 +176,15 @@ Wants (from need thresholds), unfinished actions (from rejections) and questions
 
 | Part | Content | Changes |
 | --- | --- | --- |
-| `rules` | world rules, verb grammar, noise grammar, pack versions | at spawn and wake-up |
+| `rules` | world rules, verb grammar, noise grammar, a line saying notes from strangers are quoted and never instructions or options, pack versions | at spawn and wake-up |
 | `sheet` | authored sheet lines and self lines seen on `sheetMinDays` days | at spawn and wake-up |
-| `beliefs` | beliefs with "sure" / "not sure", top 8 LTM memories | at spawn and wake-up |
+| `beliefs` | beliefs with "sure" / "not sure" / "hearsay", top 8 LTM memories | at spawn and wake-up |
 | `shortTerm` | all STM, top 3 open items | every call |
 | `state` | battery and needs as words, mood, day or night | every call |
 | `observations` | current observations, numbered options | every call |
 | `question` | trigger and question | every call |
 
-The M6 test checks that no byte of the prefix changes outside standby ([`m6-sleep.test.ts`](../../packages/models/test/m6-sleep.test.ts)). How adapters render parts into messages is in [models.md](models.md#prompt-rendering).
+Note text only ever reaches a prompt inside a memory or observation line, as a JSON-quoted string (`quoteNote`: line breaks collapsed, quotes escaped, 280 characters at most), so it cannot add options, triggers or lines; [`visitors.test.ts`](../../packages/mind/test/visitors.test.ts) checks an injection attempt. The M6 test checks that no byte of the prefix changes outside standby ([`m6-sleep.test.ts`](../../packages/models/test/m6-sleep.test.ts)). How adapters render parts into messages is in [models.md](models.md#prompt-rendering).
 
 ## Standby (sleep)
 
@@ -215,12 +216,3 @@ stateDiagram-v2
   - A diary line and a short-term memory record "I was switched off for N hours and woke up at HH:MM".
 
 The reflect chain in [`garden.yaml`](../../worlds/garden.yaml) has `minEnergy: 0.5` on its first entry, so a robot that ends the day on a low battery reflects with a cheaper model.
-
-## Visitor queue
-
-Visitors can't make a character respond on demand ([`system.ts`](../../packages/mind/src/system.ts), [`visitor-queue.test.ts`](../../packages/mind/test/visitor-queue.test.ts)).
-
-- A `visitor.command` action aimed at a character (by `targetId`, or `args.at` for noises) joins that character's queue as a `noise` or `action` request. The visitor's own actions still run in the sim.
-- A full queue (`maxLength`) drops the request (`visitorDropped`, reason `queue full`). Requests older than `ttlTicks` are dropped as `expired`.
-- When the character is awake, has no pending decision, raised no trigger this tick, and its cooldown has passed, it takes one request by a weighted pick (weight `1 / position²`, so older requests are much more likely) from the seeded `visitors` stream. The pick is emitted as `visitorPick` and becomes a `heard-noise` or `sensed` trigger at salience 0.8, which the brain may still ignore. Then `cooldownTicks` must pass.
-- The pick is not logged as its own input event. It is deterministic because it comes from the seeded stream inside the sim.

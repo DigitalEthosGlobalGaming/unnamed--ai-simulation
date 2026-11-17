@@ -8,7 +8,7 @@ A self-hosted world where little AI robots live in a 2D tile world. They learn w
 | --- | --- |
 | `@uas/core` | IDs, hashing, the seeded PRNG (xoshiro128** with named streams), the grid, entity, effect, event and mind types, the WebSocket protocol types, and the Zod pack schemas and registry. No I/O. |
 | `@uas/sim` | The deterministic tick loop, built-in verbs, A* pathfinding, the action queue, effect resolution, state hashing and snapshots, and the plugin hooks for the mind. |
-| `@uas/mind` | Needs, energy, mood, boredom, senses runtime, triggers, autopilot, memory (STM and LTM), beliefs, diary, sleep (standby), the visitor queue and the prompt builder. No clocks, randomness or I/O. |
+| `@uas/mind` | Needs, energy, mood, boredom, senses runtime, triggers, autopilot, memory (STM and LTM), beliefs, diary, sleep (standby), hearsay from the mailbox and the prompt builder. No clocks, randomness or I/O. |
 | `@uas/models` | The `DecisionModel` and `ChatModel` interfaces, the adapters (Ollama decision, local chat, LLM-as-decision, AI SDK, Jev stub and offline fakes), the YAML router, the AUD cost meter and the model host. |
 | `@uas/store` | The input log, snapshots and read models, both in memory and in SQLite (Drizzle, better-sqlite3, WAL, zstd snapshots), plus `Recorder` and `replay()`. |
 | `@uas/pack-basic` | The robot pack: solar pad, dock, ball, fountain and piano; sight and hearing; the `robot` archetype; the garden map. |
@@ -68,7 +68,9 @@ Create an app in the Vercel dashboard (team **Settings → Apps → Create**) wi
 
 Other signed-in users are visitors, and API keys keep working. See [docs/operations.md](docs/operations.md#sign-in-with-vercel).
 
-World settings, such as tick rate, walking speed, the A$ cap, the energy rate and hosted models on or off, can be changed live with `PATCH /worlds/:id/settings`.
+Visitors aren't characters: they airdrop items from an admin-edited catalogue (seeded with a battery snack, a squeaky toy and a heavy rock) and post short notes to the garden's mailbox, which the robot may read. Limits are world settings, unlimited by default; admins are exempt. See [docs/architecture/visitors.md](docs/architecture/visitors.md).
+
+World settings, such as tick rate, walking speed, the A$ cap, the energy rate, hosted models on or off and visitor limits, can be changed live with `PATCH /worlds/:id/settings`.
 
 ## Hosted models (Vercel AI Gateway)
 

@@ -7,3 +7,6 @@ export * from './events.ts';
 export * from './pack.ts';
 export * from './mind-types.ts';
 export * from './protocol.ts';
+export * from './icon.ts';
+export * from './catalog.ts';
+export * from './mail.ts';

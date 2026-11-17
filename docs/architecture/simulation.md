@@ -11,12 +11,13 @@ Code: [`packages/sim/src/world.ts`](../../packages/sim/src/world.ts), [`packages
 | Field | Meaning |
 | --- | --- |
 | `config` | `worldId`, `seed`, `grid`, `secondsPerTick`, `dayLengthSeconds`, `startSecond`, `moveTicksPerTile` |
-| `packVersions` | e.g. `basic@0.1.0#<hash>`; must match the loaded registry and every input event |
+| `packVersions` | e.g. `basic@0.1.0#<hash>`; must match the loaded registry (an older world upgrades through a logged `pack.loaded`) |
 | `tick` | The tick the next `step()` will process |
 | `nextId`, `mapVersion` | ID counter for spawned entities; walkability version that keys the path cache |
 | `rng` | State of every named PRNG stream |
 | `entities` | All characters and objects, by ID |
 | `ext` | Plugin-owned state, e.g. `ext.mind` (the `MindConfig`) and `ext.modelsBusy` |
+| `mailbox` | `{ queue }`: messages waiting, oldest first (`mailId`, `text`, `by`, `postedTick`, `expiresTick?`). Absent until the first post |
 
 The shapes as a frontend sees them are in [viewer-integration.md](../viewer-integration.md#worldstate-the-snapshot).
 
@@ -56,17 +57,17 @@ sequenceDiagram
 
 The spec lists "update needs, run senses, emit triggers" as separate tick phases. In the code they all happen inside the mind's `afterTick` hook, in the order described in [mind.md](mind.md#per-tick-order).
 
-Inputs the sim handles itself (when the plugin does not): `model.answer` for job `decide` with an `{ actions }` answer (replaces the queue), `admin.spawn`, `admin.edit`, `admin.despawn`, and `visitor.command`. `admin.poke` is rejected without a mind; `models.load` is ignored. Anything else emits an `inputRejected` delta.
+Inputs the sim handles itself (when the plugin does not): `model.answer` for job `decide` with an `{ actions }` answer (replaces the queue), `admin.spawn`, `admin.edit`, `admin.despawn`, `airdrop.drop`, `airdrop.remove`, `mail.post`, `mail.remove` and `pack.loaded` (see [Airdrops and the mailbox](#airdrops-and-the-mailbox)). `admin.poke` is rejected without a mind; `models.load` is ignored. Anything else emits an `inputRejected` delta.
 
 ## Determinism rules
 
 | Rule | Where |
 | --- | --- |
 | No `Date.now()`, `new Date()`, `Math.random()`, `performance.now()`, `process.*`, timers, `fetch`, dynamic `import()` or I/O module imports in `packages/sim/src` or `packages/mind/src`. | Enforced by [`determinism-rules.test.ts`](../../packages/sim/test/determinism-rules.test.ts) (a test, not a lint rule). |
-| One seed per world, split into named xoshiro128** streams so adding a consumer never shifts another stream. Streams in use: `effects` (handlers), `autopilot` (exploration, noise candidates), `visitors` (visitor-queue pick). | [`rng.ts`](../../packages/core/src/rng.ts) |
+| One seed per world, split into named xoshiro128** streams so adding a consumer never shifts another stream. Streams in use: `effects` (handlers), `autopilot` (exploration, noise candidates). | [`rng.ts`](../../packages/core/src/rng.ts) |
 | Entities are iterated in sorted ID order. | `World.entities()` |
-| Inputs are applied in `(tick, seq)` order; an input for a past tick or another pack version throws. | `World.enqueue()` |
-| Model answers, admin edits, visitor commands and the model-load signal enter only as input events. | [events-and-replay.md](events-and-replay.md) |
+| Inputs are applied in `(tick, seq)` order; an input for a past tick throws. | `World.enqueue()` |
+| Model answers, admin edits, airdrops, mail and the model-load signal enter only as input events. | [events-and-replay.md](events-and-replay.md) |
 | Pathfinding breaks ties on `(f, h, insertion order)` with a fixed neighbour order N, E, S, W. | [`path.ts`](../../packages/sim/src/path.ts), [`grid.ts`](../../packages/core/src/grid.ts) |
 
 Tests: [`world.test.ts`](../../packages/sim/test/world.test.ts) (snapshot round trip), [`m1-scripted.test.ts`](../../packages/pack-basic/test/m1-scripted.test.ts) (identical hashes across two runs), [`m2-replay.test.ts`](../../packages/store/test/m2-replay.test.ts) (10,000-tick replay).
@@ -118,7 +119,7 @@ classDiagram
   ActiveAction --> Action
 ```
 
-Source: [`entities.ts`](../../packages/core/src/entities.ts). Characters spawn with every need and energy at `START_LEVEL` (0.75). An archetype type spawns a character; an object type spawns an object; anything else is rejected. Visitors are characters with `state.visitor === true` and no `mind`.
+Source: [`entities.ts`](../../packages/core/src/entities.ts). Characters spawn with every need and energy at `START_LEVEL` (0.75). An archetype type spawns a character; an object type spawns an object; anything else is rejected. An entity may carry `tags` (airdrops take the item's). Visitors are not entities; a leftover visitor character from older worlds is removed on start.
 
 ## Verbs and effect handlers
 
@@ -164,6 +165,17 @@ stateDiagram-v2
 ```
 
 Every transition emits an `action` delta. Range is Manhattan distance, checked at start and again when the handler runs; an object the actor holds is always in range.
+
+## Airdrops and the mailbox
+
+Visitors' items and notes ([visitors.md](visitors.md)) live in the sim, so expiry and consumption replay exactly:
+
+- **Landing.** `airdrop.drop` spawns an object of type `airdrop` (id `drop-<dropId>`) on the nearest free walkable tile to `pos` (breadth-first from the clamped tile; free means walkable terrain with no object on it; `World.nearestFreeTile`). Its state holds `dropId`, `itemId`, the item JSON copy, `verbs`, `droppedBy`, `droppedTick`, and `usesLeft` and `expiresTick` when they apply. Emits `airdrop` `added`.
+- **Verbs per entity.** An entity's own `state.verbs` come before its type's (`World.verbDefOf`, `verbsFor`). Airdrop verbs come from the item's blocks (`airdropVerbs`): `scan` always, `pickup`/`drop` when portable, and one verb per `affectsNeeds` (handler `basic.airdropNeeds`) or `makesNoise` (handler `basic.airdropNoise`, 2 ticks per note) block. A verb whose handler isn't registered is rejected.
+- **Use and consumption.** Each completed verb on an airdrop emits `airdrop` `used`. A consumable's `usesLeft` counts down; at 0 the item is removed at the start of the next tick (`removed`, reason `used up`), so minds still see what they just used.
+- **Expiry.** At the start of each tick, drops and waiting mail past their `expiresTick` are removed (`removed` reason `expired`; `mail` status `expired`).
+- **Mailbox.** `mail.post` appends to `state.mailbox.queue`; every `mailbox` object's `state.waiting` mirrors the queue length (the flag), with a `mailbox` delta. The `read` verb's handler (`basic.mailRead`) returns the oldest message as `a note from a stranger: "<quoted text>"` and takes it (`mail` status `read`, with `readerId`), or `the mailbox was empty`. `mail.remove` deletes a waiting message.
+- **Noise.** A handler may return `noise` (notes): the sim emits a `vocalize` delta and a sound from the object, like a character's noise.
 
 ## Pathfinding
 
@@ -225,7 +237,6 @@ The runtime takes a snapshot at every in-world day boundary ([events-and-replay.
 
 - `snapshotEverySeconds`;
 - `mind.jobTimeoutSeconds`;
-- `mind.visitorQueue.ttlSeconds` and `cooldownSeconds`;
 - `models.queue.staleSeconds`.
 
 Need decay and drain were already per in-world hour. Verb durations in pack JSON are still in ticks: with 1 s per tick, charging takes 50 s and a dock rest 200 s.

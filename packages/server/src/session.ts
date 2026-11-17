@@ -112,7 +112,7 @@ export class VercelAuth {
   /** A principal for the API's role checks; `keyId` binds a visitor character to this user. */
   principalFor(cookieHeader: string | undefined): (Principal & { viaCookie: true }) | undefined {
     const s = this.sessionFor(cookieHeader);
-    return s && { role: s.role, keyId: `u${createHash('sha256').update(s.id).digest('hex').slice(0, 15)}`, viaCookie: true };
+    return s && { role: s.role, keyId: `u${createHash('sha256').update(s.id).digest('hex').slice(0, 15)}`, username: s.username ?? s.name ?? 'visitor', viaCookie: true };
   }
 
   roleFor(user: { id: string; username: string | null }): Role {

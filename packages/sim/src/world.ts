@@ -1,5 +1,9 @@
 import {
   DecideAnswerSchema,
+  airdropUses,
+  airdropVerbs,
+  type CatalogItem,
+  type VerbDef,
   MAX_QUEUE,
   RngStreams,
   hashJson,
@@ -31,6 +35,8 @@ import {
   type WorldView,
 } from '@uas/core';
 import { findPath, type PathGoal } from './path.ts';
+
+const isRecord = (v: unknown): v is Record<string, Json> => !!v && typeof v === 'object' && !Array.isArray(v);
 
 export interface WorldConfig {
   worldId: WorldId;
@@ -91,6 +97,16 @@ export interface WorldState {
    * one). Moved only by logged `clock.*` inputs. `dayZero` makes `day` count from 0.
    */
   clock?: { baseSeconds: number; baseTick: number; dayZero: number; timezone: string; anchored?: boolean };
+  /** The world's mailbox: messages oldest first (deterministic, snapshotted). Text is private until read. */
+  mailbox?: { queue: MailItem[] };
+}
+
+export interface MailItem {
+  mailId: string;
+  text: string;
+  by: { username: string; admin: boolean; userKey: string };
+  postedTick: number;
+  expiresTick?: number;
 }
 
 /** Need and energy level a new character starts at (until the mind package owns this). */
@@ -114,8 +130,9 @@ export class World implements WorldView {
   private tickSounds: Sound[] = [];
   readonly plugin: SimPlugin | undefined;
 
-  constructor(state: WorldState, registry: Registry, plugin?: SimPlugin) {
-    if (state.packVersions !== registry.packVersions) {
+  constructor(state: WorldState, registry: Registry, plugin?: SimPlugin, opts: { allowPackUpgrade?: boolean } = {}) {
+    // A world saved under older pack versions may be loaded to upgrade it (see `pack.loaded`).
+    if (state.packVersions !== registry.packVersions && !opts.allowPackUpgrade) {
       throw new Error(`content pack mismatch: world needs ${state.packVersions}, loaded ${registry.packVersions}`);
     }
     state.clock ??= { baseSeconds: state.config.startSecond, baseTick: 0, dayZero: 0, timezone: 'world' };
@@ -155,8 +172,8 @@ export class World implements WorldView {
   }
 
   /** Restore from a snapshot; the snapshot itself is not mutated. */
-  static fromSnapshot(state: WorldState, registry: Registry, plugin?: SimPlugin): World {
-    return new World(structuredClone(state), registry, plugin);
+  static fromSnapshot(state: WorldState, registry: Registry, plugin?: SimPlugin, opts: { allowPackUpgrade?: boolean } = {}): World {
+    return new World(structuredClone(state), registry, plugin, opts);
   }
 
   snapshot(): WorldState {
@@ -206,6 +223,26 @@ export class World implements WorldView {
 
   verbsOf(type: string): string[] {
     return Object.keys(this.registry.objects.get(type)?.verbs ?? {});
+  }
+
+  verbsFor(e: Readonly<AnyEntity>): string[] {
+    const own = e.kind === 'object' && isRecord(e.state.verbs) ? Object.keys(e.state.verbs) : [];
+    return [...new Set([...this.verbsOf(e.type), ...own])];
+  }
+
+  /** A verb's definition on one entity: its own (airdrops) first, then its type's. */
+  verbDefOf(e: Readonly<AnyEntity> | undefined, verb: string): VerbDef | undefined {
+    if (e?.kind !== 'object') return undefined;
+    const own = isRecord(e.state.verbs) ? e.state.verbs[verb] : undefined;
+    if (isRecord(own) && typeof own.handler === 'string' && typeof own.range === 'number' && typeof own.durationTicks === 'number') {
+      return { range: own.range, durationTicks: own.durationTicks, handler: own.handler, ...(isRecord(own.params) && { params: own.params }) };
+    }
+    return this.registry.objects.get(e.type)?.verbs[verb];
+  }
+
+  mailPeek(): { mailId: string; text: string } | undefined {
+    const m = this.state.mailbox?.queue[0];
+    return m && { mailId: m.mailId, text: m.text };
   }
 
   /** Sounds made during the current tick. */
@@ -266,6 +303,7 @@ export class World implements WorldView {
       if (!this.plugin?.onInput?.(this, e)) this.applyInput(e);
     }
 
+    this.expire();
     const finished: Character[] = [];
     for (const c of this.characters()) {
       if (!c.current) this.startNext(c);
@@ -316,6 +354,35 @@ export class World implements WorldView {
         return this.despawn(e.payload.id);
       case 'admin.poke':
         return reject('no mind runtime to poke');
+      case 'airdrop.drop':
+        return this.drop(e.payload, reject);
+      case 'airdrop.remove': {
+        const ent = this.entities().find((x) => x.type === 'airdrop' && x.state.dropId === e.payload.dropId);
+        if (!ent) return reject(`no airdrop ${e.payload.dropId}`);
+        return this.removeAirdrop(ent, 'deleted');
+      }
+      case 'mail.post': {
+        const p = e.payload;
+        if (typeof p.text !== 'string' || !p.mailId) return reject('bad mail');
+        const box = (this.state.mailbox ??= { queue: [] });
+        if (box.queue.some((m) => m.mailId === p.mailId)) return reject(`mail ${p.mailId} exists`);
+        const ticks = p.expiresAfterSeconds ? Math.max(1, Math.round(p.expiresAfterSeconds / this.state.config.secondsPerTick)) : 0;
+        box.queue.push({ mailId: p.mailId, text: p.text, by: { ...p.by }, postedTick: this.state.tick, ...(ticks && { expiresTick: this.state.tick + ticks }) });
+        this.emit({ kind: 'mail', mailId: p.mailId, status: 'waiting' });
+        return this.mailboxChanged();
+      }
+      case 'mail.remove': {
+        const box = this.state.mailbox;
+        const i = box?.queue.findIndex((m) => m.mailId === e.payload.mailId) ?? -1;
+        if (!box || i < 0) return reject(`no waiting mail ${e.payload.mailId}`);
+        box.queue.splice(i, 1);
+        this.emit({ kind: 'mail', mailId: e.payload.mailId, status: 'deleted' });
+        return this.mailboxChanged();
+      }
+      case 'pack.loaded':
+        if (e.payload.packVersions !== this.registry.packVersions) return reject(`packs ${e.payload.packVersions} are not loaded`);
+        this.state.packVersions = e.payload.packVersions;
+        return;
       case 'models.load':
       case 'settings.change':
         return; // only meaningful to a mind runtime (and the host)
@@ -350,13 +417,6 @@ export class World implements WorldView {
         const dayZero = e.type === 'clock.anchor' ? Math.floor(seconds / len) - priorDay : clock.dayZero;
         this.state.clock = { baseSeconds: seconds, baseTick: this.state.tick, dayZero, timezone: p.timezone, anchored: clock.anchored || e.type === 'clock.anchor' };
         return this.emit({ kind: 'clock', seconds, previous, reason: e.type === 'clock.anchor' ? 'anchor' : (p.reason ?? 'realign'), timezone: p.timezone });
-      }
-      case 'visitor.command': {
-        const v = this.state.entities[e.payload.visitorId];
-        if (v?.kind !== 'character' || v.state.visitor !== true) return reject(`no visitor ${e.payload.visitorId}`);
-        const parsed = DecideAnswerSchema.safeParse({ actions: e.payload.actions });
-        if (!parsed.success) return reject('malformed visitor actions');
-        return this.replaceQueue(v, parsed.data.actions as Action[]);
       }
       default:
         return reject(`unknown input type ${(e as { type: string }).type}`);
@@ -397,7 +457,8 @@ export class World implements WorldView {
     const target = action.targetId === undefined ? undefined : this.state.entities[action.targetId];
     if (action.targetId !== undefined && !target) return `no such target ${action.targetId}`;
 
-    const verbDef = target?.kind === 'object' ? this.registry.objects.get(target.type)?.verbs[action.verb] : undefined;
+    const verbDef = this.verbDefOf(target, action.verb);
+    if (verbDef && !this.registry.handlers.has(verbDef.handler)) return `${action.verb} does not work here`;
     if (target && verbDef) {
       if (this.reach(c, target) > verbDef.range) return 'out of range';
       c.current = { action, startedTick: tick, endsTick: tick + this.scaled(verbDef.durationTicks) };
@@ -482,7 +543,7 @@ export class World implements WorldView {
 
     const target = this.state.entities[action.targetId!];
     if (!target) return this.finish(c, 'failed', 'the target is gone');
-    const def = this.registry.objects.get(target.type)!.verbs[action.verb]!;
+    const def = this.verbDefOf(target, action.verb)!;
     if (this.reach(c, target) > def.range) return this.finish(c, 'failed', 'out of range');
 
     const handler = this.registry.handlers.get(def.handler)!;
@@ -496,7 +557,13 @@ export class World implements WorldView {
     if (!result.ok) return this.finish(c, 'failed', result.reason ?? 'it did not work', result.observation);
     this.applyResult(c, action, target, result);
     if (target.tags.includes('loud')) this.tickSounds.push({ sourceId: target.id, pos: { ...target.pos }, loudness: 0.8 });
+    if (result.noise?.length) {
+      this.emit({ kind: 'vocalize', id: target.id, pos: { ...target.pos }, notes: [...result.noise] });
+      this.tickSounds.push({ sourceId: target.id, pos: { ...target.pos }, notes: [...result.noise], loudness: 1 });
+    }
+    if (result.takeMail) this.takeMail(c);
     this.finish(c, 'done', undefined, result.observation);
+    if (target.type === 'airdrop' && this.state.entities[target.id]) this.airdropUsed(c, target, action.verb);
   }
 
   private finish(c: Character, status: ActionStatus, reason?: string, observation?: string): void {
@@ -506,7 +573,7 @@ export class World implements WorldView {
 
   private isObjectVerb(action: Action): boolean {
     const t = action.targetId === undefined ? undefined : this.state.entities[action.targetId];
-    return t?.kind === 'object' && !!this.registry.objects.get(t.type)?.verbs[action.verb];
+    return !!this.verbDefOf(t, action.verb);
   }
 
   // ------------------------------------------------------------- effects
@@ -557,9 +624,10 @@ export class World implements WorldView {
         queue: [],
       };
     } else if (obj) {
-      entity = { id, kind: 'object', type: def.type, pos: { ...def.pos }, tags: [...obj.tags], state: { ...obj.state, ...def.state } };
+      entity = { id, kind: 'object', type: def.type, pos: { ...def.pos }, tags: [...(def.tags ?? obj.tags)], state: { ...obj.state, ...def.state } };
     } else return `unknown entity type ${def.type}`;
     if (entity.kind === 'character') this.plugin?.onSpawn?.(this, entity);
+    if (entity.type === 'mailbox') entity.state.waiting = this.state.mailbox?.queue.length ?? 0;
     this.state.entities[id] = entity;
     this.sortedIds = undefined;
     if (this.isSolid(entity)) this.state.mapVersion++;
@@ -598,6 +666,103 @@ export class World implements WorldView {
   private setState(e: AnyEntity, set: Record<string, Json>): void {
     Object.assign(e.state, structuredClone(set));
     this.emit({ kind: 'state', id: e.id, set: structuredClone(set) });
+  }
+
+  // ------------------------------------------------------------- airdrops and the mailbox
+
+  /** Land a copy of a catalogue item on the nearest free walkable tile. */
+  private drop(p: { dropId: string; item: Json; pos: Pos; by: { username: string; admin: boolean; userKey: string }; expiresAfterSeconds?: number }, reject: (r: string) => void): void {
+    if (!isRecord(p.item) || typeof p.item.id !== 'string') return reject('bad airdrop item');
+    if (this.entities().some((x) => x.type === 'airdrop' && x.state.dropId === p.dropId)) return reject(`airdrop ${p.dropId} exists`);
+    if (!this.registry.objects.has('airdrop')) return reject('no airdrop object type loaded');
+    const at = this.nearestFreeTile(p.pos);
+    if (!at) return reject('no free tile to land on');
+    const item = p.item as unknown as CatalogItem;
+    const uses = airdropUses(item);
+    const ticks = p.expiresAfterSeconds ? Math.max(1, Math.round(p.expiresAfterSeconds / this.state.config.secondsPerTick)) : 0;
+    const entity = this.spawn({
+      id: `drop-${p.dropId}`,
+      type: 'airdrop',
+      pos: at,
+      tags: Array.isArray(item.tags) ? [...item.tags] : [],
+      state: {
+        dropId: p.dropId,
+        itemId: item.id,
+        item: structuredClone(p.item),
+        verbs: airdropVerbs(item) as unknown as Json,
+        droppedBy: { ...p.by },
+        droppedTick: this.state.tick,
+        ...(uses !== undefined && { usesLeft: uses }),
+        ...(ticks && { expiresTick: this.state.tick + ticks }),
+      },
+    });
+    if (typeof entity === 'string') return reject(entity);
+    this.emit({ kind: 'airdrop', event: 'added', dropId: p.dropId, entityId: entity.id, itemId: item.id, pos: { ...at } });
+  }
+
+  /** Breadth-first from the requested tile (clamped to the map): walkable terrain with no object on it. */
+  nearestFreeTile(want: Pos): Pos | undefined {
+    const g = this.grid;
+    const start = { x: Math.min(g.width - 1, Math.max(0, Math.round(want.x))), y: Math.min(g.height - 1, Math.max(0, Math.round(want.y))) };
+    const free = (p: Pos) => !!terrainAt(g, p)?.walkable && !this.entitiesAt(p).some((e) => e.kind === 'object');
+    const seen = new Set([posKey(start)]);
+    const queue = [start];
+    while (queue.length) {
+      const p = queue.shift()!;
+      if (free(p)) return p;
+      for (const n of [{ x: p.x, y: p.y - 1 }, { x: p.x + 1, y: p.y }, { x: p.x, y: p.y + 1 }, { x: p.x - 1, y: p.y }]) {
+        if (inBounds(g, n) && !seen.has(posKey(n))) {
+          seen.add(posKey(n));
+          queue.push(n);
+        }
+      }
+    }
+    return undefined;
+  }
+
+  /** Consumables count every use; at zero the item is gone. */
+  private airdropUsed(c: Character, target: AnyEntity, verb: string): void {
+    const dropId = String(target.state.dropId);
+    this.emit({ kind: 'airdrop', event: 'used', dropId, entityId: target.id, itemId: String(target.state.itemId), verb, by: c.id });
+    if (typeof target.state.usesLeft !== 'number') return;
+    // At zero it is removed at the start of the next tick, so this tick's minds still see what they used.
+    this.setState(target, { usesLeft: Math.max(0, target.state.usesLeft - 1) });
+  }
+
+  private removeAirdrop(e: AnyEntity, reason: 'expired' | 'used up' | 'deleted'): void {
+    this.emit({ kind: 'airdrop', event: 'removed', dropId: String(e.state.dropId), entityId: e.id, itemId: String(e.state.itemId), pos: { ...e.pos }, reason });
+    this.despawn(e.id);
+  }
+
+  /** Expiry and used-up removal happen inside the sim, by tick, so replays match. */
+  private expire(): void {
+    const tick = this.state.tick;
+    for (const e of this.entities()) {
+      if (e.type !== 'airdrop') continue;
+      if (typeof e.state.usesLeft === 'number' && e.state.usesLeft <= 0) this.removeAirdrop(e, 'used up');
+      else if (typeof e.state.expiresTick === 'number' && e.state.expiresTick <= tick) this.removeAirdrop(e, 'expired');
+    }
+    const box = this.state.mailbox;
+    if (!box) return;
+    const expired = box.queue.filter((m) => m.expiresTick !== undefined && m.expiresTick <= tick);
+    if (!expired.length) return;
+    box.queue = box.queue.filter((m) => !expired.includes(m));
+    for (const m of expired) this.emit({ kind: 'mail', mailId: m.mailId, status: 'expired' });
+    this.mailboxChanged();
+  }
+
+  private takeMail(reader: Character): void {
+    const m = this.state.mailbox?.queue.shift();
+    if (!m) return;
+    this.emit({ kind: 'mail', mailId: m.mailId, status: 'read', readerId: reader.id });
+    this.mailboxChanged();
+  }
+
+  /** Every mailbox shows the flag through `state.waiting`. */
+  private mailboxChanged(): void {
+    const waiting = this.state.mailbox?.queue.length ?? 0;
+    for (const e of this.entities()) if (e.type === 'mailbox' && e.state.waiting !== waiting) this.setState(e, { waiting });
+    this.emit({ kind: 'mailbox', waiting });
   }
 
   // ------------------------------------------------------------- helpers

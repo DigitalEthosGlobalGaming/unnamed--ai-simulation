@@ -97,8 +97,11 @@ Effects below are what the handlers do. **The robot is never told any of this**:
 | `piano` (tags `music`, `loud`) | yes | `play` | 1 | 40 | `basic.play` | +0.1 curiosity, +0.02 signal |
 | | | `press` | 1 | 5 | `basic.press` | +0.02 curiosity; a random key (C, D, E or G) from the `effects` stream |
 | | | `scan` | 6 | 20 | `basic.inspect` | as above |
+| `mailbox` (tag `metal`) | yes | `read` | 1 | 10 | `basic.mailRead` | the oldest waiting message as `a note from a stranger: "…"` (quoted) and takes it; +0.03 curiosity, +0.05 signal; or "the mailbox was empty". `state.waiting` is the flag |
+| | | `scan` | 6 | 20 | `basic.inspect` | as above |
+| `airdrop` | no | (per item) | | | `basic.airdropNeeds`, `basic.airdropNoise`, and the shared `pickup`, `drop`, `scan` | a visitor's dropped item: its verbs come from the item's catalogue blocks and live in its own `state.verbs` ([visitors.md](architecture/visitors.md)). `airdropNeeds` applies the block's need deltas and observation; `airdropNoise` plays the block's notes (+0.02 curiosity). `scan` names only its tags |
 
-Handlers: [`energy.ts`](../packages/pack-basic/handlers/energy.ts), [`ball.ts`](../packages/pack-basic/handlers/ball.ts), [`fountain.ts`](../packages/pack-basic/handlers/fountain.ts), [`piano.ts`](../packages/pack-basic/handlers/piano.ts), [`inspect.ts`](../packages/pack-basic/handlers/inspect.ts). Objects: [`objects/`](../packages/pack-basic/objects).
+Handlers: [`energy.ts`](../packages/pack-basic/handlers/energy.ts), [`ball.ts`](../packages/pack-basic/handlers/ball.ts), [`fountain.ts`](../packages/pack-basic/handlers/fountain.ts), [`piano.ts`](../packages/pack-basic/handlers/piano.ts), [`inspect.ts`](../packages/pack-basic/handlers/inspect.ts), [`airdrop.ts`](../packages/pack-basic/handlers/airdrop.ts). Objects: [`objects/`](../packages/pack-basic/objects).
 
 Using a verb on an object tagged `loud` makes a sound other characters can hear.
 
@@ -113,7 +116,7 @@ Two rules exist to prove the robot learns:
 
 | Sense | File | Rules |
 | --- | --- | --- |
-| `basic.sight` | [`sight.ts`](../packages/pack-basic/senses/sight.ts) | Entities within `sightRange` (halved at night) with line of sight (Bresenham, blocked by `blocksSight` tiles). Reports distance and direction, and the verb names an object offers. Also reports "it is light" or "it is dark". |
+| `basic.sight` | [`sight.ts`](../packages/pack-basic/senses/sight.ts) | Entities within `sightRange` (halved at night) with line of sight (Bresenham, blocked by `blocksSight` tiles). Reports distance and direction, and the verb names an object offers (an entity's own verbs for airdrops). Airdrops are reported as `thing-<tags>`, and a mailbox with mail waiting as "with its flag up". Also reports "it is light" or "it is dark". |
 | `basic.hearing` | [`hearing.ts`](../packages/pack-basic/senses/hearing.ts) | Sounds this tick within `hearingRange`. Volume falls off with distance and is multiplied down by each tile's `soundDamping`; below 0.05 it isn't heard. Reports the note chain (or "a loud piano" if the source is in sight) and direction. |
 
 Shared geometry: [`geometry.ts`](../packages/pack-basic/senses/geometry.ts).

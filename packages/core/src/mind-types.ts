@@ -66,6 +66,8 @@ export interface Belief {
   support: number;
   firmness: number;
   lastSupportedDay: number;
+  /** 'told': hearsay from a stranger's note (low firmness); any experience replaces it. */
+  source?: 'told';
 }
 
 export interface OpenItem {
@@ -123,17 +125,6 @@ export interface OutcomeDraft {
 
 export type SleepPhase = 'awake' | 'drowsy' | 'asleep';
 
-/** A visitor interaction aimed at a character, waiting for its brain to be free. */
-export interface VisitorRequest {
-  id: string;
-  visitorId: EntityId;
-  kind: 'noise' | 'action';
-  /** e.g. 'beep-C chirp-E' or 'push ball' */
-  detail: string;
-  notes?: string[];
-  tick: number;
-}
-
 export interface MindState {
   mood: { valence: number; arousal: number; word: string; bias: number };
   boredom: Record<string, { b: number; tick: number }>;
@@ -165,8 +156,6 @@ export interface MindState {
   nextId: number;
   /** Felt words last tick, to detect threshold crossings. */
   lastLevels: Record<string, string>;
-  visitorQueue: VisitorRequest[];
-  visitorCooldownUntil: number;
   /** Steps of a model plan beyond the 3-action queue; followed without another model call until they expire. */
   planSteps?: { actions: Action[]; untilTick: number; tier: 'decision' | 'llm' | 'local' };
 }

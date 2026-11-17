@@ -1,10 +1,12 @@
 import { z } from 'zod';
+import { DEFAULT_LIMITS, UNLIMITED, type VisitorLimits } from './visitors.ts';
 
 /** One live-editable world setting, described so a UI can render it generically. */
 export interface SettingField {
   key: SettingKey;
   label: string;
-  kind: 'number' | 'boolean';
+  /** `string[]`: a list of catalogue item ids (`*` = all). */
+  kind: 'number' | 'boolean' | 'string[]';
   unit?: string;
   min?: number;
   max?: number;
@@ -23,6 +25,15 @@ export const SettingsPatchSchema = z
     hostedModels: z.boolean(),
     needDecayMultiplier: z.number().min(0).max(10),
     escalateBelow: z.number().min(0).max(1),
+    catalogEnabled: z.array(z.string().regex(/^(\*|[a-z0-9]+(?:-[a-z0-9]+)*)$/, 'an item id or *')).max(1000),
+    airdropMaxActivePerVisitor: z.int().min(0).max(UNLIMITED),
+    airdropCooldownSeconds: z.number().min(0).max(30 * 86_400),
+    airdropWorldCap: z.int().min(0).max(UNLIMITED),
+    airdropDefaultExpiry: z.number().min(0).max(365 * 86_400),
+    mailCapacity: z.int().min(0).max(UNLIMITED),
+    mailExpirySeconds: z.number().min(0).max(365 * 86_400),
+    mailMaxWaitingPerVisitor: z.int().min(0).max(UNLIMITED),
+    mailCooldownSeconds: z.number().min(0).max(30 * 86_400),
   })
   .partial();
 
@@ -31,7 +42,16 @@ export type SettingKey = keyof SettingsPatch;
 export type SettingsValues = Required<SettingsPatch>;
 
 /** Settings that persist across restarts (re-applied from logged `settings.change` events). Pause and speed are session-level. */
-export const PERSISTED: SettingKey[] = ['ticksPerRealSecond', 'moveSecondsPerTile', 'dailyCapAud', 'energyPerAud', 'hostedModels', 'needDecayMultiplier', 'escalateBelow'];
+export const PERSISTED: SettingKey[] = [
+  'ticksPerRealSecond',
+  'moveSecondsPerTile',
+  'dailyCapAud',
+  'energyPerAud',
+  'hostedModels',
+  'needDecayMultiplier',
+  'escalateBelow',
+  ...(Object.keys(DEFAULT_LIMITS) as (keyof VisitorLimits)[]),
+];
 
 export const SETTINGS_SCHEMA: SettingField[] = [
   {
@@ -106,4 +126,25 @@ export const SETTINGS_SCHEMA: SettingField[] = [
     step: 0.05,
     help: 'Decisions less confident than this are asked again of a stronger model (Jev), then planned.',
   },
+  {
+    key: 'catalogEnabled',
+    label: 'Airdrop items',
+    kind: 'string[]',
+    help: 'Catalogue item ids visitors may drop in this world; * enables every item.',
+  },
+  ...limit('airdropMaxActivePerVisitor', 'Drops per visitor', 'items', 'How many of one visitor\'s drops may be in the world at once.'),
+  ...seconds('airdropCooldownSeconds', 'Drop cooldown', 'Real seconds a visitor waits between drops. Admins are not limited.'),
+  ...limit('airdropWorldCap', 'Drops in the world', 'items', 'How many dropped items the world holds at once.'),
+  ...seconds('airdropDefaultExpiry', 'Drop expiry', 'In-world seconds before a dropped item without its own expiry disappears; 0 = never.'),
+  ...limit('mailCapacity', 'Mailbox capacity', 'messages', 'Messages that may wait in the mailbox at once.'),
+  ...seconds('mailExpirySeconds', 'Mail expiry', 'In-world seconds a message may wait unread before it expires; 0 = never.'),
+  ...limit('mailMaxWaitingPerVisitor', 'Mail per visitor', 'messages', 'Unread messages one visitor may have waiting.'),
+  ...seconds('mailCooldownSeconds', 'Mail cooldown', 'Real seconds a visitor waits between messages. Admins are not limited.'),
 ];
+
+function limit(key: SettingKey, label: string, unit: string, help: string): SettingField[] {
+  return [{ key, label, kind: 'number', unit, min: 0, max: UNLIMITED, step: 1, help: `${help} Admins are not limited.` }];
+}
+function seconds(key: SettingKey, label: string, help: string): SettingField[] {
+  return [{ key, label, kind: 'number', unit: 's', min: 0, max: 365 * 86_400, step: 1, help }];
+}

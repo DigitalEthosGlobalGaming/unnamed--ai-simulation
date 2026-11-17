@@ -106,6 +106,40 @@ export const sessions = sqliteTable('sessions', {
   expiresAt: text('expires_at').notNull(),
 });
 
+/** The server-wide airdrop catalogue (admin-edited; worlds copy an item's JSON when it is dropped). */
+export const catalogItems = sqliteTable('catalog_items', {
+  id: text('id').primaryKey(),
+  item: text('item', { mode: 'json' }).notNull(),
+  disabled: integer('disabled', { mode: 'boolean' }).notNull(),
+  updatedAt: text('updated_at').notNull(),
+  updatedBy: text('updated_by'),
+});
+
+/** Mailbox messages per world, for statuses (the queue itself lives in world state). Text is private while waiting. */
+export const mail = sqliteTable(
+  'mail',
+  {
+    worldId: text('world_id').notNull(),
+    mailId: text('mail_id').notNull(),
+    text: text('text').notNull(),
+    username: text('username').notNull(),
+    admin: integer('admin', { mode: 'boolean' }).notNull(),
+    userKey: text('user_key').notNull(),
+    postedTick: integer('posted_tick').notNull(),
+    postedAt: text('posted_at').notNull(),
+    status: text('status').notNull(),
+    statusTick: integer('status_tick'),
+    readerId: text('reader_id'),
+  },
+  (t) => [primaryKey({ columns: [t.worldId, t.mailId] })],
+);
+
+/** Server-wide flags, e.g. that the catalogue was seeded once. */
+export const serverMeta = sqliteTable('server_meta', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+});
+
 /** Bootstrap DDL, kept next to the Drizzle schema it mirrors. */
 export const DDL = `
 CREATE TABLE IF NOT EXISTS worlds (id TEXT PRIMARY KEY, config TEXT NOT NULL, parent_world_id TEXT, fork_tick INTEGER, created_at TEXT NOT NULL);
@@ -120,5 +154,8 @@ CREATE INDEX IF NOT EXISTS diary_world ON diary (world_id, character_id, day);
 CREATE TABLE IF NOT EXISTS packs (name TEXT NOT NULL, version TEXT NOT NULL, content_hash TEXT PRIMARY KEY, licence TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, username TEXT, name TEXT, email TEXT, avatar_url TEXT, role TEXT NOT NULL, created_at TEXT NOT NULL, expires_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS api_keys (key_hash TEXT PRIMARY KEY, role TEXT NOT NULL, world_id TEXT);
+CREATE TABLE IF NOT EXISTS catalog_items (id TEXT PRIMARY KEY, item TEXT NOT NULL, disabled INTEGER NOT NULL, updated_at TEXT NOT NULL, updated_by TEXT);
+CREATE TABLE IF NOT EXISTS mail (world_id TEXT NOT NULL, mail_id TEXT NOT NULL, text TEXT NOT NULL, username TEXT NOT NULL, admin INTEGER NOT NULL, user_key TEXT NOT NULL, posted_tick INTEGER NOT NULL, posted_at TEXT NOT NULL, status TEXT NOT NULL, status_tick INTEGER, reader_id TEXT, PRIMARY KEY (world_id, mail_id));
+CREATE TABLE IF NOT EXISTS server_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS usage_daily (world_id TEXT NOT NULL, day TEXT NOT NULL, model_id TEXT NOT NULL, job TEXT NOT NULL, calls INTEGER NOT NULL, input_tokens INTEGER NOT NULL, cached_input_tokens INTEGER NOT NULL, output_tokens INTEGER NOT NULL, cost_aud REAL NOT NULL, energy REAL NOT NULL, PRIMARY KEY (world_id, day, model_id, job));
 `;

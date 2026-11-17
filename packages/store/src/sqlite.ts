@@ -8,6 +8,7 @@ import type { Snapshot, SnapshotStore } from './snapshots.ts';
 import * as schema from './schema.ts';
 
 export type Db = BetterSQLite3Database<typeof schema>;
+export type MailRow = typeof schema.mail.$inferSelect;
 
 /** Open (and create) the SQLite database in WAL mode. Each worker opens its own connection. */
 export function openDb(path: string): Db {
@@ -123,6 +124,12 @@ export class SqliteReadModels {
       for (const d of changes) {
         if (d.kind === 'feed') tx.insert(schema.feed).values({ worldId, tick, characterId: d.entry.characterId, entry: d.entry as object }).run();
         if (d.kind === 'diary') tx.insert(schema.diary).values({ worldId, characterId: d.id, day: d.day, tick, text: d.text }).run();
+        if (d.kind === 'mail' && d.status !== 'waiting') {
+          tx.update(schema.mail)
+            .set({ status: d.status, statusTick: tick, ...(d.readerId && { readerId: d.readerId }) })
+            .where(and(eq(schema.mail.worldId, worldId), eq(schema.mail.mailId, d.mailId)))
+            .run();
+        }
       }
     });
   }
@@ -142,6 +149,28 @@ export class SqliteReadModels {
       ? and(eq(schema.feed.worldId, worldId), eq(schema.feed.characterId, characterId), lt(schema.feed.tick, beforeTick))
       : and(eq(schema.feed.worldId, worldId), lt(schema.feed.tick, beforeTick));
     return this.db.select().from(schema.feed).where(where).orderBy(desc(schema.feed.id)).limit(limit).all().map((r) => r.entry as FeedEntry).reverse();
+  }
+
+  /** The first feed entry for a character at or after `tick` (e.g. its reaction to a note). */
+  feedAfter(worldId: WorldId, characterId: string, tick: number): FeedEntry | undefined {
+    const r = this.db
+      .select()
+      .from(schema.feed)
+      .where(and(eq(schema.feed.worldId, worldId), eq(schema.feed.characterId, characterId), gte(schema.feed.tick, tick)))
+      .orderBy(asc(schema.feed.id))
+      .limit(1)
+      .get();
+    return r?.entry as FeedEntry | undefined;
+  }
+
+  /** Record a posted message (its text stays here; the world log has it too). */
+  addMail(row: MailRow): void {
+    this.db.insert(schema.mail).values(row).onConflictDoNothing().run();
+  }
+
+  mail(worldId: WorldId, filter: { userKey?: string } = {}): MailRow[] {
+    const where = filter.userKey ? and(eq(schema.mail.worldId, worldId), eq(schema.mail.userKey, filter.userKey)) : eq(schema.mail.worldId, worldId);
+    return this.db.select().from(schema.mail).where(where).orderBy(asc(schema.mail.postedTick), asc(schema.mail.mailId)).all();
   }
 
   diary(worldId: WorldId, characterId: string, day: number): { tick: number; text: string }[] {

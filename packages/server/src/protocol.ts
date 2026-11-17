@@ -1,4 +1,4 @@
-import type { Delta, InputEvent } from '@uas/core';
+import type { CatalogItem, Delta, InputEvent, Pos, Sender } from '@uas/core';
 import type { WorldState } from '@uas/sim';
 import type { WorldFile } from './config.ts';
 import type { WorldStatus } from './runtime.ts';
@@ -21,6 +21,13 @@ export type WorkerMethod =
   | { method: 'usage'; day?: string }
   | { method: 'settings' }
   | { method: 'setSettings'; patch: unknown; userId?: string }
+  | { method: 'airdrops' }
+  | { method: 'airdrop'; dropId: string }
+  | { method: 'drop'; item: CatalogItem; pos: Pos; by: Sender }
+  | { method: 'removeAirdrop'; dropId: string; userId?: string }
+  | { method: 'mail'; userKey?: string; admin: boolean }
+  | { method: 'postMail'; text: unknown; by: Sender }
+  | { method: 'removeMail'; mailId: string; userId?: string }
   | { method: 'shutdown' };
 
 export type ToWorker = { type: 'call'; id: number } & WorkerMethod;

@@ -57,6 +57,7 @@ Live messages carry no `sessionId`; replay messages always do.
   packVersions: string,      // 'basic@0.1.0#…'
   tick: number,              // the next tick to run
   entities: Record<EntityId, Character | WorldObject>,
+  mailbox?: { queue: { mailId, text, by: { username, admin, userKey }, postedTick, expiresTick? }[] },  // text is '' unless you are an admin
   ext: { mind: MindConfig }, rng, nextId, mapVersion
 }
 ```
@@ -70,9 +71,13 @@ Live messages carry no `sessionId`; replay messages always do.
 - An entity has `{ id, kind: 'character' | 'object', type, pos: { x, y }, tags, state, heldBy? }`.
   Characters also have `needs` (`cool`, `signal`, `curiosity`, each 0..1), `energy` (the battery,
   0..1), `queue`, `current` (`{ action, startedTick, endsTick?, path? }`) and `mind` (`MindState`:
-  mood, beliefs, memories, open items, sleep phase, visitor queue…). Visitors have
-  `state.visitor === true` and no `mind`. A display name, when configured, is `state.name`
+  mood, beliefs, memories, open items, sleep phase…). A display name, when configured, is `state.name`
   (the garden robot has `name: 'Robot'`); fall back to the id.
+- Visitors are not entities. A dropped item is an object of `type: 'airdrop'` (id `drop-<dropId>`,
+  `tags` from the item) whose `state` has `dropId`, `itemId`, `item` (the catalogue JSON copy, with its
+  icon), `droppedBy { username, admin }`, `droppedTick`, and `usesLeft` / `expiresTick` when they apply.
+  The `mailbox` object's `state.waiting` is the number of messages waiting: draw the flag up when it's above 0.
+  Details and REST shapes: [visitors.md](architecture/visitors.md).
 
 ### `Delta` kinds
 
@@ -91,9 +96,9 @@ Live messages carry no `sessionId`; replay messages always do.
 | `beliefs` | `id, beliefs` | sent after each night's consolidation |
 | `sleep` | `id, phase` (`awake`, `drowsy` or `asleep`) | standby indicator |
 | `diary` | `id, day, text` | story view |
-| `visitorQueue` | `id, queue` | the numbered schedule table |
-| `visitorPick` | `id, request` | highlight the picked row |
-| `visitorDropped` | `id, request, reason` (`expired` or `queue full`) | tell the visitor |
+| `airdrop` | `event` (`added`, `used` or `removed`), `dropId, entityId, itemId, pos?, verb?, by?, reason?` (`expired`, `used up` or `deleted`) | landing, use and removal; the entity itself comes and goes with `spawned` / `despawned` |
+| `mailbox` | `waiting` | the mailbox count and flag |
+| `mail` | `mailId, status` (`waiting`, `read`, `expired` or `deleted`), `readerId?` | a message's status changed (no text) |
 | `inputRejected` | `seq, type, reason` | admin-tool error |
 | `clock` | `seconds, previous, reason, timezone` | the world clock was anchored or jumped (`anchor`, `restart`, `resume`, `realign`, `sync`), or its rate changed (`rate`, after a logged `sim.config`) |
 
@@ -121,22 +126,25 @@ A note `chirp-E` means the `chirp` noise played at E. Play the notes of a chain 
 
 | Method and path | Role | Returns |
 | --- | --- | --- |
-| `GET /worlds` | spectator | `WorldSummary[]` with live `status` (`WorldStatus`): `tick, day, timeOfDay, paused, timeScale, clockMode, timezone, worldSeconds, driftSeconds, ticksPerRealSecond, idleTicksPerRealSecond, watched, effectiveTicksPerRealSecond, secondsPerTick, inWorldSecondsPerRealSecond, pendingJobs, visitorQueueDepth, costAudToday, modelLatencyMs, tickLagMs, queue` where `queue` is `QueueStats { waiting, running, byLane, waitMs {p50,p95,max}, runMs {p50,p95,max}, completed, dropped {stale, superseded, failed}, timeouts }` |
+| `GET /worlds` | spectator | `WorldSummary[]` with live `status` (`WorldStatus`): `tick, day, timeOfDay, paused, timeScale, clockMode, timezone, worldSeconds, driftSeconds, ticksPerRealSecond, idleTicksPerRealSecond, watched, effectiveTicksPerRealSecond, secondsPerTick, inWorldSecondsPerRealSecond, pendingJobs, mailWaiting, costAudToday, modelLatencyMs, tickLagMs, queue` where `queue` is `QueueStats { waiting, running, byLane, waitMs {p50,p95,max}, runMs {p50,p95,max}, completed, dropped {stale, superseded, failed}, timeouts }` |
 | `GET /worlds/:id/catalog` | spectator | `WorldCatalog`: pack objects (type, tags, portable, solid, verbs), archetypes (needs, energy, noises, ranges), `ticksPerRealSecond` (`ticksPerSecond` is a deprecated alias), `secondsPerTick`, cost settings |
 | `GET /worlds/:id` | spectator | `WorldSummary` |
 | `PATCH /worlds/:id/clock` | admin | `{ paused?, timeScale?, realign? }` sets the clock and returns the status; real-time worlds re-align (logged jump) on resume, on `timeScale` back to 1, or on `realign: true` |
 | `POST /worlds/:id/entities` | admin | body `EntityDef { type, pos, id?, state? }`; returns the logged `InputEvent` |
 | `PATCH /worlds/:id/entities/:eid` | admin | body `{ pos?, state?, needs?, energy? }` |
 | `DELETE /worlds/:id/entities/:eid` | admin | removes the entity |
-| `GET /worlds/:id/characters/:cid/mind` | spectator | `MindView` (needs, energy, mood, sleep, open items, queue, pending jobs, visitor queue) |
+| `GET /worlds/:id/characters/:cid/mind` | spectator | `MindView` (needs, energy, mood, sleep, open items, queue, pending jobs) |
 | `GET /worlds/:id/characters/:cid/memories` | spectator | `{ stm, ltm, beliefs, sheet }` |
 | `GET /worlds/:id/characters/:cid/diary?day=` | spectator | `{ day, entries: [{ tick, text }] }` |
 | `POST /worlds/:id/characters/:cid/poke` | admin | raises an `admin-poke` trigger |
-| `POST /worlds/:id/visitors` | visitor | `{ visitorId }`; one visitor per key per world |
-| `POST /worlds/:id/visitors/:vid/actions` | visitor | body `{ actions: Action[] }`. To make noises at a character, send `{ verb: 'vocalize', args: { notes, at: characterId } }`, or call `client.noiseAt(...)`. |
+| `GET /catalog`, `GET /catalog/templates`, `POST /catalog/validate`, `PUT` / `DELETE /catalog/:itemId` | spectator / admin | the airdrop catalogue ([visitors.md](architecture/visitors.md#rest)) |
+| `GET /worlds/:id/airdrops`, `GET /worlds/:id/airdrops/:dropId` | spectator | `Airdrop[]`; one `Airdrop` with `beliefs` about it |
+| `POST /worlds/:id/airdrops` | visitor | body `{ itemId, pos }`; returns the `Airdrop` (`client.dropItem`) |
+| `GET /worlds/:id/mail`, `POST /worlds/:id/mail` | spectator / visitor | `{ waiting, mine?, all? }`; post `{ text }` (`client.postMail`) |
+| `DELETE /worlds/:id/airdrops/:dropId`, `DELETE /worlds/:id/mail/:mailId` | admin | remove a drop or a waiting message |
 | `GET /worlds/:id/feed?characterId=&limit=` | spectator | `FeedEntry[]`, oldest first |
 | `GET /worlds/:id/deltas?fromTick=&toTick=&kinds=` | spectator | `[{ tick, changes }]`, for fast scrubbing without re-simulating; `kinds=beliefs,sleep` filters delta kinds |
-| `GET /worlds/:id/events?fromSeq=&limit=` | spectator | the input log |
+| `GET /worlds/:id/events?fromSeq=&limit=` | spectator | the input log (`mail.post` without `text` unless you are an admin) |
 | `POST /worlds/:id/seek` | spectator | body `{ tick }`; returns `{ sessionId, tick, state }` |
 | `POST /worlds/:id/fork` | admin | body `{ tick, id?, config? }`; starts the fork |
 | `GET /usage?worldId=&day=` | admin | `{ [worldId]: { rows: UsageRow[], queue: QueueStats } }`: tokens, AUD and energy by model and job, plus model queue depth and wait/run times |
@@ -149,7 +157,7 @@ A note `chirp-E` means the `chirp` noise played at E. Play the notes of a chain 
   - Sign out with `client.logout()`.
   - The session is a cookie, so same-origin requests through the Vite `/api` proxy are authenticated automatically. Mutations need the browser's own `Origin`, which browsers send.
 - **Settings.**
-  - `client.settings(id)` returns `{ values, schema, derived }`. Render each `schema` entry generically (`kind` number or boolean, with `label`, `unit`, `min`, `max`, `step` and `help`), and show `derived` read-only (battery per decision, decisions per full battery, A$ spent versus the cap).
+  - `client.settings(id)` returns `{ values, schema, derived }`. Render each `schema` entry generically (`kind` number, boolean, or `string[]` for `catalogEnabled`, a list of item ids where `*` means all; with `label`, `unit`, `min`, `max`, `step` and `help`), and show `derived` read-only (battery per decision, decisions per full battery, A$ spent versus the cap).
   - `client.updateSettings(id, patch)` (admin) returns `{ values, derived, effects }`.
 
 ## Timeline scrubbing

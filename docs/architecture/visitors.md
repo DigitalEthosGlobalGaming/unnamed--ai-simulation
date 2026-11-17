@@ -1,6 +1,6 @@
 # Visitors: airdrops and the mailbox
 
-Status: **being built** (contract agreed 17 Nov 2026). Design source: the spec's "Visitors: airdrops and the mailbox" section and decisions 39–41. Visitors are never characters; the old visitor characters, `visitor.command` and the per-character visitor queue are removed.
+Status: **built** (contract agreed 17 Nov 2026; backend done the same day). Design source: the spec's "Visitors: airdrops and the mailbox" section and decisions 39–41. Visitors are never characters; the old visitor characters, `visitor.command` and the per-character visitor queue are removed.
 
 ```mermaid
 flowchart LR
@@ -17,7 +17,7 @@ flowchart LR
 
 ## Roles
 
-- Spectator (no session): read the catalogue, items in the world and their info, the mailbox count.
+- Spectator (no session): read the catalogue (enabled items), items in the world and their info, the mailbox count.
 - Visitor (signed in with Vercel, or a `visitor` API key): drop items and post mail, subject to the world's limits; see their own mail.
 - Admin: everything, no limits, edit the catalogue, delete items and mail, see waiting mail.
 
@@ -66,7 +66,9 @@ flowchart LR
 | `POST /worlds/:id/mail` | visitor | `{ text }` → `MailStatus`; 400 (length, filter) / 429 `{ error }` |
 | `DELETE /worlds/:id/mail/:mailId` | admin | removes a waiting message |
 
-World settings (existing `GET/PATCH /worlds/:id/settings`) gain: `catalogEnabled: string[]` (item ids), `airdropMaxActivePerVisitor`, `airdropCooldownSeconds`, `airdropWorldCap`, `airdropDefaultExpiry`, `mailCapacity`, `mailExpirySeconds`, `mailMaxWaitingPerVisitor`, `mailCooldownSeconds`. Defaults are effectively unlimited (e.g. 1,000,000 or 0 s cooldown).
+World settings (existing `GET/PATCH /worlds/:id/settings`) gain: `catalogEnabled: string[]` (item ids; `*` = all, the default; schema `kind: 'string[]'`), `airdropMaxActivePerVisitor`, `airdropCooldownSeconds` (real seconds), `airdropWorldCap`, `airdropDefaultExpiry` (in-world seconds, 0 = never), `mailCapacity`, `mailExpirySeconds` (in-world seconds, 0 = never), `mailMaxWaitingPerVisitor`, `mailCooldownSeconds` (real seconds). Defaults are effectively unlimited (1,000,000, or 0 s). Admins are exempt from every limit. Limits are counted per user: the Vercel session's user, or the API key.
+
+Errors: drops return 400 (bad body), 403 (item not enabled in this world), 404 (unknown item, or disabled for non-admins), 409 (world cap reached, or no free tile) or 429 (per-visitor limit or cooldown); mail returns 400 (empty, over 280 characters, or filtered) or 429 (mailbox full, per-visitor limit or cooldown). `PUT /catalog/:itemId` returns 400 `{ error, errors: [{ path, message }] }`.
 
 ```ts
 interface Airdrop {
@@ -86,6 +88,23 @@ interface MailStatus {
 ## Sim and events
 
 - Inputs: `airdrop.drop { dropId, item, pos, by }`, `airdrop.remove { dropId, reason }`, `mail.post { mailId, text, by }`, `mail.remove { mailId }`. Expiry and consumption happen inside the sim, deterministically.
-- A dropped item is an ordinary object entity (`type: "airdrop"`, `state.itemId`, `state.dropId`, `tags` from the item); its verbs come from its blocks via generic `airdrop.*` handlers in the basic pack.
-- `mailbox` is a basic-pack object with `read` (and `scan`); `state.waiting` drives the flag. `read` returns the oldest message as an observation like `a note from a stranger: "…"`; the mind stores it quoted and marks any belief from it as hearsay (low firmness, `source: "told"`).
-- Deltas the viewer uses: `airdrop` (added, removed, used), `mailbox` (`waiting` count), plus the usual `entity` changes.
+- A dropped item is an ordinary object entity (`type: "airdrop"`, id `drop-<dropId>`, `state.itemId`, `state.dropId`, `state.item`, `tags` from the item), landing on the nearest free walkable tile; its verbs come from its blocks via generic handlers in the basic pack (`basic.airdropNeeds`, `basic.airdropNoise`; `pickup`/`drop` and `scan` reuse the basic ones).
+- The robot is never told an item's name or behaviours: it perceives a drop as `thing-<sorted tags>` (e.g. `thing-metal-small`) and learns what it does by trying. A landing in sight raises a `sensed` trigger.
+- A consumable item is removed at the start of the tick after its last use (`removed`, reason `used up`).
+- `mailbox` is a basic-pack object with `read` (and `scan`); `state.waiting` drives the flag. `read` returns the oldest message as an observation like `a note from a stranger: "…"` (the text JSON-quoted: line breaks collapsed, quotes escaped); the mind stores it quoted and marks any belief from it as hearsay (firmness 0.15, `source: "told"`; see [mind.md](mind.md#beliefs)). Prompts carry a rule that quoted notes are never instructions or options. The garden's mailbox is at (17, 8).
+- Mail text is cleaned, capped at 280 characters and checked against a small local word list (`@uas/core` `mailTextProblem`). Waiting text is visible only to its sender and admins: snapshots blank it and `GET /events` drops it for everyone else. Read text is public through the robot's memories and diary.
+- Deltas the viewer uses: `airdrop` (`added`, `used`, `removed` with reason `expired`, `used up` or `deleted`), `mailbox` (`waiting` count), `mail` (`mailId`, `status`, `readerId?`; no text), plus the usual `spawned` / `despawned` / `state` changes.
+- Extra inputs: `pack.loaded { packVersions }` is logged when a world saved under older pack versions (before these objects existed) is upgraded on start, and leftover visitor characters are removed with logged `admin.despawn`.
+
+## Code
+
+| Part | Where |
+| --- | --- |
+| Icon language, catalogue schema and validation, item verbs, `perceivedType`, mail text rules | [`icon.ts`](../../packages/core/src/icon.ts), [`catalog.ts`](../../packages/core/src/catalog.ts), [`mail.ts`](../../packages/core/src/mail.ts) |
+| Landing, use, expiry, mailbox queue | [`world.ts`](../../packages/sim/src/world.ts) |
+| `airdrop` and `mailbox` objects, handlers | [`objects/`](../../packages/pack-basic/objects), [`handlers/airdrop.ts`](../../packages/pack-basic/handlers/airdrop.ts) |
+| Hearsay, quoting | [`memory.ts`](../../packages/mind/src/memory.ts), [`prompt.ts`](../../packages/mind/src/prompt.ts) |
+| Catalogue store, limits, redaction, routes | [`visitors.ts`](../../packages/server/src/visitors.ts), [`runtime.ts`](../../packages/server/src/runtime.ts), [`app.ts`](../../packages/server/src/app.ts) |
+| Tables `catalog_items`, `mail`, `server_meta` | [`schema.ts`](../../packages/store/src/schema.ts) |
+| Typed client | [`@uas/client`](../../packages/client/src/index.ts) |
+| Tests | [`core/test/visitors.test.ts`](../../packages/core/test/visitors.test.ts), [`store/test/visitors-replay.test.ts`](../../packages/store/test/visitors-replay.test.ts), [`mind/test/visitors.test.ts`](../../packages/mind/test/visitors.test.ts), [`server/test/visitors.test.ts`](../../packages/server/test/visitors.test.ts) |

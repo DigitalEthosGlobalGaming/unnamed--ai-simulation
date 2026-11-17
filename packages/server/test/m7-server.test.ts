@@ -104,24 +104,6 @@ describe('M7: server', () => {
     expect(rows.every((r) => r.changes.every((d) => d.kind === 'needs'))).toBe(true);
   });
 
-  it('a visitor joins, makes noises at the robot through its visitor queue, and hears it answer', async () => {
-    const v = new UasClient(base, VISITOR);
-    const { visitorId } = await v.joinAsVisitor('garden', { x: 11, y: 10 });
-    expect((await v.joinAsVisitor('garden')).visitorId).toBe(visitorId); // one visitor per key
-    const ws = v.connect();
-    await ws.open;
-    ws.subscribe('garden', { channels: ['deltas', 'noises'] });
-    await ws.next('snapshot');
-    const picked = ws.next('deltas', (m) => m.changes.some((d) => d.kind === 'visitorPick' && d.request.visitorId === visitorId));
-    const answer = ws.next('noises', (m) => m.noises.some((n) => n.id === 'robot'));
-    await v.noiseAt('garden', visitorId, 'robot', ['beep-C', 'chirp-E']);
-    await picked;
-    const heard = await answer;
-    expect(heard.noises.find((n) => n.id === 'robot')!.notes.length).toBeGreaterThan(0);
-    await expect(new UasClient(base, VISITOR).visitorActions('garden', 'robot', [{ verb: 'wait', reason: 'x' }])).rejects.toMatchObject({ status: 403 });
-    ws.close();
-  }, 30_000);
-
   it('admin edits are logged input events', async () => {
     const c = admin();
     const e = await c.editEntity('garden', 'ball', { pos: { x: 5, y: 12 } });

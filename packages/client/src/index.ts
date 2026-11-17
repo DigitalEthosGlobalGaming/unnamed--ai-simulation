@@ -1,5 +1,6 @@
 import type {
   Action,
+  CatalogItem,
   ArchetypeDef,
   Belief,
   Character,
@@ -16,7 +17,6 @@ import type {
   ServerMessage,
   SheetLine,
   SleepPhase,
-  VisitorRequest,
   Noises,
   WorldObject,
   TickDeltas,
@@ -43,7 +43,7 @@ export interface WorldStatus {
   worldSeconds: number;
   driftSeconds: number;
   pendingJobs: number;
-  visitorQueueDepth: number;
+  mailWaiting: number;
   costAudToday: number;
   modelLatencyMs: number;
   tickLagMs: number;
@@ -117,6 +117,8 @@ export interface WorldStateView {
   /** In-world time anchor: seconds = baseSeconds + (tick − baseTick) × secondsPerTick (absent on old snapshots). */
   clock?: { baseSeconds: number; baseTick: number };
   entities: Record<string, Character | WorldObject>;
+  /** The mailbox queue, oldest first. `text` is empty unless you are an admin (use `mail()` for your own). */
+  mailbox?: { queue: { mailId: string; text: string; by: { username: string; admin: boolean }; postedTick: number; expiresTick?: number }[] };
 }
 
 export interface MindView {
@@ -129,7 +131,6 @@ export interface MindView {
   queue: Action[];
   current: { action: Action; startedTick: number; endsTick?: number } | null;
   pendingJobs: { jobId: string; job: string; tick: number }[];
-  visitorQueue: VisitorRequest[];
 }
 
 export interface MemoriesView {
@@ -168,13 +169,25 @@ export interface SettingsValues {
   hostedModels: boolean;
   needDecayMultiplier: number;
   escalateBelow: number;
+  /** Visitor limits (admins are exempt). Defaults are effectively unlimited. */
+  catalogEnabled: string[];
+  airdropMaxActivePerVisitor: number;
+  airdropCooldownSeconds: number;
+  airdropWorldCap: number;
+  /** In-world seconds; 0 = never. */
+  airdropDefaultExpiry: number;
+  mailCapacity: number;
+  /** In-world seconds; 0 = never. */
+  mailExpirySeconds: number;
+  mailMaxWaitingPerVisitor: number;
+  mailCooldownSeconds: number;
 }
 
-/** How to render one setting: a generic number or boolean control. */
+/** How to render one setting: a generic number or boolean control, or a list of catalogue item ids. */
 export interface SettingField {
   key: keyof SettingsValues;
   label: string;
-  kind: 'number' | 'boolean';
+  kind: 'number' | 'boolean' | 'string[]';
   unit?: string;
   min?: number;
   max?: number;
@@ -211,11 +224,59 @@ export interface SettingsUpdate {
   effects: string[];
 }
 
+// ---- visitors: the airdrop catalogue, airdrops and the mailbox (docs/architecture/visitors.md)
+
+/** `GET /catalog` for admins: items plus edit metadata (others get plain `CatalogItem`s, enabled only). */
+export type CatalogEntry = CatalogItem & { disabled?: boolean; updatedAt?: string; updatedBy?: string | null };
+export interface PathError {
+  path: string;
+  message: string;
+}
+export type ValidateResult = { ok: true; item: CatalogItem } | { ok: false; errors: PathError[] };
+
+export interface Airdrop {
+  id: string;
+  entityId: string;
+  itemId: string;
+  /** A copy of the catalogue item at drop time. */
+  item: CatalogItem;
+  pos: { x: number; y: number };
+  droppedBy: { username: string; admin: boolean };
+  droppedTick: number;
+  expiresTick?: number;
+  usesLeft?: number;
+}
+export interface AirdropDetail extends Airdrop {
+  /** What characters believe about things like this (beliefs are by what the robot perceives: `thing-<tags>`). */
+  beliefs: { characterId: string; text: string; firmness: number }[];
+}
+export interface MailStatus {
+  id: string;
+  status: 'waiting' | 'read' | 'expired' | 'deleted';
+  /** 1 = next to be read. */
+  position?: number;
+  /** The sender and admins always; everyone once read. */
+  text?: string;
+  from: { username: string; admin: boolean };
+  postedTick: number;
+  readTick?: number;
+  /** What the robot did right after reading (its next feed entry). */
+  reaction?: { feedTick: number; summary: string; notes?: string[] };
+}
+export interface MailView {
+  waiting: number;
+  mine?: MailStatus[];
+  all?: MailStatus[];
+}
+
 export class ApiError extends Error {
   readonly status: number;
-  constructor(status: number, message: string) {
+  /** Path-specific problems (catalogue validation). */
+  readonly errors?: PathError[];
+  constructor(status: number, message: string, errors?: PathError[]) {
     super(message);
     this.status = status;
+    if (errors) this.errors = errors;
   }
 }
 
@@ -237,7 +298,7 @@ export class UasClient {
     });
     const text = await res.text();
     const data = text ? JSON.parse(text) : undefined;
-    if (!res.ok) throw new ApiError(res.status, (data as { error?: string })?.error ?? res.statusText);
+    if (!res.ok) throw new ApiError(res.status, (data as { error?: string })?.error ?? res.statusText, (data as { errors?: PathError[] })?.errors);
     return data as T;
   }
 
@@ -261,11 +322,6 @@ export class UasClient {
   diary = (id: string, cid: string, day?: number) =>
     this.req<{ day: number; entries: { tick: number; text: string }[] }>('GET', `/worlds/${id}/characters/${cid}/diary${day === undefined ? '' : `?day=${day}`}`);
   poke = (id: string, cid: string) => this.req<InputEvent>('POST', `/worlds/${id}/characters/${cid}/poke`);
-  joinAsVisitor = (id: string, pos?: Pos) => this.req<{ visitorId: string }>('POST', `/worlds/${id}/visitors`, pos ? { pos } : {});
-  visitorActions = (id: string, vid: string, actions: Action[]) => this.req<InputEvent>('POST', `/worlds/${id}/visitors/${vid}/actions`, { actions });
-  /** Make noises at a character: `notes` like ['beep-C', 'chirp-E']. Joins its visitor queue. */
-  noiseAt = (id: string, vid: string, characterId: string, notes: string[]) =>
-    this.visitorActions(id, vid, [{ verb: 'vocalize', args: { notes, at: characterId }, reason: 'visitor' }]);
   events = (id: string, fromSeq = 0, limit = 100) => this.req<InputEvent[]>('GET', `/worlds/${id}/events?fromSeq=${fromSeq}&limit=${limit}`);
   feed = (id: string, characterId?: string, limit = 100) =>
     this.req<FeedEntry[]>('GET', `/worlds/${id}/feed?limit=${limit}${characterId ? `&characterId=${characterId}` : ''}`);
@@ -284,6 +340,22 @@ export class UasClient {
   // ---- Live world settings
   settings = (id: string) => this.req<WorldSettings>('GET', `/worlds/${id}/settings`);
   updateSettings = (id: string, patch: Partial<SettingsValues>) => this.req<SettingsUpdate>('PATCH', `/worlds/${id}/settings`, patch);
+
+  // ---- Visitors: the airdrop catalogue (server-wide), airdrops and the mailbox (per world)
+  catalogItems = () => this.req<CatalogEntry[]>('GET', '/catalog');
+  catalogTemplates = () => this.req<{ name: string; item: CatalogItem }[]>('GET', '/catalog/templates');
+  validateItem = (item: unknown) => this.req<ValidateResult>('POST', '/catalog/validate', { item });
+  /** Throws ApiError (400) with `errors` when the item is invalid. */
+  saveItem = (item: CatalogItem, disabled?: boolean) =>
+    this.req<CatalogEntry>('PUT', `/catalog/${encodeURIComponent(item.id)}`, { item, ...(disabled !== undefined && { disabled }) });
+  deleteItem = (itemId: string) => this.req<{ ok: true }>('DELETE', `/catalog/${encodeURIComponent(itemId)}`);
+  airdrops = (id: string) => this.req<Airdrop[]>('GET', `/worlds/${id}/airdrops`);
+  airdrop = (id: string, dropId: string) => this.req<AirdropDetail>('GET', `/worlds/${id}/airdrops/${encodeURIComponent(dropId)}`);
+  dropItem = (id: string, itemId: string, pos: { x: number; y: number }) => this.req<Airdrop>('POST', `/worlds/${id}/airdrops`, { itemId, pos });
+  removeAirdrop = (id: string, dropId: string) => this.req<{ ok: true }>('DELETE', `/worlds/${id}/airdrops/${encodeURIComponent(dropId)}`);
+  mail = (id: string) => this.req<MailView>('GET', `/worlds/${id}/mail`);
+  postMail = (id: string, text: string) => this.req<MailStatus>('POST', `/worlds/${id}/mail`, { text });
+  removeMail = (id: string, mailId: string) => this.req<{ ok: true }>('DELETE', `/worlds/${id}/mail/${encodeURIComponent(mailId)}`);
 
   /** Open the WebSocket stream. */
   connect(): WorldStream {

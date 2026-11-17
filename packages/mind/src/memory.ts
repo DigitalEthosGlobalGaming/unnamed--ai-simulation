@@ -69,6 +69,11 @@ export function updateBelief(mind: MindState, mem: Memory): Belief | undefined {
   const key = aboutKey(mem);
   const felt = mem.felt;
   let b = mind.beliefs.find((x) => x.key === key);
+  // Experience replaces hearsay outright.
+  if (b?.source === 'told') {
+    mind.beliefs.splice(mind.beliefs.indexOf(b), 1);
+    b = undefined;
+  }
   if (!b) {
     b = { key, text: '', expectedNeedDeltas: { ...felt }, expectedValence: mem.valence, support: 1, firmness: 0.3, lastSupportedDay: mem.day };
     mind.beliefs.push(b);
@@ -93,4 +98,34 @@ export function updateBelief(mind: MindState, mem: Memory): Belief | undefined {
   }
   b.text = beliefText(key, b.expectedNeedDeltas);
   return b;
+}
+
+/** Firmness of a belief that only comes from a stranger's note. */
+export const HEARSAY_FIRMNESS = 0.15;
+
+/**
+ * A stranger's note that names one of my known options (a verb and the thing it applies to)
+ * becomes a weak belief with `source: "told"`, unless I already believe something about it.
+ * The note is matched as plain words; it never adds options or acts by itself.
+ */
+export function hearsay(mind: MindState, quoted: string, day: number): Belief | undefined {
+  const words = new Set(quoted.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+  const named = (type: string) => {
+    const parts = type.startsWith('thing-') ? type.split('-').slice(1) : [type.toLowerCase()];
+    return parts.some((p) => words.has(p)) || (type.startsWith('thing') && words.has('thing'));
+  };
+  const options = Object.values(mind.known)
+    .flatMap((k) => k.affordances.map((verb) => ({ verb, type: k.type })))
+    .filter((o) => o.verb !== 'scan' && words.has(o.verb.toLowerCase()) && named(o.type))
+    .sort((a, b) => (`${a.verb}:${a.type}` < `${b.verb}:${b.type}` ? -1 : 1));
+  const o = options[0];
+  if (!o) return undefined;
+  let made: Belief | undefined;
+  for (const when of ['day', 'night'] as const) {
+    const key = `${o.verb}:${o.type}@${when}`;
+    if (mind.beliefs.some((b) => b.key === key)) continue;
+    made = { key, text: `a stranger's note said to ${o.verb} the ${o.type}`, expectedNeedDeltas: {}, expectedValence: 0.1, support: 0, firmness: HEARSAY_FIRMNESS, lastSupportedDay: day, source: 'told' };
+    mind.beliefs.push(made);
+  }
+  return made;
 }

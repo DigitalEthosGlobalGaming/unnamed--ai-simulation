@@ -1,4 +1,4 @@
-# The first-slice world: one robot, five objects, the 24 x 16 garden.
+# The first-slice world: one robot, six objects, the 24 x 16 garden.
 # ${VAR} and ${VAR:-default} are read from the environment.
 id: garden
 name: The Garden
@@ -18,7 +18,6 @@ clock:
 timeScale: 1             # PATCH /worlds/garden/clock { timeScale } speeds up for development; back to 1 re-aligns
 snapshotEverySeconds: 3600
 publicRead: true
-visitorArchetype: robot
 # 4 ticks per real second at 0.25 in-world seconds per tick (still 1 in-world second per real
 # second). Models are called per decision, not per tick, so this stays light. Adjustable live:
 # PATCH /worlds/garden/settings { ticksPerRealSecond, moveSecondsPerTile }.
@@ -33,7 +32,6 @@ mind:
   jobTimeoutSeconds: ${UAS_JOB_TIMEOUT_SECONDS:-300}
   # Two extra cheap jobs (appraise + scoreMemory) per outcome; 'false' uses code appraisal.
   appraiseOutcomes: ${UAS_APPRAISE:-false}
-  visitorQueue: { maxLength: 5, ttlSeconds: 600, cooldownSeconds: 60 }   # TODO(open question): tune
 entities:
   - { id: robot, type: robot, pos: [10, 10], state: { name: Robot } }   # TODO(open question): the robot's name
   - { id: pad, type: solarPad, pos: [8, 8] }
@@ -41,6 +39,7 @@ entities:
   - { id: ball, type: ball, pos: [12, 12] }
   - { id: fountain, type: fountain, pos: [14, 6] }
   - { id: piano, type: piano, pos: [3, 3] }
+  - { id: mailbox, type: mailbox, pos: [17, 8] }   # visitors' notes; the flag shows when one is waiting
 
 models:
   audPerUsd: 1.55          # fixed config rate, never fetched (replays stay deterministic)

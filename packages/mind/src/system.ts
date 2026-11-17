@@ -1,5 +1,6 @@
 import {
   manhattan,
+  perceivedType,
   type Action,
   type ArchetypeDef,
   type Candidate,
@@ -22,7 +23,7 @@ import {
 import type { SimPlugin, World } from '@uas/sim';
 import { buildCandidates, choose, confident, score } from './autopilot.ts';
 import { mindConfigOf, type MindConfig } from './config.ts';
-import { admit, recall, updateBelief } from './memory.ts';
+import { admit, hearsay, recall, updateBelief } from './memory.ts';
 import { band, clamp, computeMood, feltWord, round3, updateNeeds } from './needs.ts';
 import { buildPrompt, freezePrefix, timeWord } from './prompt.ts';
 
@@ -50,6 +51,9 @@ const isRecord = (v: unknown): v is Record<string, Json> => !!v && typeof v === 
  * triggers, autopilot, memory, beliefs, sleep, and the job outbox for models.
  * Pure and deterministic; model answers only arrive as `model.answer` inputs.
  */
+/** How the mailbox's `read` presents a message (see the basic pack's mailRead). */
+const NOTE_PREFIX = 'a note from a stranger: ';
+
 export class MindSystem implements SimPlugin {
   /** Jobs requested this tick. The host drains it and sends them to the gateway (never on replay). */
   outbox: JobRequest[] = [];
@@ -63,7 +67,7 @@ export class MindSystem implements SimPlugin {
   // ------------------------------------------------------------------ plugin hooks
 
   onSpawn(world: World, c: Character): void {
-    if (c.state.visitor === true) return; // visitors are human-controlled: no mind
+    if (c.state.visitor === true) return; // leftover visitor characters (removed on start) have no mind
     const arch = world.archetype(c.type)!;
     const m: MindState = {
       mood: { valence: 0, arousal: 0.3, word: 'okay', bias: 0 },
@@ -88,8 +92,6 @@ export class MindSystem implements SimPlugin {
       energyFloorLatched: false,
       nextId: 1,
       lastLevels: {},
-      visitorQueue: [],
-      visitorCooldownUntil: 0,
     };
     freezePrefix(world.registry, arch, m, world.tick, this.ticksPerDay(world), world.day);
     c.mind = m;
@@ -101,10 +103,6 @@ export class MindSystem implements SimPlugin {
       if (!c) return false;
       c.mind!.triggers.push({ kind: 'admin-poke', tick: world.tick, salience: 1 });
       return true;
-    }
-    if (e.type === 'visitor.command') {
-      this.queueVisitorRequests(world, e.payload as { visitorId: string; actions: Action[] });
-      return false; // the sim still runs the visitor's own actions
     }
     if (e.type === 'settings.change') {
       // The mind's part of a live settings change: how much battery thinking costs, and need decay.
@@ -172,7 +170,7 @@ export class MindSystem implements SimPlugin {
     const arch = world.archetype(actor.type)!;
     const m = actor.mind;
     if (!m) return;
-    const key = `${action.verb}:${target.type}`;
+    const key = `${action.verb}:${perceivedType(target)}`;
     const b = this.boredom(world, m, key, arch);
     const mult = Math.max(0, 1 - b);
     const values: Record<string, number> = {};
@@ -183,11 +181,11 @@ export class MindSystem implements SimPlugin {
       else if (k in actor.needs) values[k] = actor.needs[k] = clamp(actor.needs[k]! + d);
     }
     if (m.sleep === 'asleep') return world.emit({ kind: 'needs', id: actor.id, values: roundAll(values) });
-    const step = world.registry.objects.get(target.type)?.verbs[action.verb]?.boredomStep ?? arch.mind.boredomStep;
+    const step = world.verbDefOf(world.entity(target.id), action.verb)?.boredomStep ?? arch.mind.boredomStep;
     m.boredom[key] = { b: round3(b + step), tick: world.tick };
     if (b + step > arch.mind.boredomThreshold) {
       m.mood.bias = round3(Math.max(-1, m.mood.bias - arch.mind.boredomValencePenalty));
-      this.diary(world, actor, `${action.verb} at the ${target.type} is getting dull`);
+      this.diary(world, actor, `${action.verb} at the ${perceivedType(target)} is getting dull`);
     }
     world.emit({ kind: 'needs', id: actor.id, values: roundAll(values) });
   }
@@ -272,7 +270,6 @@ export class MindSystem implements SimPlugin {
     } else m.idleSince = world.tick;
 
     this.expireJobs(world, c, arch, cfg, isNight);
-    this.visitorQueueTick(world, c, cfg);
     this.brain(world, c, arch, cfg, isNight);
 
     if (changed) world.emit({ kind: 'mood', id: c.id, valence: mood.valence, arousal: mood.arousal, word: mood.word });
@@ -293,7 +290,7 @@ export class MindSystem implements SimPlugin {
         case 'done':
         case 'failed': {
           finished = true;
-          const objectType = target?.kind === 'object' ? target.type : undefined;
+          const objectType = target?.kind === 'object' ? perceivedType(target) : undefined;
           if (d.action.verb === 'vocalize' && Array.isArray(d.action.args?.notes)) {
             m.usedChains = [...m.usedChains, { notes: d.action.args.notes as string[], valence: m.mood.valence }].slice(-8);
           }
@@ -307,7 +304,7 @@ export class MindSystem implements SimPlugin {
         case 'rejected': {
           m.triggers.push({ kind: 'action-rejected', tick: world.tick, salience: 0.6, detail: d.reason });
           if (d.reason?.startsWith('no such target') && d.action.targetId) delete m.known[d.action.targetId];
-          this.openItem(world, m, 'unfinished', `I could not ${d.action.verb}${target ? ` the ${target.type}` : ''}: ${d.reason}`, d.action.verb);
+          this.openItem(world, m, 'unfinished', `I could not ${d.action.verb}${target ? ` the ${perceivedType(target)}` : ''}: ${d.reason}`, d.action.verb);
           this.diary(world, c, `tried to ${d.action.verb} but ${d.reason}`);
           break;
         }
@@ -367,6 +364,11 @@ export class MindSystem implements SimPlugin {
       waitingFor: [],
     });
     this.diary(world, c, `${verb}${objectType ? ` at the ${objectType}` : ''}: ${observation} (felt ${m.mood.word})`);
+    // A stranger's note (already quoted by the mailbox) may suggest something: hearsay only.
+    if (objectType === 'mailbox' && observation.startsWith(NOTE_PREFIX)) {
+      const told = hearsay(m, observation.slice(NOTE_PREFIX.length), world.day);
+      if (told) this.diary(world, c, `a stranger's note says ${told.text.replace(/^a stranger's note said /, '')}; I have not seen it myself`);
+    }
     const cfg = mindConfigOf(world.state.ext);
     if (cfg.brain === 'models' && cfg.appraiseOutcomes && !m.energyFloorLatched) {
       const draft = m.drafts.at(-1)!;
@@ -439,9 +441,9 @@ export class MindSystem implements SimPlugin {
         const prev = m.known[o.subjectId];
         if (!prev) {
           salience += 0.5;
-          for (const mem of [...m.stm, ...m.ltm]) if (mem.about.objectType === e.type) recall(mem, world.tick, world.day);
+          for (const mem of [...m.stm, ...m.ltm]) if (mem.about.objectType === perceivedType(e)) recall(mem, world.tick, world.day);
         } else if (manhattan(prev.pos, pos) > 0) salience += 0.2;
-        if (e.kind === 'object') m.known[o.subjectId] = { type: e.type, pos, affordances: o.affordances ?? [], tick: world.tick };
+        if (e.kind === 'object') m.known[o.subjectId] = { type: perceivedType(e), pos, affordances: o.affordances ?? [], tick: world.tick };
       }
       if (o.kind === 'heard') {
         const notes = o.summary.match(NOTE_RE);
@@ -793,64 +795,6 @@ export class MindSystem implements SimPlugin {
       ...(o.candidates && { multi: { max: o.multi ?? 3 } }),
       ...(o.input !== undefined && { input: o.input }),
     });
-  }
-
-  // ------------------------------------------------------------------ visitor queue
-
-  /** Every visitor interaction aimed at a character joins that character's queue. */
-  private queueVisitorRequests(world: World, p: { visitorId: string; actions: Action[] }): void {
-    if (!Array.isArray(p.actions)) return;
-    const cfg = mindConfigOf(world.state.ext);
-    for (const a of p.actions) {
-      const targetId = a?.targetId ?? (typeof a?.args?.at === 'string' ? a.args.at : undefined);
-      const target = targetId === undefined ? undefined : this.character(world, targetId);
-      if (!target) continue;
-      const m = target.mind!;
-      const notes = a.verb === 'vocalize' && Array.isArray(a.args?.notes) ? (a.args.notes as string[]) : undefined;
-      const request = {
-        id: `v${m.nextId++}`,
-        visitorId: p.visitorId,
-        kind: notes ? ('noise' as const) : ('action' as const),
-        detail: notes ? notes.join(' ') : `${a.verb}${a.targetId ? ' at me' : ''}`,
-        ...(notes && { notes }),
-        tick: world.tick,
-      };
-      if (m.visitorQueue.length >= cfg.visitorQueue.maxLength) {
-        world.emit({ kind: 'visitorDropped', id: target.id, request, reason: 'queue full' });
-        continue;
-      }
-      m.visitorQueue.push(request);
-      world.emit({ kind: 'visitorQueue', id: target.id, queue: structuredClone(m.visitorQueue) });
-    }
-  }
-
-  /**
-   * Expire old requests; when the brain is free and the cooldown has passed, take one by a
-   * seeded weighted pick that strongly favours the oldest. The pick becomes a normal trigger.
-   */
-  private visitorQueueTick(world: World, c: Character, cfg: MindConfig): void {
-    const m = c.mind!;
-    if (m.visitorQueue.length === 0) return;
-    const expired = m.visitorQueue.filter((r) => world.tick - r.tick > cfg.visitorQueue.ttlTicks);
-    for (const r of expired) world.emit({ kind: 'visitorDropped', id: c.id, request: r, reason: 'expired' });
-    if (expired.length) m.visitorQueue = m.visitorQueue.filter((r) => !expired.includes(r));
-    let changed = expired.length > 0;
-    const free = m.sleep !== 'asleep' && !m.pendingJobs.some((j) => j.job === 'decide' || j.job === 'vocalize') && m.triggers.length === 0;
-    if (free && world.tick >= m.visitorCooldownUntil && m.visitorQueue.length > 0) {
-      const weights = m.visitorQueue.map((_, i) => 1 / ((i + 1) * (i + 1)));
-      let x = world.rng('visitors').next() * weights.reduce((a, b) => a + b, 0);
-      let idx = 0;
-      while (idx < weights.length - 1 && (x -= weights[idx]!) > 0) idx++;
-      const [request] = m.visitorQueue.splice(idx, 1);
-      changed = true;
-      m.visitorCooldownUntil = world.tick + cfg.visitorQueue.cooldownTicks;
-      world.emit({ kind: 'visitorPick', id: c.id, request: structuredClone(request!) });
-      if (request!.notes) {
-        m.heard = [...m.heard, { notes: request!.notes, tick: world.tick, fromId: request!.visitorId }].slice(-8);
-        m.triggers.push({ kind: 'heard-noise', tick: world.tick, salience: 0.8, detail: request!.detail });
-      } else m.triggers.push({ kind: 'sensed', tick: world.tick, salience: 0.8, detail: `a visitor: ${request!.detail}` });
-    }
-    if (changed) world.emit({ kind: 'visitorQueue', id: c.id, queue: structuredClone(m.visitorQueue) });
   }
 
   // ------------------------------------------------------------------ helpers

@@ -163,6 +163,6 @@ Each `worlds/*.yaml` is one world ([`config.ts`](../packages/server/src/config.t
 ## Health and metrics
 
 - `GET /healthz` returns `{ ok: true, worlds: [...] }`. The Docker image health-checks it every 30 seconds.
-- `GET /metrics` is Prometheus text with per-world gauges: tick, tick lag, model latency, spend, pending jobs, model queue stats and visitor queue depth. The full list is in [server-and-api.md](architecture/server-and-api.md#health-and-metrics).
+- `GET /metrics` is Prometheus text with per-world gauges: tick, tick lag, model latency, spend, pending jobs, model queue stats and mail waiting. The full list is in [server-and-api.md](architecture/server-and-api.md#health-and-metrics).
 - `GET /usage` (admin) gives tokens, AUD and energy by day, model and job, plus the queue stats.
 - Each world worker logs model routing skips and failures to the server's console, prefixed with the world ID.

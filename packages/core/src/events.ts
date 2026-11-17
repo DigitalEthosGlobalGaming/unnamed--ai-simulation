@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { EntityId, Json, WorldId } from './json.ts';
 import type { Pos } from './grid.ts';
 import type { Action, AnyEntity, EntityDef } from './entities.ts';
-import type { Belief, Memory, MemoryId, SleepPhase, VisitorRequest } from './mind-types.ts';
+import type { Belief, Memory, MemoryId, SleepPhase } from './mind-types.ts';
 
 export type JobName = 'decide' | 'route' | 'appraise' | 'scoreMemory' | 'vocalize' | 'plan' | 'reflect' | 'embed';
 
@@ -68,7 +68,6 @@ export interface AdminDespawnPayload {
 export interface AdminPokePayload {
   characterId: EntityId;
 }
-/** A visitor's own actions. Anything aimed at a character also joins that character's visitor queue. */
 /**
  * Wall-clock alignment, set by the server (the sim never reads a clock). `epochMs` is real UTC
  * time; `tzOffsetMinutes` the world timezone's offset at that instant, so the world's time of
@@ -82,6 +81,41 @@ export interface ClockPayload {
   reason?: 'restart' | 'resume' | 'realign' | 'sync';
 }
 
+/** A world moved to new content pack versions (logged, so replays know where the change happened). */
+export interface PackLoadedPayload {
+  packVersions: string;
+}
+
+/** Who sent a visitor input: shown publicly as the username; `userKey` (a pseudonymous hash) rate-limits. */
+export interface Sender {
+  username: string;
+  admin: boolean;
+  userKey: string;
+}
+/** Airdrop: a copy of the catalogue item's JSON lands near `pos` (snapped to the nearest free walkable tile). */
+export interface AirdropDropPayload {
+  dropId: string;
+  item: Json;
+  pos: Pos;
+  by: Sender;
+  /** 0 or absent: never expires. */
+  expiresAfterSeconds?: number;
+}
+export interface AirdropRemovePayload {
+  dropId: string;
+  reason: 'deleted';
+}
+/** A message for the world's mailbox (already length-capped and filtered by the server). */
+export interface MailPostPayload {
+  mailId: string;
+  text: string;
+  by: Sender;
+  expiresAfterSeconds?: number;
+}
+export interface MailRemovePayload {
+  mailId: string;
+}
+
 /** Change sim timing on an existing world (e.g. when it switches to real time), logged so replays follow. */
 export interface SimConfigPayload {
   secondsPerTick?: number;
@@ -91,16 +125,12 @@ export interface SimConfigPayload {
 
 /** A live settings change from an admin; the mind applies its part (energy rate, need decay). */
 export interface SettingsChangePayload {
-  changes: Record<string, number | boolean>;
+  changes: Record<string, number | boolean | string[]>;
 }
 
 /** Host-reported model load (outside the sim), recorded so replays see the same signal. */
 export interface ModelsLoadPayload {
   busy: boolean;
-}
-export interface VisitorCommandPayload {
-  visitorId: EntityId;
-  actions: Action[];
 }
 
 export interface InputPayloads {
@@ -109,12 +139,16 @@ export interface InputPayloads {
   'admin.edit': AdminEditPayload;
   'admin.despawn': AdminDespawnPayload;
   'admin.poke': AdminPokePayload;
-  'visitor.command': VisitorCommandPayload;
   'models.load': ModelsLoadPayload;
   'clock.anchor': ClockPayload;
   'clock.jump': ClockPayload;
   'sim.config': SimConfigPayload;
   'settings.change': SettingsChangePayload;
+  'pack.loaded': PackLoadedPayload;
+  'airdrop.drop': AirdropDropPayload;
+  'airdrop.remove': AirdropRemovePayload;
+  'mail.post': MailPostPayload;
+  'mail.remove': MailRemovePayload;
 }
 export type InputType = keyof InputPayloads;
 
@@ -142,6 +176,12 @@ export type Delta =
     }
   | { kind: 'vocalize'; id: EntityId; pos: Pos; notes: string[] }
   | { kind: 'inputRejected'; seq: number; type: string; reason: string }
+  /** An airdropped item landed, was used (a verb completed on it) or was removed. */
+  | { kind: 'airdrop'; event: 'added' | 'used' | 'removed'; dropId: string; entityId: EntityId; itemId: string; pos?: Pos; verb?: string; by?: EntityId; reason?: 'expired' | 'used up' | 'deleted' }
+  /** How many messages wait in the mailbox (drives its flag). */
+  | { kind: 'mailbox'; waiting: number }
+  /** A message changed status. Never carries the text (waiting text is private). */
+  | { kind: 'mail'; mailId: string; status: 'waiting' | 'read' | 'expired' | 'deleted'; readerId?: EntityId }
   /** The world clock was anchored or jumped; `seconds` are local wall-clock seconds since the epoch. */
   | { kind: 'clock'; seconds: number; previous: number; reason: string; timezone: string }
   | { kind: 'mood'; id: EntityId; valence: number; arousal: number; word: string }
@@ -149,10 +189,7 @@ export type Delta =
   | { kind: 'memory'; id: EntityId; memory: Memory; evicted?: MemoryId }
   | { kind: 'beliefs'; id: EntityId; beliefs: Belief[] }
   | { kind: 'sleep'; id: EntityId; phase: SleepPhase }
-  | { kind: 'diary'; id: EntityId; day: number; text: string }
-  | { kind: 'visitorQueue'; id: EntityId; queue: VisitorRequest[] }
-  | { kind: 'visitorPick'; id: EntityId; request: VisitorRequest }
-  | { kind: 'visitorDropped'; id: EntityId; request: VisitorRequest; reason: 'expired' | 'queue full' };
+  | { kind: 'diary'; id: EntityId; day: number; text: string };
 
 export interface TickDeltas {
   tick: number;

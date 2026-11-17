@@ -40,7 +40,6 @@ const RawWorldFileSchema = z.strictObject({
   snapshotEveryTicks: z.int().positive().optional(),
   /** Spectators may read without a key. */
   publicRead: z.boolean().default(true),
-  visitorArchetype: z.string().default('robot'),
   sim: z
     .strictObject({
       secondsPerTick: z.number().positive(),
@@ -94,15 +93,6 @@ function resolve(raw: z.infer<typeof RawWorldFileSchema>): WorldFile {
   const mind = { ...raw.mind } as Record<string, unknown>;
   if (typeof mind.jobTimeoutSeconds === 'number') mind.jobTimeoutTicks = ticks(mind.jobTimeoutSeconds);
   delete mind.jobTimeoutSeconds;
-  const vq = mind.visitorQueue as Record<string, unknown> | undefined;
-  if (vq) {
-    const q = { ...vq };
-    if (typeof q.ttlSeconds === 'number') q.ttlTicks = ticks(q.ttlSeconds);
-    if (typeof q.cooldownSeconds === 'number') q.cooldownTicks = ticks(q.cooldownSeconds);
-    delete q.ttlSeconds;
-    delete q.cooldownSeconds;
-    mind.visitorQueue = q;
-  }
   const models = { ...raw.models } as Record<string, unknown>;
   const queue = models.queue as Record<string, unknown> | undefined;
   if (queue && typeof queue.staleSeconds === 'number') {

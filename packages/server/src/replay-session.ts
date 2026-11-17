@@ -36,7 +36,7 @@ export class ReplaySession {
       worldId: this.cfg.id,
       log: this.log,
       snapshots: this.snaps,
-      restore: (s) => World.fromSnapshot(s.state, registry, minds),
+      restore: (s) => World.fromSnapshot(s.state, registry, minds, { allowPackUpgrade: true }),
       toTick: tick,
       onTick: () => minds.drain(),
     });

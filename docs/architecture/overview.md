@@ -21,7 +21,7 @@ flowchart LR
   uas -- "HTTPS" --> cloud
 ```
 
-Spectators and visitors are supported by the API (roles, visitor queue) but the viewer is built for the owner first. See [PRODUCT.md](../../PRODUCT.md).
+Spectators and visitors are supported by the API (roles; visitors airdrop catalogue items and post to a mailbox, see [visitors.md](visitors.md)) but the viewer is built for the owner first. See [PRODUCT.md](../../PRODUCT.md).
 
 ## Containers
 
@@ -116,7 +116,7 @@ flowchart BT
 | --- | --- | --- | --- |
 | `@uas/core` | [package.json](../../packages/core/package.json) | zod | Types, IDs, hashing, seeded PRNG, grid, pack schemas and registry, WebSocket protocol types. No I/O. |
 | `@uas/sim` | [package.json](../../packages/sim/package.json) | none | Tick loop, built-in verbs, action queue, effects, A* pathfinding, snapshots. See [simulation.md](simulation.md). |
-| `@uas/mind` | [package.json](../../packages/mind/package.json) | none | `MindSystem`, a `SimPlugin`: needs, mood, boredom, senses, triggers, autopilot, memory, beliefs, standby, visitor queue, prompt builder. See [mind.md](mind.md). |
+| `@uas/mind` | [package.json](../../packages/mind/package.json) | none | `MindSystem`, a `SimPlugin`: needs, mood, boredom, senses, triggers, autopilot, memory, beliefs, hearsay, standby, prompt builder. See [mind.md](mind.md). |
 | `@uas/models` | [package.json](../../packages/models/package.json) | ai, @ai-sdk/anthropic, yaml, zod | Model interfaces, adapters, routing, AUD meter, job queue. See [models.md](models.md). |
 | `@uas/store` | [package.json](../../packages/store/package.json) | better-sqlite3, drizzle-orm | Input log, snapshots, read models, `Recorder`, `replay()`. See [events-and-replay.md](events-and-replay.md). |
 | `@uas/pack-basic` | [package.json](../../packages/pack-basic/package.json) | none | The robot pack and garden map. See [content-packs.md](../content-packs.md). |
@@ -133,4 +133,4 @@ Two edges differ from the spec's package table: `@uas/mind` depends on `@uas/sim
 | The sim never awaits I/O. | Model jobs go into `MindSystem.outbox`; the runtime drains it after each tick and hands it to `ModelHost`. Answers come back as `model.answer` input events on a later tick. See [`system.ts`](../../packages/mind/src/system.ts), [`runtime.ts`](../../packages/server/src/runtime.ts). |
 | No clocks, randomness or I/O in `sim` or `mind`. | [`determinism-rules.test.ts`](../../packages/sim/test/determinism-rules.test.ts) scans both packages' sources for `Date.now()`, `Math.random()`, timers, `fetch`, `process.*` and I/O imports. |
 | Workers share no mutable state with the server. | [`worker.ts`](../../packages/server/src/worker.ts) talks only through `postMessage` with the message types in [`protocol.ts`](../../packages/server/src/protocol.ts). |
-| Everything from outside enters as a logged input event. | Admin edits, visitor commands, model answers and model-load signals all go through `Recorder.submit`, which appends to the log before queueing. See [events-and-replay.md](events-and-replay.md). |
+| Everything from outside enters as a logged input event. | Admin edits, airdrops, mail, model answers and model-load signals all go through `Recorder.submit`, which appends to the log before queueing. See [events-and-replay.md](events-and-replay.md). |

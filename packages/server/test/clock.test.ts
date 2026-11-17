@@ -21,13 +21,13 @@ const localHour = (tz: string) => {
 
 describe('real-time world clock (server)', () => {
   it('resolves real-time defaults: 4 ticks per real second at 0.25 s per tick, watched or not, 0.75 s per tile', () => {
-    const c = config({ snapshotEverySeconds: 3600, mind: { jobTimeoutSeconds: 300, visitorQueue: { ttlSeconds: 600, cooldownSeconds: 60 } }, models: { models: {}, jobs: {}, queue: { staleSeconds: 60 } } });
+    const c = config({ snapshotEverySeconds: 3600, mind: { jobTimeoutSeconds: 300 }, models: { models: {}, jobs: {}, queue: { staleSeconds: 60 } } });
     expect(c.sim.secondsPerTick).toBe(0.25);
     expect([c.ticksPerRealSecond, c.idleTicksPerRealSecond]).toEqual([4, 4]);
     expect(c.sim.moveTicksPerTile).toBe(3); // 0.75 s
     expect(c.sim.durationScale).toBe(4); // pack durations stay in seconds
     expect(c.snapshotEveryTicks).toBe(14_400);
-    expect(c.mind).toMatchObject({ jobTimeoutTicks: 1200, visitorQueue: { ttlTicks: 2400, cooldownTicks: 240 } });
+    expect(c.mind).toMatchObject({ jobTimeoutTicks: 1200 });
     expect(c.models.queue).toMatchObject({ staleTicks: 240 });
     expect(config({ ticksPerRealSecond: 2, sim: { moveSecondsPerTile: 1.5 } }).sim).toMatchObject({ secondsPerTick: 0.5, moveTicksPerTile: 3, durationScale: 2 });
     expect(parseWorldFile({ id: 'x', seed: 1 }).clock.timezone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);

@@ -12,7 +12,8 @@ export interface Simulation<S> {
 
 export interface RecorderOptions {
   worldId: WorldId;
-  packVersions: string;
+  /** Stamped on every input; a function when it can change (after a `pack.loaded`). */
+  packVersions: string | (() => string);
   /** Default 1,000. */
   snapshotEveryTicks?: number;
 }
@@ -35,6 +36,10 @@ export class Recorder<S, W extends Simulation<S>> {
     if (!snapshots.nearest(opts.worldId, world.tick)) this.takeSnapshot();
   }
 
+  private packVersions(): string {
+    return typeof this.opts.packVersions === 'function' ? this.opts.packVersions() : this.opts.packVersions;
+  }
+
   /** Stamp an input with the next seq and the current tick, log it, then queue it. */
   submit(type: string, payload: unknown, causedBy?: InputEvent['causedBy']): InputEvent {
     const event: InputEvent = {
@@ -43,7 +48,7 @@ export class Recorder<S, W extends Simulation<S>> {
       tick: this.world.tick,
       type,
       payload,
-      packVersions: this.opts.packVersions,
+      packVersions: this.packVersions(),
       ...(causedBy && { causedBy }),
     };
     this.log.append(event);
@@ -62,7 +67,7 @@ export class Recorder<S, W extends Simulation<S>> {
       worldId: this.opts.worldId,
       tick: this.world.tick,
       seq: this.log.lastSeq(this.opts.worldId),
-      packVersions: this.opts.packVersions,
+      packVersions: this.packVersions(),
       state: this.world.snapshot(),
     };
     this.snapshots.put(snap);
@@ -89,9 +94,6 @@ export function replay<S, W extends Simulation<S>>(o: ReplayOptions<S, W>): W {
   if (!snap) throw new Error(`world ${o.worldId}: no snapshot at or before tick ${o.fromTick ?? o.toTick}`);
   const world = o.restore(snap);
   for (const e of o.log.read(o.worldId, { fromTick: snap.tick, toTick: o.toTick })) {
-    if (e.packVersions !== snap.packVersions) {
-      throw new Error(`input seq ${e.seq} needs content packs ${e.packVersions}; snapshot has ${snap.packVersions}`);
-    }
     world.enqueue(e);
   }
   while (world.tick < o.toTick) {

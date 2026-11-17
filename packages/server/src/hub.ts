@@ -6,6 +6,7 @@ import type { SqliteInputLog, SqliteSnapshotStore } from '@uas/store';
 import { allows, type KeyRing, type Principal } from './auth.ts';
 import { filterRegion, splitChannels } from './region.ts';
 import { ReplaySession } from './replay-session.ts';
+import { redactState } from './visitors.ts';
 import type { Supervisor } from './supervisor.ts';
 
 interface Sub {
@@ -95,11 +96,13 @@ export class Hub {
     const world = 'worldId' in msg ? this.sup.get(msg.worldId) : undefined;
     if ('worldId' in msg && !world) throw new Error(`no world ${msg.worldId}`);
     if (world && !allows(principal ?? undefined, 'spectator', world.config.publicRead)) throw new Error('not allowed');
+    // Waiting mail text is private to its sender and admins.
+    const admin = principal?.role === 'admin';
     switch (msg.type) {
       case 'subscribe': {
         const sub: Sub = { worldId: msg.worldId, channels: new Set(msg.channels ?? ['deltas', 'feed', 'noises']), ...(msg.region && { region: msg.region }) };
         const state = await world!.call<WorldState>({ method: 'state' });
-        send(ws, { type: 'snapshot', worldId: msg.worldId, tick: state.tick, state });
+        send(ws, { type: 'snapshot', worldId: msg.worldId, tick: state.tick, state: redactState(state, admin) });
         this.subs.get(ws)!.set(msg.worldId, sub);
         this.updateWatched(msg.worldId);
         return;
@@ -111,7 +114,7 @@ export class Hub {
       case 'replay.open': {
         const { id, state } = this.openSession(msg.worldId, msg.tick, ws);
         send(ws, { type: 'replay.opened', worldId: msg.worldId, sessionId: id, tick: state.tick });
-        send(ws, { type: 'snapshot', worldId: msg.worldId, sessionId: id, tick: state.tick, state });
+        send(ws, { type: 'snapshot', worldId: msg.worldId, sessionId: id, tick: state.tick, state: redactState(state, admin) });
         return;
       }
       case 'play':
@@ -125,7 +128,7 @@ export class Hub {
         if (msg.type === 'pause') return s.session.pause();
         if (msg.type === 'seek') {
           const state = s.session.seek(msg.tick);
-          return send(ws, { type: 'snapshot', worldId: state.config.worldId, sessionId: msg.sessionId, tick: state.tick, state });
+          return send(ws, { type: 'snapshot', worldId: state.config.worldId, sessionId: msg.sessionId, tick: state.tick, state: redactState(state, admin) });
         }
         const live = this.sup.get(s.session.world.state.config.worldId);
         return s.session.play(() => live?.status?.tick ?? s.session.world.tick, msg.speed ?? 1);

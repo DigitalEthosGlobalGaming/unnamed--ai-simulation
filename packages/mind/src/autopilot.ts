@@ -10,10 +10,10 @@ export function buildCandidates(world: World, c: Character, m: MindState): Candi
     .sort((a, b) => a.d - b.d || (a.id < b.id ? -1 : 1));
   const out: Candidate[] = [];
   for (const k of known) {
-    const def = world.registry.objects.get(k.type);
+    const entity = world.entity(k.id);
     for (const verb of k.affordances) {
       if (out.length >= MAX_CANDIDATES - 2) break;
-      const range = def?.verbs[verb]?.range ?? 1;
+      const range = world.verbDefOf(entity, verb)?.range ?? 1;
       const actions = [
         ...(k.d > range ? [{ verb: 'moveTo', targetId: k.id, reason: `heading to the ${k.type}` }] : []),
         { verb, targetId: k.id, reason: '' },
@@ -47,8 +47,10 @@ export function score(c: Character, m: MindState, arch: ArchetypeDef, cands: Can
     const k = target === undefined ? undefined : m.known[target];
     const travel = k ? 0.004 * manhattan(c.pos, k.pos) : 0;
     if (cand.key === 'wait:self') return { candidate: cand, value: 0.01, believed: true, firmness: 1, reason: 'nothing pulls at me, so I watch' };
-    if (!belief) {
-      const v = arch.mind.curiosityWeight * (0.4 + (1 - curiosity)) - travel;
+    if (!belief || belief.source === 'told') {
+      // Hearsay only nudges curiosity: a stranger said so, I haven't seen it.
+      const v = arch.mind.curiosityWeight * (0.4 + (1 - curiosity)) - travel + (belief?.expectedValence ?? 0);
+      if (belief) return { candidate: cand, value: v, believed: false, firmness: belief.firmness, reason: `${belief.text}; I want to see for myself` };
       return { candidate: cand, value: v, believed: false, firmness: 0, reason: `I wonder what happens if I ${cand.label.replace(/ \(.*\)$/, '')}` };
     }
     // Foresight: if this only works by day and dusk is near, value it against the battery

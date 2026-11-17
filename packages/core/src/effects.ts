@@ -21,6 +21,10 @@ export interface WorldView {
   archetype(type: string): Readonly<ArchetypeDef> | undefined;
   /** Verb names an object type offers (empty for characters). */
   verbsOf(type: string): string[];
+  /** Verb names one entity offers: its type's verbs plus any of its own (airdrops). */
+  verbsFor(entity: Readonly<AnyEntity>): string[];
+  /** The oldest waiting mailbox message, if any (read-only). */
+  mailPeek(): { mailId: string; text: string } | undefined;
   sounds(): readonly Sound[];
 }
 
@@ -50,6 +54,10 @@ export interface EffectResult {
   spawn?: EntityDef[];
   despawn?: EntityId[];
   observation: string;
+  /** The target makes this note chain (heard like a vocalize). */
+  noise?: string[];
+  /** Take the oldest mailbox message (the one `mailPeek` returned). */
+  takeMail?: boolean;
 }
 
 export type EffectHandler = (ctx: EffectContext) => EffectResult;

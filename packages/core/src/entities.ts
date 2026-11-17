@@ -54,6 +54,8 @@ export interface EntityDef {
   pos: Pos;
   id?: EntityId;
   state?: Record<string, Json>;
+  /** Replaces the type's default tags (airdrops carry their item's tags). */
+  tags?: string[];
 }
 
 export const MAX_QUEUE = 3;

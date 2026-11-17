@@ -76,6 +76,27 @@ port.on('message', (msg: ToWorker) => {
       case 'usage':
         value = { rows: rt.gateway.meter.report(msg.day), queue: rt.host.stats() };
         break;
+      case 'airdrops':
+        value = rt.airdrops();
+        break;
+      case 'airdrop':
+        value = rt.airdrop(msg.dropId);
+        break;
+      case 'drop':
+        value = rt.dropItem(msg.item, msg.pos, msg.by);
+        break;
+      case 'removeAirdrop':
+        value = rt.removeAirdrop(msg.dropId, msg.userId);
+        break;
+      case 'mail':
+        value = rt.mail(msg);
+        break;
+      case 'postMail':
+        value = rt.postMail(msg.text, msg.by);
+        break;
+      case 'removeMail':
+        value = rt.removeMail(msg.mailId, msg.userId);
+        break;
       case 'shutdown':
         clearTimeout(timer);
         rt.shutdown();

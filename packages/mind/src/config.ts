@@ -14,8 +14,6 @@ export interface MindConfig {
   appraiseOutcomes: boolean;
   /** Multiplier on need decay (not battery drain); a live world setting. */
   needDecayMultiplier: number;
-  /** Visitor queue tuning (open question in the spec; provisional defaults). */
-  visitorQueue: { maxLength: number; ttlTicks: number; cooldownTicks: number };
 }
 
 export const DEFAULT_MIND_CONFIG: MindConfig = {
@@ -25,10 +23,9 @@ export const DEFAULT_MIND_CONFIG: MindConfig = {
   jobTimeoutTicks: 100,
   appraiseOutcomes: true,
   needDecayMultiplier: 1,
-  visitorQueue: { maxLength: 5, ttlTicks: 1200, cooldownTicks: 150 },
 };
 
 export function mindConfigOf(ext: Record<string, Json>): MindConfig {
   const m = (ext.mind ?? {}) as Partial<MindConfig>;
-  return { ...DEFAULT_MIND_CONFIG, ...m, visitorQueue: { ...DEFAULT_MIND_CONFIG.visitorQueue, ...m.visitorQueue } };
+  return { ...DEFAULT_MIND_CONFIG, ...m };
 }

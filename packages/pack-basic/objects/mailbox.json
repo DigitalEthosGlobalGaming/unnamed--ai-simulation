@@ -1,0 +1,10 @@
+{
+  "type": "mailbox",
+  "tags": ["metal"],
+  "solid": true,
+  "verbs": {
+    "read": { "range": 1, "durationTicks": 10, "handler": "basic.mailRead" },
+    "scan": { "range": 6, "durationTicks": 20, "handler": "basic.inspect" }
+  },
+  "state": { "waiting": 0 }
+}

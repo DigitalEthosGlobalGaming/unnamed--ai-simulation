@@ -5,6 +5,8 @@ export interface Principal {
   role: Role;
   /** Stable id for a key (hash prefix); visitors are bound to one visitor per world by it. */
   keyId?: string;
+  /** Public name for visitor actions (the Vercel username for signed-in users). */
+  username?: string;
 }
 
 const RANK: Record<Role, number> = { spectator: 0, visitor: 1, admin: 2 };
