@@ -124,6 +124,10 @@ export interface WorldConnection {
   subscribe(onMessage: (m: ViewerMessage) => void): () => void;
   /** Recorded brain feed up to a tick (REST `GET /worlds/:id/feed` plus the live feed). */
   feedUntil(tick: number): FeedEntry[];
+  /** Older brain feed before a tick (REST `?beforeTick=`): the newest `limit`, oldest first. */
+  feedBefore?(beforeTick: number, limit: number, characterId?: string): Promise<FeedEntry[]>;
+  /** How many of the oldest loaded feed entries were dropped to keep memory bounded (keeps revision numbers stable). */
+  feedTrimmed?(): number;
   /** Where beliefs changed, for the timeline markers. */
   beliefMarks(): BeliefMark[];
   /** Earliest and latest ticks, for the scale bar. */

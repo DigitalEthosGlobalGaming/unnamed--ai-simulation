@@ -40,6 +40,13 @@ function sampleCatalog(): WorldCatalog {
     dailyCapAud: 2,
     energyFloor: 0.2,
     energyPerAud: 1.6,
+    models: [
+      { id: 'jev-1.13', adapter: 'jev', model: 'jev-1.13', provider: 'offline', local: false },
+      { id: 'tev1:0.8b', adapter: 'ollama-decision', model: 'tev1:0.8b', provider: 'ollama', local: true },
+      { id: 'llama3.2:1b', adapter: 'local', model: 'llama3.2:1b', provider: 'ollama', local: true },
+      { id: 'claude-haiku-5-5', adapter: 'ai-sdk', model: 'claude-haiku-5-5', provider: 'anthropic', local: false },
+      { id: 'claude-sonnet-5-5', adapter: 'ai-sdk', model: 'claude-sonnet-5-5', provider: 'anthropic', local: false },
+    ],
     objects: Object.entries(OBJECT_VERBS).map(([type, verbs]) => ({ type, tags: [], portable: type === 'ball', solid: type !== 'ball' && type !== 'dock' && type !== 'solarPad', verbs })),
     archetypes: [
       {
@@ -328,6 +335,11 @@ export class SampleServer implements WorldConnection {
     this.emit({ type: 'deltas', worldId: s.worldId, ...(sessionId && { sessionId }), tick: out.tick, changes });
     if (!replay) for (const e of out.feed) this.emit({ type: 'feed', worldId: s.worldId, entry: e });
     if (out.changes.some((c) => c.kind === 'spend')) this.emitSpend(s);
+  }
+
+  async feedBefore(beforeTick: number, limit: number, characterId?: string): Promise<FeedEntry[]> {
+    const rows = this.feed.filter((e) => e.tick < beforeTick && (!characterId || e.characterId === characterId));
+    return rows.slice(-limit);
   }
 
   feedUntil(tick: number): FeedEntry[] {

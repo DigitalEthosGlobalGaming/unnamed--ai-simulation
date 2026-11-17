@@ -2,7 +2,7 @@
  * Inspector panel (desktop right column; phone pull-up drawer). Standard
  * HTML controls only. Updated in place so focus and scroll survive ticks.
  */
-import type { CharacterView, FeedEntry, Tier } from '../types.ts';
+import type { CharacterView } from '../types.ts';
 import type { ViewerStore } from '../client/store.ts';
 import { clockOf, esc, fmtAud, fmtPct, pct, TIER_LABEL, TRIGGER_LABEL } from './format.ts';
 import { icons } from './icons.ts';
@@ -10,22 +10,9 @@ import { gaugesFor } from '../client/view.ts';
 import type { SettingsView } from './settings.ts';
 import type { VisitorStore } from '../client/visitors.ts';
 import { iconSvg } from '../icons/render.ts';
-import { durationText } from './format.ts';
+import { durationText, phrase } from './format.ts';
+import { FeedView } from './feed.ts';
 
-
-const TIER_RANK: Record<Tier, number> = { 'carry-on': 0, autopilot: 0, local: 1, decision: 2, llm: 3, fallback: 0 };
-const FEED_ROWS = 60;
-
-function tierBars(tier: Tier): string {
-  const n = TIER_RANK[tier];
-  const bars = [0, 1, 2]
-    .map((i) => {
-      const h = 5 + i * 3.5;
-      return `<rect x="${1 + i * 5}" y="${14 - h}" width="3.2" height="${h}" rx="0.6" ${i < n ? 'fill="currentColor"' : 'fill="none" stroke="currentColor" stroke-width="1"'} />`;
-    })
-    .join('');
-  return `<svg class="tier-bars" viewBox="0 0 16 15" width="16" height="15" aria-hidden="true">${bars}</svg>`;
-}
 
 type Tab = 'feed' | 'beliefs' | 'settings';
 
@@ -42,16 +29,17 @@ export class Panel {
   private lastDropsKey: string | null = null;
   private robotId: string | null = null;
   private tab: Tab = 'feed';
-  private lastFeedKey: string | null = null;
+  private readonly feed: FeedView;
   private lastBeliefKey: string | null = null;
   private lastRobotsKey: string | null = null;
-  private scrolledSeq = 0;
 
   constructor(
     private root: HTMLElement,
     private store: ViewerStore,
     private settings?: SettingsView,
   ) {
+    this.feed = new FeedView(store, () => this.root);
+    root.addEventListener('scroll', () => this.feed.onScroll(), { passive: true });
     root.addEventListener('click', (e) => {
       const t = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
       if (!t) return;
@@ -95,7 +83,6 @@ export class Panel {
       b.tabIndex = on ? 0 : -1;
     }
     for (const p of this.root.querySelectorAll<HTMLElement>('[role="tabpanel"]')) p.hidden = p.dataset['tab'] !== tab;
-    this.lastFeedKey = null;
     this.lastBeliefKey = null;
     this.update();
   }
@@ -154,7 +141,6 @@ export class Panel {
     if (this.tab === 'beliefs') this.tab = 'feed';
     this.mode = 'overview';
     this.robotId = null;
-    this.lastFeedKey = null;
     this.lastRobotsKey = null;
     this.root.innerHTML = `
       <section class="pane-section peek" aria-labelledby="robots-h">
@@ -191,7 +177,7 @@ export class Panel {
           <p class="section-meta tab-meta">${this.tab === 'settings' ? '' : 'All robots · newest first'}</p>
         </div>
         <div role="tabpanel" id="tp-feed" aria-labelledby="tab-feed" data-tab="feed" ${this.tab === 'feed' ? '' : 'hidden'}>
-          <div class="table-wrap">${this.feedTableShell(true)}</div>
+          <div data-ref="feed-slot"></div>
         </div>
         <div role="tabpanel" id="tp-settings" aria-labelledby="tab-settings" data-tab="settings" data-ref="settings-slot" ${this.tab === 'settings' ? '' : 'hidden'}></div>
       </section>`;
@@ -293,7 +279,6 @@ export class Panel {
     }
     this.mode = 'robot';
     this.robotId = c.id;
-    this.lastFeedKey = null;
     this.lastBeliefKey = null;
     // Gauges and their low marks come from the archetype (needs) and the world's energy floor (battery).
     const gauges = gaugesFor(this.store.catalog, c.type).map(
@@ -326,7 +311,7 @@ export class Panel {
           <p class="section-meta tab-meta" data-ref="spendBot"></p>
         </div>
         <div role="tabpanel" id="tp-feed" aria-labelledby="tab-feed" data-tab="feed" ${this.tab === 'feed' ? '' : 'hidden'}>
-          <div class="table-wrap">${this.feedTableShell(false)}</div>
+          <div data-ref="feed-slot"></div>
         </div>
         <div role="tabpanel" id="tp-beliefs" aria-labelledby="tab-beliefs" data-tab="beliefs" ${this.tab === 'beliefs' ? '' : 'hidden'}>
           <p class="belief-note">Learned from experience, not told. Beliefs can be wrong and only change while the robot is in standby.</p>
@@ -420,89 +405,13 @@ export class Panel {
 
   /* ----------------------------------------------------------- feed */
 
-  private feedTableShell(all: boolean): string {
-    return `<table class="rev-table">
-      <caption class="sr-only">Brain feed: each decision with tier, model, confidence and cost in Australian dollars</caption>
-      <thead><tr>
-        <th scope="col" class="c-rev">Rev · when</th>
-        <th scope="col" class="c-tier">Tier · model</th>
-        <th scope="col" class="c-dec">${all ? 'Robot · decision' : 'Decision'}</th>
-        <th scope="col" class="c-num">Conf. · A$</th>
-      </tr></thead>
-      <tbody data-ref="feed"></tbody>
-    </table>`;
-  }
-
   private updateFeed(robotId: string | null) {
-    const s = this.store;
-    const tbody = this.root.querySelector<HTMLElement>('[data-ref="feed"]');
-    if (!tbody) return;
-    const rows: FeedEntry[] = [];
-    for (let i = s.feed.length - 1; i >= 0 && rows.length < FEED_ROWS; i--) {
-      const e = s.feed[i]!;
-      if (!robotId || e.characterId === robotId) rows.push(e);
-    }
-    // Keep a highlighted row in view even when it is older than the newest rows.
-    if (s.highlight && !rows.some((e) => `${e.tick}:${e.characterId}` === s.highlight)) {
-      const h = s.feed.find((e) => `${e.tick}:${e.characterId}` === s.highlight);
-      if (h && (!robotId || h.characterId === robotId)) rows.push(h);
-    }
-    const key = `${s.highlight}|` + rows.map((e) => `${e.tick}${e.characterId}${e.actions.map((a) => a.status[0]).join('')}`).join(',');
-    if (key === this.lastFeedKey) return;
-    this.lastFeedKey = key;
-    if (!rows.length) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="4"><strong>No decisions recorded yet.</strong> Entries appear here as the brain wakes on events.</td></tr>`;
-      return;
-    }
-    const w = s.world!;
-    const focusKey = (document.activeElement as HTMLElement | null)?.dataset?.['key'];
-    tbody.innerHTML = rows
-      .map((e) => {
-        const ck = clockOf(e.tick, w.clock);
-        const warn = e.tier === 'fallback' || e.actions.some((a) => a.status === 'rejected' || a.status === 'failed');
-        const acts = e.actions
-          .map((a) => {
-            const st = a.status === 'queued' ? '' : `<span class="st st-${a.status}">${a.status}</span>`;
-            return `<span class="act"><span class="verb">${esc(phrase(s, a.verb, a.targetId))}</span>${st}<span class="why">${esc(a.reason)}</span></span>`;
-          })
-          .join('');
-    if (focusKey) tbody.querySelector<HTMLElement>(`.rev-btn[data-key="${focusKey}"]`)?.focus();
-    if (s.highlight && this.scrolledSeq !== s.highlightSeq) {
-      this.scrolledSeq = s.highlightSeq;
-      tbody.querySelector<HTMLElement>(`tr[data-key="${s.highlight}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-    }
-        const notes = e.notes?.length ? `<span class="notes">${esc(e.notes.join(' · '))}</span>` : '';
-        const why = e.reason ? `<span class="why fallback-why">${esc(e.reason)}</span>` : '';
-        const who = robotId ? '' : `<span class="who">${esc(s.nameOf(e.characterId))}</span>`;
-        const cost = e.usage ? `${fmtAud(e.usage.costAud)}${e.energyCost ? `<span class="sub">−${fmtPct(e.energyCost)} bat</span>` : ''}` : `<span class="nil">free</span>`;
-        const k = `${e.tick}:${e.characterId}`;
-        const n = s.rev(e);
-        const on = s.highlight === k;
-        const belief = e.actions[0]?.verb === 'reflect' && /new|revised/.test(e.actions[0].reason);
-        return `<tr class="${warn ? 'is-warn' : ''} tier-${e.tier}${on ? ' is-lit' : ''}" data-key="${k}">
-          <th scope="row" class="c-rev"><button type="button" class="rev-btn" data-action="rev" data-key="${k}" aria-pressed="${on}" aria-label="Revision ${n}${warn ? ', needs attention' : ''}${belief ? ', belief changed' : ''}: show on the plan and timeline">${deltaSvg(warn, on)}<span>${n}</span></button><span class="t">${ck.time}</span><span class="sub">D${ck.day}</span></th>
-          <td class="c-tier"><span class="tier">${warn && e.tier === 'fallback' ? icons.revision() : tierBars(e.tier)}${TIER_LABEL[e.tier]}</span>${e.modelId ? `<span class="sub model">${esc(e.modelId)}</span>` : ''}</td>
-          <td class="c-dec">${who}${acts}${why}${notes}</td>
-          <td class="c-num"><span class="conf">${e.confidence !== undefined ? e.confidence.toFixed(2) : '<span class="nil">—</span>'}</span>${cost}</td>
-        </tr>`;
-      })
-      .join('');
+    const slot = this.root.querySelector<HTMLElement>('[data-ref="feed-slot"]');
+    if (!slot) return;
+    if (this.feed.el.parentElement !== slot) slot.append(this.feed.el);
+    this.feed.setRobot(robotId);
+    this.feed.update();
   }
-}
-
-const PREP: Record<string, string> = { rest: 'at', charge: 'at', rinse: 'at', splash: 'at', dock: 'at', vocalize: 'to' };
-
-/** "charge" + solar pad → "charge at solar pad"; robots keep their tag. */
-export function phrase(store: ViewerStore, verb: string, targetId?: string): string {
-  if (!targetId) return verb;
-  const isRobot = !!store.character(targetId);
-  const name = isRobot ? store.nameOf(targetId) : store.nameOf(targetId).toLowerCase();
-  return `${verb} ${PREP[verb] ? `${PREP[verb]} ` : ''}${name}`;
-}
-
-/** Revision delta, drawn: outline, or red when the row needs attention; filled when highlighted. */
-function deltaSvg(warn: boolean, on: boolean): string {
-  return `<svg class="delta${warn ? ' warn' : ''}" viewBox="0 0 16 14" width="16" height="14" aria-hidden="true"><path d="M8 1.5 14.8 12.8H1.2Z" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
 }
 
 function cap(s: string): string {

@@ -3,7 +3,7 @@
  * the selection and the live/replay mode. Transport-agnostic: it consumes `ViewerMessage`s from
  * a `WorldConnection` (the real server via `@uas/client`, or the offline sample).
  */
-import type { BeliefMark, CharacterView, ConnectionStatus, FeedEntry, Vec2, ViewerMessage, WorldCatalog, WorldConnection, WorldStateView, WorldView } from '../types.ts';
+import type { Delta, BeliefMark, CharacterView, ConnectionStatus, FeedEntry, Vec2, ViewerMessage, WorldCatalog, WorldConnection, WorldStateView, WorldView } from '../types.ts';
 import { applyDeltas, labelOf, verbsOf, viewFromState } from './view.ts';
 
 export interface NoiseEvent {
@@ -104,11 +104,43 @@ export class ViewerStore {
     return verbsOf(this.catalog, type);
   }
 
+  /** Why steps were refused or failed, from the world's action deltas (the feed entry only has the status). */
+  private outcomes = new WeakMap<FeedEntry, ({ status: 'rejected' | 'failed'; why: string } | undefined)[]>();
+
+  /** The world's refusal or failure for each step of a decision, where one was seen. */
+  stepOutcomes(e: FeedEntry): ({ status: 'rejected' | 'failed'; why: string } | undefined)[] {
+    return this.outcomes.get(e) ?? [];
+  }
+
+  private noteOutcomes(tick: number, changes: Delta[]) {
+    for (const c of changes) {
+      if (c.kind !== 'action' || (c.status !== 'rejected' && c.status !== 'failed')) continue;
+      const why = c.reason ?? c.observation ?? '';
+      // The latest decision by this robot that holds this step and has no outcome for it yet.
+      for (let i = this.feed.length - 1, n = 0; i >= 0 && n < 80; i--, n++) {
+        const e = this.feed[i]!;
+        if (e.characterId !== c.id || e.tick > tick) continue;
+        const o = this.outcomes.get(e) ?? [];
+        const k = e.actions.findIndex((a, j) => a.verb === c.action.verb && (a.targetId ?? '') === (c.action.targetId ?? '') && !o[j]);
+        if (k < 0) continue;
+        o[k] = { status: c.status, why };
+        this.outcomes.set(e, o);
+        break;
+      }
+    }
+  }
+
+  /** Older brain feed from the source, before a tick (newest `limit`, oldest first); [] when it has none or can't page. */
+  async feedBefore(beforeTick: number, limit: number, characterId?: string): Promise<FeedEntry[]> {
+    return this.conn.feedBefore ? this.conn.feedBefore(beforeTick, limit, characterId) : [];
+  }
+
   /** Revision number of a feed entry: its 1-based position in the loaded feed. */
   rev(e: FeedEntry): number {
     let n = this.revs.get(e);
     if (n === undefined) {
-      this.conn.feedUntil(this.conn.range().to).forEach((x, i) => this.revs.set(x, i + 1));
+      const off = this.conn.feedTrimmed?.() ?? 0;
+      this.conn.feedUntil(this.conn.range().to).forEach((x, i) => this.revs.set(x, off + i + 1));
       n = this.revs.get(e) ?? 0;
     }
     return n;
@@ -237,6 +269,7 @@ export class ViewerStore {
       case 'deltas': {
         if (m.sessionId !== this.session || !this.world) return;
         const fx = applyDeltas(this.world, m.tick, m.changes, this.catalog);
+        this.noteOutcomes(m.tick, m.changes);
         // Airdrops and mail are fetched over REST; these deltas just say "look again".
         if (m.changes.some((c) => c.kind === 'airdrop' || c.kind === 'mailbox' || c.kind === 'mail')) for (const l of this.visitorListeners) l();
         for (const n of fx.noises) this.addNoise(n.id, n.notes, n.pos);
@@ -244,9 +277,27 @@ export class ViewerStore {
         if (this.mode === 'live' && this.selectedId && fx.beliefsChanged.includes(this.selectedId) && this.conn.memories) void this.refreshBeliefs(this.selectedId);
         break;
       }
+      case 'feedStep': {
+        // A step of a recorded decision resolved (done, failed, rejected or superseded): update it in place.
+        if (m.sessionId && m.sessionId !== this.session) return;
+        for (let i = this.feed.length - 1, n = 0; i >= 0 && n < 400; i--, n++) {
+          const e = this.feed[i]!;
+          if (e.tick < m.feedTick) break;
+          if (e.tick !== m.feedTick || e.characterId !== m.characterId) continue;
+          const a = e.actions[m.step];
+          if (a) {
+            a.status = m.status;
+            if (m.result !== undefined) a.result = m.result;
+          }
+          break;
+        }
+        break;
+      }
       case 'feed':
         if (this.mode !== 'live' || m.sessionId) return;
-        if (!this.feed.includes(m.entry)) this.feed.push(m.entry);
+        if (this.feed[this.feed.length - 1] !== m.entry) this.feed.push(m.entry);
+        // Bounded, like the source: the panel pages older history back in from the server.
+        if (this.feed.length > 2500) this.feed.splice(0, this.feed.length - 2000);
         break;
       default:
         return;

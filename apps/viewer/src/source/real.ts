@@ -8,6 +8,7 @@ import { RestAccount } from './account.ts';
 import { RestVisitors } from './visitors.ts';
 
 const FEED_HISTORY = 500;
+const FEED_KEEP = 2000;
 const STATUS_POLL_MS = 5_000;
 const PACE_MS = 500;
 
@@ -26,6 +27,7 @@ export class RealConnection implements WorldConnection {
   private cat: WorldCatalog | null = null;
   private worldId: string | undefined;
   private feed: FeedEntry[] = [];
+  private trimmed = 0;
   private marks: BeliefMark[] = [];
   private liveTick = 0;
   private sessionId: string | null = null;
@@ -93,6 +95,7 @@ export class RealConnection implements WorldConnection {
       const id = this.worldId;
       this.cat = await this.api.catalog(id);
       this.feed = await this.api.feed(id, undefined, FEED_HISTORY);
+      this.trimmed = 0;
       const beliefRows = await this.api.deltas(id, 0, undefined, ['beliefs']);
       this.marks = beliefRows.flatMap((r) => r.changes.flatMap((c) => (c.kind === 'beliefs' ? [{ tick: r.tick, characterId: c.id }] : [])));
       if (gen !== this.generation) return;
@@ -188,7 +191,15 @@ export class RealConnection implements WorldConnection {
         else this.pace.replay = { tick: m.tick, at: performance.now() };
         break;
       case 'feed':
-        if (!m.sessionId) this.feed.push(m.entry);
+        if (!m.sessionId) {
+          this.feed.push(m.entry);
+          // Bounded: older history stays on the server and pages back in through feedBefore.
+          if (this.feed.length > FEED_KEEP + 500) {
+            const drop = this.feed.length - FEED_KEEP;
+            this.feed.splice(0, drop);
+            this.trimmed += drop;
+          }
+        }
         if (this.sessionId) return;
         break;
       case 'replay.opened':
@@ -208,6 +219,17 @@ export class RealConnection implements WorldConnection {
         break;
     }
     this.emit(m);
+  }
+
+  async feedBefore(beforeTick: number, limit: number, characterId?: string): Promise<FeedEntry[]> {
+    if (!this.worldId) return [];
+    const rows = await this.api.feed(this.worldId, characterId, limit, beforeTick);
+    // A server without the cursor answers with the newest entries instead: treat that as "no paging".
+    return rows.some((e) => e.tick >= beforeTick) ? [] : rows;
+  }
+
+  feedTrimmed(): number {
+    return this.trimmed;
   }
 
   feedUntil(tick: number): FeedEntry[] {

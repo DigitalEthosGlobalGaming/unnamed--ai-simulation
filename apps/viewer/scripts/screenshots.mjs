@@ -29,6 +29,18 @@ const realShots = [
   { name: 'mobile-drawer-full', vp: [390, 844], q: 'select=robot&drawer=full', mobile: true },
   { name: 'mobile-replay', vp: [390, 844], q: async () => `drawer=closed&at=${Math.floor((await live()).status.tick * 0.55)}`, mobile: true },
   { name: 'desktop-settings', vp: [1440, 900], q: '', click: '#tab-settings' },
+  // Brain feed: hierarchy, collapsed runs, the model/cost popover, phone drawer.
+  { name: 'desktop-feed-popover', vp: [1440, 900], q: 'select=robot', steps: [{ click: '.fe-row .tier-btn' }] },
+  { name: 'desktop-feed-run', vp: [1440, 900], q: 'select=robot', steps: [{ js: () => document.querySelector('.fe-expand')?.click() }] },
+  { name: 'desktop-feed-all', vp: [1440, 900], q: '' },
+  {
+    name: 'desktop-feed-newpill',
+    vp: [1440, 900],
+    q: 'select=robot',
+    steps: [{ js: () => (document.querySelector('#panel-body').scrollTop = 900), wait: 300 }, { js: () => document.querySelector('#panel-body').dispatchEvent(new Event('scroll')), wait: 30000 }],
+  },
+  { name: 'mobile-feed', vp: [390, 844], q: 'select=robot&drawer=full', mobile: true, steps: [{ js: () => document.querySelector('.feed-view')?.scrollIntoView() }] },
+  { name: 'mobile-feed-popover', vp: [390, 844], q: 'select=robot&drawer=full', mobile: true, steps: [{ js: () => document.querySelector('.feed-view')?.scrollIntoView() }, { click: '.fe-row .tier-btn' }] },
 ];
 
 const sampleShots = [
@@ -66,6 +78,19 @@ const sampleShots = [
   { name: 'desktop-settings-error', vp: [1440, 900], q: 'as=admin', click: '#tab-settings', type: { sel: '#set-ticksPerRealSecond', value: '99' } },
   { name: 'desktop-settings-signedout', vp: [1440, 900], q: '', click: '#tab-settings' },
   { name: 'mobile-settings-admin', vp: [390, 844], q: 'as=admin&drawer=full', mobile: true, click: '#tab-settings' },
+  // Brain feed.
+  { name: 'desktop-feed-popover', vp: [1440, 900], q: 'select=rb-03', steps: [{ click: '.fe-row .tier-btn' }] },
+  { name: 'desktop-feed-run', vp: [1440, 900], q: 'select=rb-01', steps: [{ js: () => document.querySelector('.fe-expand')?.click() }] },
+  { name: 'desktop-feed-all', vp: [1440, 900], q: '' },
+  { name: 'desktop-feed-problems', vp: [1440, 900], q: 'scenario=lowbattery&select=rb-03', steps: [{ click: '[data-feed="filter"][data-id="problems"]' }] },
+  {
+    name: 'desktop-feed-newpill',
+    vp: [1440, 900],
+    q: '',
+    steps: [{ js: () => (document.querySelector('#panel-body').scrollTop = 900), wait: 300 }, { js: () => document.querySelector('#panel-body').dispatchEvent(new Event('scroll')), wait: 20000 }],
+  },
+  { name: 'mobile-feed', vp: [390, 844], q: 'select=rb-01&drawer=full', mobile: true, steps: [{ js: () => document.querySelector('.feed-view')?.scrollIntoView() }] },
+  { name: 'mobile-feed-popover', vp: [390, 844], q: 'select=rb-01&drawer=full', mobile: true, steps: [{ js: () => document.querySelector('.feed-view')?.scrollIntoView() }, { click: '.fe-row .tier-btn' }] },
   // Visitors: airdrops, the mailbox and the catalogue (sample mocks the API).
   { name: 'desktop-drops', vp: [1440, 900], q: 'as=visitor&view=12,10,1.6' },
   { name: 'desktop-item-card', vp: [1440, 900], q: 'as=admin&open=drop:d1', wait: 3800, steps: [{ click: '[data-act="json"]' }] },

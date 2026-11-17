@@ -145,15 +145,68 @@ const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--ena
   const mtick = Number(await marker.getAttribute('data-tick'));
   await marker.click();
   await page.waitForTimeout(1500);
-  const lit = await page.evaluate(() => ({ h: window.__uas.store.highlight, tick: window.__uas.store.tick, row: !!document.querySelector('.rev-table tr.is-lit') }));
+  const lit = await page.evaluate(() => ({ h: window.__uas.store.highlight, tick: window.__uas.store.tick, row: !!document.querySelector('.fe-row.is-lit, .fe-sub-row.is-lit') }));
   check('belief marker seeks and lights its revision row', lit.h === `${mtick}:rb-03` && lit.row && Math.abs(lit.tick - mtick) < 10, JSON.stringify(lit));
-  await page.locator('.rev-table .rev-btn').first().click();
+  await page.locator('.fe-row .rev-btn').first().click();
   await page.waitForTimeout(600);
   const h2 = await page.evaluate(() => window.__uas.store.highlight);
   check('revision button toggles the highlight', h2 !== lit.h, `${lit.h} → ${h2}`);
 
   const scale = await page.textContent('[data-tb="scale"]');
   check('title block SCALE shows the live value', /%/.test(scale ?? ''), scale ?? '');
+
+  // Brain feed: paging, collapsed runs, the tier detail popover, and the "new decisions" button.
+  await page.evaluate(() => {
+    window.__uas.store.goLive();
+    window.__uas.store.select(null);
+    window.__uas.store.setHighlight(null);
+  });
+  await page.waitForTimeout(1500);
+  const rows0 = await page.locator('.fe-row').count();
+  await page.click('[data-feed="older"]');
+  await page.waitForTimeout(600);
+  const rows1 = await page.locator('.fe-row').count();
+  check('feed shows 25 rows, Load older adds a page', rows0 === 25 && rows1 === 50, `${rows0} → ${rows1}`);
+  const run = page.locator('.fe-expand').first();
+  if (await run.count()) {
+    await run.click();
+    await page.waitForTimeout(300);
+    const st = await page.evaluate(() => ({ exp: document.querySelector('.fe-expand[aria-expanded="true"]') !== null, sub: document.querySelectorAll('.fe-sub .fe-sub-row').length }));
+    check('a collapsed run expands to its entries', st.exp && st.sub > 1, JSON.stringify(st));
+  } else check('a collapsed run expands to its entries', false, 'no run in view');
+  const tier = page.locator('.fe-row .tier-btn').first();
+  await tier.click();
+  await page.waitForTimeout(200);
+  const open1 = await page.evaluate(() => document.querySelector('#tier-pop')?.matches(':popover-open') && document.querySelector('.tier-btn[aria-expanded="true"]') !== null);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  const after = await page.evaluate(() => ({ open: document.querySelector('#tier-pop')?.matches(':popover-open'), focus: document.activeElement?.classList.contains('tier-btn') }));
+  check('tier mark opens the model detail; Escape closes it and returns focus', open1 && !after.open && after.focus, JSON.stringify({ open1, ...after }));
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await page.waitForTimeout(200);
+  const kb = await page.evaluate(() => document.querySelector('#tier-pop')?.matches(':popover-open'));
+  check('keyboard focus on a tier mark shows the detail', !!kb, `open=${kb}`);
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => {
+    const pb = document.querySelector('#panel-body');
+    pb.scrollTop = 900;
+    pb.dispatchEvent(new Event('scroll'));
+  });
+  await page.waitForTimeout(300);
+  // A live entry arriving while scrolled back waits behind the button instead of moving the list.
+  await page.evaluate(() => {
+    const s = window.__uas.store;
+    const last = s.feed[s.feed.length - 1];
+    s.onMessage({ type: 'feed', worldId: 'garden-01', entry: { ...last, tick: s.tick + 1, actions: [{ verb: 'rest', reason: 'test entry', status: 'queued' }] } });
+  });
+  await page.waitForTimeout(500);
+  const pill = await page.evaluate(() => ({ text: document.querySelector('.new-pill:not([hidden])')?.textContent ?? '', top: document.querySelector('.fe-row .fe-do')?.textContent ?? '' }));
+  check('new live entries wait behind "N new decisions" while scrolled back', /1 new decision/.test(pill.text) && !/test entry/.test(pill.top), JSON.stringify(pill));
+  await page.click('.new-pill');
+  await page.waitForTimeout(500);
+  const shown = await page.evaluate(() => ({ hidden: document.querySelector('.new-pill')?.hidden, why: [...document.querySelectorAll('.fe-row')].slice(0, 3).map((r) => r.textContent).join(' ') }));
+  check('the button shows the newest decisions', shown.hidden && /test entry/i.test(shown.why), JSON.stringify(shown));
   await ctx.close();
 }
 

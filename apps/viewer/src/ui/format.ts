@@ -1,3 +1,4 @@
+import type { ViewerStore } from '../client/store.ts';
 import type { WorldClock } from '../types.ts';
 
 const nf = new Intl.NumberFormat('en-AU');
@@ -62,7 +63,7 @@ export const TIER_LABEL: Record<string, string> = {
   'carry-on': 'Carry on',
   autopilot: 'Autopilot',
   local: 'Local',
-  decision: 'Decision',
+  decision: 'Decision model',
   llm: 'LLM',
   fallback: 'Fallback',
 };
@@ -77,6 +78,16 @@ export const TRIGGER_LABEL: Record<string, string> = {
   'woke-up': 'woke up',
   'admin-poke': 'poked by admin',
 };
+
+const PREP: Record<string, string> = { rest: 'at', charge: 'at', rinse: 'at', splash: 'at', dock: 'at', vocalize: 'to' };
+
+/** "charge" + solar pad → "charge at solar pad"; robots keep their tag. */
+export function phrase(store: ViewerStore, verb: string, targetId?: string): string {
+  if (!targetId) return verb;
+  const isRobot = !!store.character(targetId);
+  const name = isRobot ? store.nameOf(targetId) : store.nameOf(targetId).toLowerCase();
+  return `${verb} ${PREP[verb] ? `${PREP[verb]} ` : ''}${name}`;
+}
 
 export function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
