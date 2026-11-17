@@ -73,7 +73,7 @@ npm run dev              # uses hosted models when the key is set, local models 
   - Local Laya takes over when there's no key, the budget is spent or the network is down. Autopilot is the last resort.
 - **Plans, reflection and appraisal:** `meta/llama-3.1-8b` by default (`UAS_HOSTED_TEXT_MODEL`). `openai/gpt-6-luna` is the better option; `anthropic/claude-haiku-5.5` and `mistral/mistral-nemo` are alternatives.
 - **Spend:** `UAS_DAILY_CAP_AUD` (default A$0.50 per world per day) is a hard cap that survives restarts. Prices and routing are in [docs/architecture/models.md](docs/architecture/models.md#hosted-models-vercel-ai-gateway).
-- **Pacing:** the world runs at 10× real time while a viewer is connected and slows to 1.5× when nobody is watching (`ticksPerRealSecond`, `idleTicksPerRealSecond`).
+- **Clock:** the garden runs in real time, at your local time of day (`UAS_TIMEZONE`). A fast scaled copy is in `examples/worlds/garden-fast.yaml`; see [docs/operations.md](docs/operations.md#world-clock).
 
 ## Docker / Podman
 

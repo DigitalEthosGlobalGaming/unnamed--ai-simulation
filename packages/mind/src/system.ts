@@ -33,6 +33,8 @@ const EMIT_EVERY = 50;
 const LOW_BATTERY_AT_NIGHT = 0.45;
 /** While the model queue is busy, triggers below this salience are handled by autopilot. */
 const BUSY_SALIENCE = 0.7;
+/** Clock jumps shorter than this (drift corrections) aren't felt as being switched off. */
+const POWERED_OFF_MIN_SECONDS = 300;
 /** Options offered to a decision model: the most relevant few (decision models have small budgets). */
 const MAX_MODEL_OPTIONS = 6;
 /** A plan's later steps stay valid this long (in-world seconds). */
@@ -182,7 +184,46 @@ export class MindSystem implements SimPlugin {
   }
 
   afterTick(world: World, deltas: readonly Delta[]): void {
-    for (const c of world.characters()) if (c.mind) this.tickMind(world, c, deltas);
+    const jump = deltas.find((d): d is Extract<Delta, { kind: 'clock' }> => d.kind === 'clock' && d.reason !== 'anchor');
+    for (const c of world.characters()) {
+      if (!c.mind) continue;
+      if (jump) this.poweredOff(world, c, jump.seconds - jump.previous);
+      this.tickMind(world, c, deltas);
+    }
+  }
+
+  /**
+   * The world clock jumped forward (server off, paused, or re-aligned after a speed-up). Robots
+   * treat the gap as being powered off: needs don't drain (no ticks ran), and they remember
+   * waking up. Small jumps (clock drift) pass unnoticed.
+   */
+  private poweredOff(world: World, c: Character, gapSeconds: number): void {
+    if (gapSeconds < POWERED_OFF_MIN_SECONDS) return;
+    const m = c.mind!;
+    const hours = gapSeconds / 3600;
+    const span = hours >= 1 ? `${hours.toFixed(hours >= 10 ? 0 : 1)} hours` : `${Math.round(gapSeconds / 60)} minutes`;
+    const t = world.timeOfDay * 24;
+    const at = `${String(Math.floor(t)).padStart(2, '0')}:${String(Math.floor((t % 1) * 60)).padStart(2, '0')}`;
+    const text = `I was switched off for ${span} and woke up at ${at}`;
+    this.diary(world, c, text);
+    this.remember(world, c, {
+      id: `m${m.nextId++}`,
+      store: 'stm',
+      tick: world.tick,
+      day: world.day,
+      kind: 'fact',
+      text,
+      about: { place: 'power' },
+      valence: 0,
+      strength: 0.6,
+      recalls: 0,
+      recallDays: [],
+      lastRecallTick: world.tick,
+    });
+    // Whatever it was doing belongs to before the gap.
+    m.planSteps = undefined;
+    m.pendingJobs = m.pendingJobs.filter((j) => j.job === 'reflect');
+    m.triggers.push({ kind: 'woke-up', tick: world.tick, salience: 1 });
   }
 
   // ------------------------------------------------------------------ per tick

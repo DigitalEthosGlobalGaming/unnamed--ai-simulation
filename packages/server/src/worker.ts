@@ -37,6 +37,13 @@ function loop() {
 
 setInterval(() => send({ type: 'status', status: rt.status(lag) }), 1000).unref();
 
+// Real-time worlds: re-align with a logged jump when the tick loop drifts from the wall clock
+// (slow host, timer jitter). Not while paused or sped up.
+setInterval(() => {
+  if (rt.paused || rt.timeScale !== 1) return;
+  if (Math.abs(rt.drift()) > rt.config.clock.maxDriftSeconds) rt.realign('sync');
+}, 30_000).unref();
+
 port.on('message', (msg: ToWorker) => {
   try {
     let value: unknown;
@@ -44,12 +51,19 @@ port.on('message', (msg: ToWorker) => {
       case 'submit':
         value = rt.submit(msg.type, msg.payload, msg.causedBy);
         break;
-      case 'clock':
+      case 'clock': {
+        const wasPaused = rt.paused;
+        const wasScale = rt.timeScale;
         if (msg.paused !== undefined) rt.paused = msg.paused;
         if (msg.timeScale !== undefined) rt.timeScale = msg.timeScale;
         if (msg.watched !== undefined) rt.watched = msg.watched;
+        // Real-time worlds catch up with the wall clock after a pause or a speed-up, as logged jumps.
+        if (msg.realign) rt.realign('realign');
+        else if (wasPaused && !rt.paused) rt.realign('resume');
+        else if (wasScale !== 1 && rt.timeScale === 1) rt.realign('realign');
         value = rt.status(lag);
         break;
+      }
       case 'status':
         value = rt.status(lag);
         break;

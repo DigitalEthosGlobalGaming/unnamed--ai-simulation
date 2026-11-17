@@ -79,6 +79,12 @@ export interface WorldState {
   entities: Record<EntityId, AnyEntity>;
   /** Plugin-owned state (e.g. mind config), snapshotted with everything else. */
   ext: Record<string, Json>;
+  /**
+   * In-world time: `seconds(tick) = baseSeconds + (tick - baseTick) × secondsPerTick`, in local
+   * wall-clock seconds since the epoch for a real-time world (or from `startSecond` for a scaled
+   * one). Moved only by logged `clock.*` inputs. `dayZero` makes `day` count from 0.
+   */
+  clock?: { baseSeconds: number; baseTick: number; dayZero: number; timezone: string };
 }
 
 /** Need and energy level a new character starts at (until the mind package owns this). */
@@ -106,6 +112,7 @@ export class World implements WorldView {
     if (state.packVersions !== registry.packVersions) {
       throw new Error(`content pack mismatch: world needs ${state.packVersions}, loaded ${registry.packVersions}`);
     }
+    state.clock ??= { baseSeconds: state.config.startSecond, baseTick: 0, dayZero: 0, timezone: 'world' };
     this.state = state;
     this.registry = registry;
     this.plugin = plugin;
@@ -160,9 +167,15 @@ export class World implements WorldView {
     return this.state.tick;
   }
 
+  /** In-world seconds (local wall-clock seconds since the epoch in a real-time world). */
+  get seconds(): number {
+    const k = this.state.clock!;
+    return k.baseSeconds + (this.state.tick - k.baseTick) * this.state.config.secondsPerTick;
+  }
+
   get timeOfDay(): number {
-    const c = this.state.config;
-    return ((c.startSecond + this.state.tick * c.secondsPerTick) % c.dayLengthSeconds) / c.dayLengthSeconds;
+    const len = this.state.config.dayLengthSeconds;
+    return (((this.seconds % len) + len) % len) / len;
   }
 
   /** 06:00 to 18:00. */
@@ -173,8 +186,7 @@ export class World implements WorldView {
 
   /** In-world day number, counting from 0. */
   get day(): number {
-    const c = this.state.config;
-    return Math.floor((c.startSecond + this.state.tick * c.secondsPerTick) / c.dayLengthSeconds);
+    return Math.floor(this.seconds / this.state.config.dayLengthSeconds) - this.state.clock!.dayZero;
   }
 
   archetype(type: string) {
@@ -295,6 +307,18 @@ export class World implements WorldView {
         return reject('no mind runtime to poke');
       case 'models.load':
         return; // only meaningful to a mind runtime
+      case 'clock.anchor':
+      case 'clock.jump': {
+        const p = e.payload;
+        if (!Number.isFinite(p.epochMs) || !Number.isFinite(p.tzOffsetMinutes)) return reject('bad clock payload');
+        const previous = this.seconds;
+        const seconds = Math.round(p.epochMs / 1000) + p.tzOffsetMinutes * 60;
+        const clock = this.state.clock!;
+        // Anchoring a fresh world starts day 0 on the local date; later jumps keep counting days.
+        const dayZero = e.type === 'clock.anchor' ? Math.floor(seconds / this.state.config.dayLengthSeconds) : clock.dayZero;
+        this.state.clock = { baseSeconds: seconds, baseTick: this.state.tick, dayZero, timezone: p.timezone };
+        return this.emit({ kind: 'clock', seconds, previous, reason: e.type === 'clock.anchor' ? 'anchor' : (p.reason ?? 'realign'), timezone: p.timezone });
+      }
       case 'visitor.command': {
         const v = this.state.entities[e.payload.visitorId];
         if (v?.kind !== 'character' || v.state.visitor !== true) return reject(`no visitor ${e.payload.visitorId}`);

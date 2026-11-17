@@ -12,7 +12,9 @@ services:
       # CPU-only: outcomes are appraised in code by default (see README, Local models).
       UAS_SCORER: ${UAS_SCORER:-fake}
       UAS_APPRAISE: ${UAS_APPRAISE:-false}
-      UAS_JOB_TIMEOUT_TICKS: ${UAS_JOB_TIMEOUT_TICKS:-600}
+      UAS_JOB_TIMEOUT_SECONDS: ${UAS_JOB_TIMEOUT_SECONDS:-300}
+      UAS_TIMEZONE: ${UAS_TIMEZONE:-}       # empty = the container's timezone (UTC unless TZ is set)
+      TZ: ${TZ:-}
       UAS_REFLECTOR: ${UAS_REFLECTOR:-local}
       UAS_PLANNER: ${UAS_PLANNER:-planner}
       UAS_BRAIN: ${UAS_BRAIN:-models}

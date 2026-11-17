@@ -13,7 +13,7 @@ export interface WorkerInit {
 
 export type WorkerMethod =
   | { method: 'submit'; type: string; payload: unknown; causedBy?: InputEvent['causedBy'] }
-  | { method: 'clock'; paused?: boolean; timeScale?: number; watched?: boolean }
+  | { method: 'clock'; paused?: boolean; timeScale?: number; watched?: boolean; realign?: boolean }
   | { method: 'status' }
   | { method: 'state' }
   | { method: 'mind'; characterId: string }

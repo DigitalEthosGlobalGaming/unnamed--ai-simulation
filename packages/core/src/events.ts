@@ -69,6 +69,19 @@ export interface AdminPokePayload {
   characterId: EntityId;
 }
 /** A visitor's own actions. Anything aimed at a character also joins that character's visitor queue. */
+/**
+ * Wall-clock alignment, set by the server (the sim never reads a clock). `epochMs` is real UTC
+ * time; `tzOffsetMinutes` the world timezone's offset at that instant, so the world's time of
+ * day equals local wall time. `clock.anchor` starts a world; `clock.jump` re-aligns it after
+ * downtime, a pause, a speed-up, or drift.
+ */
+export interface ClockPayload {
+  epochMs: number;
+  tzOffsetMinutes: number;
+  timezone: string;
+  reason?: 'restart' | 'resume' | 'realign' | 'sync';
+}
+
 /** Host-reported model load (outside the sim), recorded so replays see the same signal. */
 export interface ModelsLoadPayload {
   busy: boolean;
@@ -86,6 +99,8 @@ export interface InputPayloads {
   'admin.poke': AdminPokePayload;
   'visitor.command': VisitorCommandPayload;
   'models.load': ModelsLoadPayload;
+  'clock.anchor': ClockPayload;
+  'clock.jump': ClockPayload;
 }
 export type InputType = keyof InputPayloads;
 
@@ -113,6 +128,8 @@ export type Delta =
     }
   | { kind: 'vocalize'; id: EntityId; pos: Pos; notes: string[] }
   | { kind: 'inputRejected'; seq: number; type: string; reason: string }
+  /** The world clock was anchored or jumped; `seconds` are local wall-clock seconds since the epoch. */
+  | { kind: 'clock'; seconds: number; previous: number; reason: string; timezone: string }
   | { kind: 'mood'; id: EntityId; valence: number; arousal: number; word: string }
   | { kind: 'feed'; entry: FeedEntry }
   | { kind: 'memory'; id: EntityId; memory: Memory; evicted?: MemoryId }

@@ -118,7 +118,7 @@ export function createApp(opts: AppOptions): App {
   app.get('/worlds', need('spectator'), route(() => [...supervisor.worlds.values()].map(summary)));
   app.post('/worlds', need('admin'), route(async (req) => summary(await startWorld(parseWorldFile(req.body)))));
   app.get('/worlds/:id', need('spectator'), route((req) => summary(world(req))));
-  app.patch('/worlds/:id/clock', need('admin'), route((req) => world(req).call({ method: 'clock', ...(req.body as { paused?: boolean; timeScale?: number }) })));
+  app.patch('/worlds/:id/clock', need('admin'), route((req) => world(req).call({ method: 'clock', ...(req.body as { paused?: boolean; timeScale?: number; realign?: boolean }) })));
 
   // ---- entities (admin edits are logged input events)
   app.post('/worlds/:id/entities', need('admin'), route((req) => submit(world(req), 'admin.spawn', req.body as EntityDef, { userId: principal(req)?.keyId })));

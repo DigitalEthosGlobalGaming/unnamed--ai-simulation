@@ -21,6 +21,16 @@ With `npm run dev` or `dev:fake` running, open `http://localhost:5173/`; the vie
 
 Stopping the server with Ctrl-C snapshots every world; the next start resumes from that snapshot. The database is `data/uas.db` by default; delete it to start the worlds from scratch.
 
+## World clock
+
+The garden runs in real time: one in-world second per real second, with its time of day equal to your local time (`UAS_TIMEZONE`, default the server's timezone).
+
+- When the server was off, the world jumps to now on start. The jump is logged, and the robot treats it as having been switched off.
+- To watch learning faster, run the scaled copy alongside: `cp examples/worlds/garden-fast.yaml worlds/`. It runs at 10× watched and 1.5× idle.
+- For a quick look, speed a world up with `PATCH /worlds/:id/clock { timeScale }`. Setting it back to 1, or sending `{ realign: true }`, snaps it back to the wall clock.
+
+See [simulation.md](architecture/simulation.md#clock-and-pacing).
+
 ## Secrets and `.env`
 
 Copy `.env.example` to `.env` and fill in what you need. `.env` is git-ignored.
@@ -108,11 +118,10 @@ Under podman-compose 1.5, `depends_on: condition: service_completed_successfully
 | `UAS_REFLECTOR` | `fakeChat` | garden.yaml | Head of `reflect` |
 | `UAS_PLANNER` | `fakeChat` | garden.yaml | Head of `plan` (low-confidence escalation) |
 | `UAS_APPRAISE` | `false` | garden.yaml | Ask models to appraise and score every outcome (two extra jobs per action) |
-| `UAS_JOB_TIMEOUT_TICKS` | 600 | garden.yaml | The mind's safety-net deadline for an answer |
-| `UAS_STALE_TICKS` | 150 | garden.yaml | Drop a queued job whose trigger is older than this ([job queue](architecture/models.md#job-queue)) |
-| `UAS_SECONDS_PER_TICK` | 2 | garden.yaml | In-world seconds per tick (pacing, with `ticksPerRealSecond` 5 = 10× real time) |
+| `UAS_JOB_TIMEOUT_SECONDS` | 300 | garden.yaml | The mind's safety-net deadline for an answer (in-world seconds) |
+| `UAS_STALE_SECONDS` | 60 | garden.yaml | Drop a queued job whose trigger is older than this many in-world seconds ([job queue](architecture/models.md#job-queue)) |
+| `UAS_TIMEZONE` | the server's zone | garden.yaml, compose | IANA timezone the real-time garden follows (set it for Docker, whose containers default to UTC) |
 | `UAS_ESCALATE_BELOW` | 0.35 (`npm run dev`: 0.15) | garden.yaml | Decisions below this confidence escalate to the `plan` chain |
-| `UAS_START_SECOND` | 28800 (08:00) | garden.yaml | In-world time of day at tick 0 for a new world |
 | `AI_GATEWAY_API_KEY` | empty | garden.yaml, smoke:gateway, bake-off | Vercel AI Gateway key for every hosted model; empty means local only |
 | `UAS_DAILY_CAP_AUD` | 0.5 | garden.yaml | Daily hosted spend cap per world (persisted) |
 | `UAS_HOSTED_TEXT_MODEL` | `meta/llama-3.1-8b` | garden.yaml, smoke:gateway | Gateway id for `hostedText` (plans, reflection, appraisal) |

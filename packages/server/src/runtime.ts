@@ -5,7 +5,7 @@ import { and, eq } from 'drizzle-orm';
 import { World, type WorldState } from '@uas/sim';
 import { Recorder, SqliteInputLog, SqliteReadModels, SqliteSnapshotStore, openDb, schema, type Db } from '@uas/store';
 import { loadMap, loadPacks } from './catalog.ts';
-import type { WorldFile } from './config.ts';
+import { tzOffsetMinutes, type WorldFile } from './config.ts';
 
 export interface RuntimeOptions {
   dbPath: string;
@@ -33,6 +33,12 @@ export interface WorldStatus {
   costAudToday: number;
   modelLatencyMs: number;
   tickLagMs: number;
+  clockMode: 'realtime' | 'scaled';
+  timezone: string;
+  /** In-world time as local wall-clock seconds since the epoch (realtime) or seconds from the start (scaled). */
+  worldSeconds: number;
+  /** How far a real-time world is from the wall clock (it re-aligns past clock.maxDriftSeconds). */
+  driftSeconds: number;
   /** In-world seconds per tick, and the resulting in-world seconds per real second. */
   secondsPerTick: number;
   inWorldSecondsPerRealSecond: number;
@@ -134,6 +140,35 @@ export class WorldRuntime {
       snapshotEveryTicks: this.config.snapshotEveryTicks,
     });
     this.lastDay = this.world.day;
+    if (this.config.clock.mode === 'realtime') {
+      // A new world is anchored to the wall clock; a resumed one jumps over the downtime.
+      // Both are logged inputs, so replays reproduce them without reading a clock.
+      if (latest) this.submitClock('clock.jump', 'restart');
+      else this.submitClock('clock.anchor');
+    }
+  }
+
+  /** Wall-clock time in the world's timezone, as the sim's clock payload. Only the server reads clocks. */
+  private clockPayload(reason?: 'restart' | 'resume' | 'realign' | 'sync') {
+    const epochMs = Date.now();
+    const timezone = this.config.clock.timezone;
+    return { epochMs, tzOffsetMinutes: tzOffsetMinutes(timezone, epochMs), timezone, ...(reason && { reason }) };
+  }
+
+  private submitClock(type: 'clock.anchor' | 'clock.jump', reason?: 'restart' | 'resume' | 'realign' | 'sync'): void {
+    this.recorder.submit(type, this.clockPayload(reason));
+  }
+
+  /** Re-align a real-time world with the wall clock (logged `clock.jump`). No-op for scaled worlds. */
+  realign(reason: 'resume' | 'realign' | 'sync' = 'realign'): void {
+    if (this.config.clock.mode === 'realtime') this.submitClock('clock.jump', reason);
+  }
+
+  /** Seconds the world is ahead (+) or behind (-) the wall clock; 0 for scaled worlds. */
+  drift(): number {
+    if (this.config.clock.mode !== 'realtime') return 0;
+    const p = this.clockPayload();
+    return this.world.seconds - (Math.round(p.epochMs / 1000) + p.tzOffsetMinutes * 60);
   }
 
   /** One tick: record arrived model answers, step, persist read models, dispatch new jobs. */
@@ -176,6 +211,10 @@ export class WorldRuntime {
       watched: this.watched,
       effectiveTicksPerRealSecond: this.ticksPerRealSecond(),
       secondsPerTick: this.world.state.config.secondsPerTick,
+      clockMode: this.config.clock.mode,
+      timezone: this.config.clock.timezone,
+      worldSeconds: this.world.seconds,
+      driftSeconds: Math.round(this.drift()),
       inWorldSecondsPerRealSecond: this.world.state.config.secondsPerTick * this.ticksPerRealSecond() * this.timeScale,
       queue: this.host.stats(),
       pendingJobs: this.host.pending,

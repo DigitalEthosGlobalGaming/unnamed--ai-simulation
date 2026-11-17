@@ -1,0 +1,116 @@
+# ${VAR} and ${VAR:-default} are read from the environment.
+# A fast, scaled copy of the garden for testing learning quickly: 2 in-world seconds per tick at
+# 5 ticks per real second = 10x real time while watched (1.5x idle), starting at 08:00 on day 0,
+# so a day/night cycle takes 2.4 real hours. Run it alongside the real-time garden by copying
+# this file into worlds/, or on its own: UAS_WORLDS=examples/worlds npm start
+id: garden-fast
+name: The Garden (fast)
+seed: 2026
+packs: [basic]
+map: basic:garden
+clock:
+  mode: scaled
+ticksPerRealSecond: 5          # while a viewer is subscribed
+idleTicksPerRealSecond: 0.75   # when nobody is watching
+timeScale: 1
+snapshotEveryTicks: 1000
+publicRead: true
+visitorArchetype: robot
+sim:
+  secondsPerTick: 2
+  dayLengthSeconds: 86400
+  startSecond: 28800       # 08:00
+  moveTicksPerTile: 5
+mind:
+  brain: ${UAS_BRAIN:-models}
+  jobTimeoutTicks: 600
+  appraiseOutcomes: ${UAS_APPRAISE:-false}
+  visitorQueue: { maxLength: 5, ttlTicks: 1200, cooldownTicks: 150 }
+entities:
+  - { id: robot, type: robot, pos: [10, 10], state: { name: Robot } }   # TODO(open question): the robot's name
+  - { id: pad, type: solarPad, pos: [8, 8] }
+  - { id: dock, type: dock, pos: [2, 7] }
+  - { id: ball, type: ball, pos: [12, 12] }
+  - { id: fountain, type: fountain, pos: [14, 6] }
+  - { id: piano, type: piano, pos: [3, 3] }
+
+models:
+  audPerUsd: 1.55          # fixed config rate, never fetched (replays stay deterministic)
+  # Hard real-money cap per world per (UTC) day for hosted models. When it's reached, hosted
+  # entries are skipped: decisions fall back to local Laya, then autopilot. Survives restarts.
+  dailyCapAud: ${UAS_DAILY_CAP_AUD:-0.5}
+  energyPerAud: 2          # TODO(open question): provisional; ~0.3 battery per A$0.15 of thinking
+  # Decisions below this confidence are asked again of `escalateTo` (Jev), then the plan chain.
+  escalateBelow: ${UAS_ESCALATE_BELOW:-0.35}
+  escalateTo: [jev]
+  energyFloor: 0.1
+  ollamaUrl: ${OLLAMA_URL:-http://localhost:11434}
+  # All local calls share one queue per Ollama endpoint (priority decide > vocalize > plan >
+  # appraise > scoreMemory > reflect). A job whose trigger is older than staleSeconds (in-world)
+  # when it reaches the front is dropped and the character uses autopilot.
+  queue: { localConcurrency: 1, cloudConcurrency: 4, staleTicks: 150 }
+  models:
+    # --- Hosted, through Vercel AI Gateway with one key (AI_GATEWAY_API_KEY). Without the key these
+    # are skipped (one warning) and everything runs locally. Prices: US$ per million tokens from
+    # the gateway's catalogue (GET https://ai-gateway.vercel.sh/v1/models), checked 2026-11-17.
+    # When a response reports the gateway's billed cost, that is used instead of this table.
+    laya:          # routine decisions; same model as local Laya, so behaviour stays consistent
+      adapter: gateway-decision          # POST https://ai-gateway.vercel.sh/typesafe/v1/systemone
+      model: convaiinnovations/laya
+      apiKey: ${AI_GATEWAY_API_KEY:-}
+      maxStateChars: 900                 # Laya: 512-token budget per question (8k context)
+      price: { inputPerMTok: 0.0105, cachedInputPerMTok: 0.0105, outputPerMTok: 0 }
+    jev:           # unsure decisions (escalateTo)
+      adapter: gateway-decision
+      model: typesafe-ai/jev
+      apiKey: ${AI_GATEWAY_API_KEY:-}
+      maxStateChars: 3000                # 32k context
+      price: { inputPerMTok: 0.042, cachedInputPerMTok: 0.042, outputPerMTok: 0 }
+    hostedText:    # plans, reflection, appraisal; meta/llama-3.1-8b by default
+      adapter: openai-compatible         # POST https://ai-gateway.vercel.sh/v1/chat/completions
+      model: "${UAS_HOSTED_TEXT_MODEL:-meta/llama-3.1-8b}"
+      apiKey: ${AI_GATEWAY_API_KEY:-}
+      providerOrder: [novita, bedrock]   # Novita lists US$0.02 in / 0.05 out; the catalogue's default is 0.22 / 0.22
+      structured: prompt                 # gateway json_schema gave `{}` and forced tools HTTP 400 for this model (2026-11-17)
+      price: { inputPerMTok: 0.22, cachedInputPerMTok: 0.22, outputPerMTok: 0.22 }   # conservative (catalogue)
+    luna:          # better text option: UAS_HOSTED_TEXT=luna (or UAS_PLANNER / UAS_REFLECTOR=luna)
+      adapter: openai-compatible
+      model: openai/gpt-6-luna
+      apiKey: ${AI_GATEWAY_API_KEY:-}
+      price: { inputPerMTok: 0.10, cachedInputPerMTok: 0.01, outputPerMTok: 0.50 }
+    haiku:         # alternative
+      adapter: openai-compatible
+      model: anthropic/claude-haiku-5.5
+      apiKey: ${AI_GATEWAY_API_KEY:-}
+      price: { inputPerMTok: 0.10, cachedInputPerMTok: 0.01, outputPerMTok: 0.50 }
+    nemo:          # cheap open alternative
+      adapter: openai-compatible
+      model: mistral/mistral-nemo
+      apiKey: ${AI_GATEWAY_API_KEY:-}
+      price: { inputPerMTok: 0.029, cachedInputPerMTok: 0.029, outputPerMTok: 0.03 }
+    # --- Offline stand-ins: plausible, deterministic, no network (npm run dev:fake).
+    fake: { adapter: fake-decision }
+    fakeChat: { adapter: fake-chat }
+    # --- Local models via Ollama (npm run ollama:up && npm run ollama:pull).
+    # Decision models answer through /v1/systemone, which ignores request options, so their thread
+    # count is baked into derived models built by `npm run ollama:pull`:
+    #   uas-laya = laya:421m-typed-decisions-bf16 (512-token budget per question, so a short state)
+    #   uas-tev1 = tev1:0.8b with num_ctx 2048 (alternative: UAS_DECIDER=tev, needs UAS_PULL_TEV=1 when pulling)
+    localDm: { adapter: ollama-decision, model: "${UAS_DM_MODEL:-uas-laya}", maxStateChars: 900 }
+    tev: { adapter: ollama-decision, model: "${UAS_TEV_MODEL:-uas-tev1}", maxStateChars: 1200 }
+    # Text model for reflection and short jobs; numThread matches the container's CPU cap.
+    local: { adapter: local, model: "${UAS_TEXT_MODEL:-llama3.2:1b}", numThread: ${OLLAMA_THREADS:-4} }
+    # Local plans: the bake-off's only small model that actually plans (docs/benchmarks/2026-11-17-plan.md).
+    planner: { adapter: local, model: "${UAS_PLAN_MODEL:-qwen3.5:0.8b}", numThread: ${OLLAMA_THREADS:-4} }
+  # Chains are tried in order; entries whose conditions fail (no key, cap reached, low energy...)
+  # are skipped; errors and timeouts fall through. If nothing answers, the robot uses autopilot.
+  # Decisions: autopilot for obvious choices (no call) -> hosted Laya -> Jev if unsure
+  #            -> local Laya when there's no key, no budget or no network -> autopilot.
+  jobs:
+    decide: [{ use: "${UAS_DECIDER:-laya}", timeoutMs: 20000 }, { use: localDm, timeoutMs: 45000 }]
+    vocalize: [{ use: "${UAS_DECIDER:-laya}", timeoutMs: 20000 }, { use: localDm, timeoutMs: 45000 }]
+    appraise: [{ use: "${UAS_SCORER:-hostedText}", timeoutMs: 30000 }, { use: localDm, timeoutMs: 45000 }]
+    scoreMemory: [{ use: "${UAS_SCORER:-hostedText}", timeoutMs: 30000 }, { use: localDm, timeoutMs: 45000 }]
+    plan: [{ use: "${UAS_PLANNER:-hostedText}", minEnergy: 0.5, timeoutMs: 60000 }, { use: planner, timeoutMs: 60000 }]
+    # Reflection runs during standby, so it may take its time.
+    reflect: [{ use: "${UAS_REFLECTOR:-hostedText}", onlyAtNight: true, timeoutMs: 120000 }, { use: local, timeoutMs: 120000 }]

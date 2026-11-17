@@ -72,7 +72,7 @@ Interoception is not a pack sense; it is built into `MindSystem.interoception`.
 
 | Trigger | Raised by | Salience |
 | --- | --- | --- |
-| `woke-up` | spawn, leaving standby | 1 |
+| `woke-up` | spawn, leaving standby, a forward clock jump of 5 minutes or more | 1 |
 | `admin-poke` | `admin.poke` input | 1 |
 | `sensed` | salient new observation; a visitor action picked from the queue | observation's, or 0.8 |
 | `heard-noise` | heard note chain; a visitor noise picked from the queue | from volume, or 0.8 |
@@ -209,6 +209,10 @@ stateDiagram-v2
   3. Sheet: if the same positive outcome happened 3 or more times that day, note a self line "I keep going back to …". One unlocked self line not seen for `sheetFadeNights` nights is removed.
   4. With `brain: models` and the energy floor not latched, dispatch a `reflect` job (deadline 10 × `jobTimeoutTicks`). Its answer may reword existing beliefs, add up to 3 question open items, and propose one sheet line.
 - **Waking** rebuilds the cached prefix and raises `woke-up`.
+- **Switched off.** A forward clock jump of 5 minutes or more (server downtime, a pause, or a realign) is treated as being switched off ([`system.ts`](../../packages/mind/src/system.ts) `poweredOff`; see [simulation.md](simulation.md#clock-and-pacing)).
+  - Needs and battery don't drain over the gap, because no ticks ran. This was chosen over a capped drain because a robot that is off uses nothing, and it keeps restarts harmless.
+  - Plans and pending decisions are dropped.
+  - A diary line and a short-term memory record "I was switched off for N hours and woke up at HH:MM".
 
 The reflect chain in [`garden.yaml`](../../worlds/garden.yaml) has `minEnergy: 0.5` on its first entry, so a robot that ends the day on a low battery reflects with a cheaper model.
 

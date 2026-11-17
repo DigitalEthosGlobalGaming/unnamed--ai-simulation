@@ -36,6 +36,12 @@ export interface WorldStatus {
   idleTicksPerRealSecond: number;
   watched: boolean;
   effectiveTicksPerRealSecond: number;
+  /** `realtime`: in-world time is local wall-clock time in `timezone`; `scaled`: a fast test world. */
+  clockMode: 'realtime' | 'scaled';
+  timezone: string;
+  /** In-world time: local wall-clock seconds since the epoch (realtime); read it as a UTC date to get local time. */
+  worldSeconds: number;
+  driftSeconds: number;
   pendingJobs: number;
   visitorQueueDepth: number;
   costAudToday: number;
@@ -108,6 +114,8 @@ export interface WorldStateView {
   };
   packVersions: string;
   tick: number;
+  /** In-world time anchor: seconds = baseSeconds + (tick − baseTick) × secondsPerTick (absent on old snapshots). */
+  clock?: { baseSeconds: number; baseTick: number };
   entities: Record<string, Character | WorldObject>;
 }
 
@@ -183,7 +191,7 @@ export class UasClient {
       'GET',
       `/worlds/${id}/deltas?fromTick=${fromTick}${toTick === undefined ? '' : `&toTick=${toTick}`}${kinds?.length ? `&kinds=${kinds.join(',')}` : ''}`,
     );
-  clock = (id: string, c: { paused?: boolean; timeScale?: number }) => this.req<WorldStatus>('PATCH', `/worlds/${id}/clock`, c);
+  clock = (id: string, c: { paused?: boolean; timeScale?: number; realign?: boolean }) => this.req<WorldStatus>('PATCH', `/worlds/${id}/clock`, c);
   spawn = (id: string, def: EntityDef) => this.req<InputEvent>('POST', `/worlds/${id}/entities`, def);
   editEntity = (id: string, eid: string, edit: { pos?: Pos; state?: Record<string, Json>; needs?: Record<string, number>; energy?: number }) =>
     this.req<InputEvent>('PATCH', `/worlds/${id}/entities/${eid}`, edit);

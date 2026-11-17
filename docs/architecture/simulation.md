@@ -183,8 +183,45 @@ The runtime takes a snapshot at every in-world day boundary ([events-and-replay.
 
 ## Clock and pacing
 
-- `World` has no notion of real time. The world worker decides when to call `step()` ([`worker.ts`](../../packages/server/src/worker.ts)).
-- The world config sets `ticksPerRealSecond` (default 5) and `timeScale` (default 1). The worker steps every `1000 / (ticksPerRealSecond × timeScale)` ms, runs at most 4 catch-up ticks per turn, and resets its schedule if it falls more than a second behind. `timeScale: 0` or `paused` stops the clock. See [`config.ts`](../../packages/server/src/config.ts).
-- In-world speed is `secondsPerTick × ticksPerRealSecond × timeScale` in-world seconds per real second, reported as `inWorldSecondsPerRealSecond` in the world status. In [`worlds/garden.yaml`](../../worlds/garden.yaml) it is 2 × 5 × 1 = 10× real time (`UAS_SECONDS_PER_TICK`), so an in-world day takes 2.4 real hours. That was chosen from measured CPU-only Tev1 latency (5–20 s per decision on the dev laptop), so a decision spans 1–3 in-world minutes. Raise `timeScale` to watch faster; model answers then arrive later in in-world time.
-- **Watched and idle pacing.** `ticksPerRealSecond` applies while a viewer is subscribed over WebSocket. When nobody is, the worker drops to `idleTicksPerRealSecond` (default 0.75, so 1.5× real time at 2 s per tick), and fewer ticks means fewer model calls. The hub tells the worker through `clock { watched }`. The status reports `watched` and `effectiveTicksPerRealSecond`.
-- The sim's own default (`DEFAULT_CONFIG`) is 6 in-world seconds per tick if a world config doesn't set one.
+`World` never reads a clock. In-world time is `seconds(tick) = baseSeconds + (tick − baseTick) × secondsPerTick`, stored in `WorldState.clock` and moved only by logged inputs ([`world.ts`](../../packages/sim/src/world.ts)). `timeOfDay`, `isDaylight` (06:00–18:00) and `day` derive from it.
+
+**Real-time worlds** (`clock.mode: realtime`, the default; [`worlds/garden.yaml`](../../worlds/garden.yaml)):
+
+- **Speed.** One in-world second per real second: 1 tick per real second at 1 s per tick, and 2 ticks per tile, so a robot walks a tile in 2 s. The viewer interpolates between ticks.
+- **Time of day.** It is the real local time in `clock.timezone`: an IANA name, defaulting to the server's system timezone. It's night in the garden when it's night for the owner.
+- **Anchor.** When a world is created, the server logs `clock.anchor { epochMs, tzOffsetMinutes, timezone }` at tick 0. `baseSeconds` becomes local wall-clock seconds since the epoch, and day 0 is that local date.
+- **Restarts.** On restart, the world fast-forwards through its log and then logs `clock.jump { reason: 'restart' }` to now. The missed time is not simulated.
+- **Pauses.** Resuming from a pause logs `clock.jump { reason: 'resume' }`.
+- **Speed-ups.** `PATCH /clock { timeScale }` still speeds a world up for development. Setting `timeScale` back to 1 logs `clock.jump { reason: 'realign' }`, which can move time backwards. `PATCH /clock { realign: true }` forces a realign.
+- **Drift.** Every 30 s the worker compares the world with the wall clock and logs `clock.jump { reason: 'sync' }` past `clock.maxDriftSeconds` (default 5). This happens on slow hosts and with timer jitter.
+- **DST** changes are picked up by the next jump.
+- **Robots and jumps.** A forward jump of 5 minutes or more is felt as having been switched off ([mind.md](mind.md)):
+  - Needs and battery don't drain over the gap, because no ticks ran.
+  - Plans and pending decisions are dropped.
+  - The robot remembers "I was switched off for 7 hours and woke up at 13:30" (diary and short-term memory) and gets a `woke-up` trigger.
+  - Shorter jumps (drift syncs) pass unnoticed.
+- **Learning is slow.** At 1×, learning day versus night takes real days. Run a fast scaled world alongside to see it in hours.
+
+**Scaled worlds** (`clock.mode: scaled`, e.g. [`examples/worlds/garden-fast.yaml`](../../examples/worlds/garden-fast.yaml)):
+
+- The old fast clock: `seconds = startSecond + tick × secondsPerTick`, with no anchor or jumps.
+- Defaults are 2 s per tick, `ticksPerRealSecond` 5 while a viewer is subscribed and `idleTicksPerRealSecond` 0.75 otherwise. That's 10× and 1.5×, a day in 2.4 real hours.
+- Copy the file into `worlds/` to run it alongside the real-time garden, or run it alone with `UAS_WORLDS=examples/worlds npm start`.
+
+**Pacing in the worker.**
+
+- The worker steps every `1000 / (ticks per real second × timeScale)` ms. Ticks per real second are `ticksPerRealSecond` while a WebSocket subscriber is watching and `idleTicksPerRealSecond` otherwise (`clock { watched }` from the hub; in real-time mode both default to `1 / secondsPerTick`).
+- The worker runs at most 4 catch-up ticks per turn. `paused` or `timeScale: 0` stops the clock.
+- The status reports `clockMode`, `timezone`, `worldSeconds`, `driftSeconds`, `watched`, `effectiveTicksPerRealSecond` and `inWorldSecondsPerRealSecond`.
+
+**Settings in seconds.** World configs can give durations in in-world seconds, and the server converts them to ticks ([`config.ts`](../../packages/server/src/config.ts)):
+
+- `snapshotEverySeconds`;
+- `mind.jobTimeoutSeconds`;
+- `mind.visitorQueue.ttlSeconds` and `cooldownSeconds`;
+- `models.queue.staleSeconds`.
+
+Need decay and drain were already per in-world hour. Verb durations in pack JSON are still in ticks: with 1 s per tick, charging takes 50 s and a dock rest 200 s.
+
+The sim's own default (`DEFAULT_CONFIG`) is 6 in-world seconds per tick if a world config doesn't set one. Worlds created before this change get `clock = { baseSeconds: startSecond, baseTick: 0, dayZero: 0 }`.
+

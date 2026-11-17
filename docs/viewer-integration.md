@@ -63,9 +63,9 @@ Live messages carry no `sessionId`; replay messages always do.
 
 - `grid.tiles` is row-major (`tiles[y * width + x]`) and holds terrain keys. In the garden,
   `#` is a wall (blocks sight), `~` is water, `*` is a rock, and `.` and `:` are floor and path.
-- In-world time: `seconds = startSecond + tick * secondsPerTick`. Read `secondsPerTick` from the
+- In-world time: `seconds = state.clock.baseSeconds + (tick − state.clock.baseTick) × secondsPerTick`. In a real-time world (`WorldStatus.clockMode`), these are local wall-clock seconds since the epoch, so `new Date(seconds * 1000)` read with UTC getters gives the local date and time. A `clock` delta (`{ seconds, previous, reason, timezone }`) marks an anchor or a jump; reset any clock display there. With slow ticks (1 per second, 2 per tile), interpolate movement between `moved` deltas. Read `secondsPerTick` from the
   state rather than assuming it (the garden uses 2). Real-time pacing is
-  `ticksPerRealSecond × timeScale` ticks per real second (garden: 5 × 1 with 2 s per tick, i.e. 10× real time, a day in 2.4 real hours, while a viewer is subscribed; it slows to `idleTicksPerRealSecond`, 1.5×, when nobody is); both come with `WorldStatus`. The day number is
+  `ticksPerRealSecond × timeScale` ticks per real second (the real-time garden: 1 tick per second at 1 s per tick; scaled test worlds run faster); both come with `WorldStatus`. The day number is
   `floor(seconds / dayLengthSeconds)`. It is daylight from 06:00 to 18:00.
 - An entity has `{ id, kind: 'character' | 'object', type, pos: { x, y }, tags, state, heldBy? }`.
   Characters also have `needs` (`cool`, `signal`, `curiosity`, each 0..1), `energy` (the battery,
@@ -95,6 +95,7 @@ Live messages carry no `sessionId`; replay messages always do.
 | `visitorPick` | `id, request` | highlight the picked row |
 | `visitorDropped` | `id, request, reason` (`expired` or `queue full`) | tell the visitor |
 | `inputRejected` | `seq, type, reason` | admin-tool error |
+| `clock` | `seconds, previous, reason, timezone` | the world clock was anchored or jumped (`anchor`, `restart`, `resume`, `realign`, `sync`) |
 
 ### `FeedEntry`
 
@@ -120,10 +121,10 @@ A note `chirp-E` means the `chirp` noise played at E. Play the notes of a chain 
 
 | Method and path | Role | Returns |
 | --- | --- | --- |
-| `GET /worlds` | spectator | `WorldSummary[]` with live `status` (`WorldStatus`): `tick, day, timeOfDay, paused, timeScale, ticksPerRealSecond, idleTicksPerRealSecond, watched, effectiveTicksPerRealSecond, secondsPerTick, inWorldSecondsPerRealSecond, pendingJobs, visitorQueueDepth, costAudToday, modelLatencyMs, tickLagMs, queue` where `queue` is `QueueStats { waiting, running, byLane, waitMs {p50,p95,max}, runMs {p50,p95,max}, completed, dropped {stale, superseded, failed}, timeouts }` |
+| `GET /worlds` | spectator | `WorldSummary[]` with live `status` (`WorldStatus`): `tick, day, timeOfDay, paused, timeScale, clockMode, timezone, worldSeconds, driftSeconds, ticksPerRealSecond, idleTicksPerRealSecond, watched, effectiveTicksPerRealSecond, secondsPerTick, inWorldSecondsPerRealSecond, pendingJobs, visitorQueueDepth, costAudToday, modelLatencyMs, tickLagMs, queue` where `queue` is `QueueStats { waiting, running, byLane, waitMs {p50,p95,max}, runMs {p50,p95,max}, completed, dropped {stale, superseded, failed}, timeouts }` |
 | `GET /worlds/:id/catalog` | spectator | `WorldCatalog`: pack objects (type, tags, portable, solid, verbs), archetypes (needs, energy, noises, ranges), `ticksPerRealSecond` (`ticksPerSecond` is a deprecated alias), `secondsPerTick`, cost settings |
 | `GET /worlds/:id` | spectator | `WorldSummary` |
-| `PATCH /worlds/:id/clock` | admin | `{ paused?, timeScale? }` sets the clock and returns the status |
+| `PATCH /worlds/:id/clock` | admin | `{ paused?, timeScale?, realign? }` sets the clock and returns the status; real-time worlds re-align (logged jump) on resume, on `timeScale` back to 1, or on `realign: true` |
 | `POST /worlds/:id/entities` | admin | body `EntityDef { type, pos, id?, state? }`; returns the logged `InputEvent` |
 | `PATCH /worlds/:id/entities/:eid` | admin | body `{ pos?, state?, needs?, energy? }` |
 | `DELETE /worlds/:id/entities/:eid` | admin | removes the entity |

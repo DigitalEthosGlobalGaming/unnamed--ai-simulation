@@ -6,19 +6,38 @@ import { substituteEnv } from '@uas/models';
 
 const Pos = z.union([z.tuple([z.int(), z.int()]).transform(([x, y]) => ({ x, y })), z.strictObject({ x: z.int(), y: z.int() })]);
 
-export const WorldFileSchema = z.strictObject({
+/** The server's own IANA timezone, e.g. `Australia/Sydney` or `Europe/Berlin`. */
+export const systemTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+const RawWorldFileSchema = z.strictObject({
   id: z.string().regex(/^[\w-]+$/),
   name: z.string().default(''),
   seed: z.int(),
   packs: z.array(z.string()).default(['basic']),
   /** `pack:map`, e.g. `basic:garden`. */
   map: z.string().default('basic:garden'),
-  /** Real-time pacing while a viewer is subscribed: sim ticks per real second at timeScale 1 (PATCH /clock changes timeScale). */
-  ticksPerRealSecond: z.number().positive().default(5),
-  /** Pacing when nobody is watching (fewer ticks, so fewer model calls). */
-  idleTicksPerRealSecond: z.number().positive().default(0.75),
+  /**
+   * `realtime` (default): one in-world second per real second, and the world's time of day is the
+   * real local time in `timezone`. `scaled`: the world runs at `secondsPerTick × ticksPerRealSecond`
+   * in-world seconds per real second from `sim.startSecond` (fast test worlds).
+   */
+  clock: z
+    .strictObject({
+      mode: z.enum(['realtime', 'scaled']).default('realtime'),
+      /** IANA name; default: the server's system timezone. */
+      timezone: z.string().nullish(),
+      /** Re-align when the world drifts from the wall clock by more than this (real-time mode). */
+      maxDriftSeconds: z.number().positive().default(5),
+    })
+    .prefault({}),
+  /** Sim ticks per real second at timeScale 1 while a viewer is subscribed. Real-time default: 1 / secondsPerTick. */
+  ticksPerRealSecond: z.number().positive().optional(),
+  /** Sim ticks per real second when nobody is watching. Real-time default: the same as watched. */
+  idleTicksPerRealSecond: z.number().positive().optional(),
   timeScale: z.number().min(0).default(1),
-  snapshotEveryTicks: z.int().positive().default(1000),
+  /** Snapshot interval: in-world seconds (preferred) or ticks. */
+  snapshotEverySeconds: z.number().positive().optional(),
+  snapshotEveryTicks: z.int().positive().optional(),
   /** Spectators may read without a key. */
   publicRead: z.boolean().default(true),
   visitorArchetype: z.string().default('robot'),
@@ -31,19 +50,67 @@ export const WorldFileSchema = z.strictObject({
     })
     .partial()
     .default({}),
-  /** Passed to the mind runtime (see `MindConfig`). */
+  /** Passed to the mind runtime (see `MindConfig`); `*Seconds` keys are converted to ticks. */
   mind: z.record(z.string(), z.unknown()).default({}),
   entities: z.array(z.strictObject({ id: z.string().optional(), type: z.string(), pos: Pos, state: z.record(z.string(), z.unknown()).optional() })).default([]),
-  /** Model routing (see `ModelsConfig`); validated by @uas/models. */
+  /** Model routing (see `ModelsConfig`); validated by @uas/models. `queue.staleSeconds` is converted to ticks. */
   models: z.record(z.string(), z.unknown()).default({ models: {}, jobs: {} }),
 });
 
-export type WorldFile = z.infer<typeof WorldFileSchema>;
+/** A world config with every timing resolved to ticks for the chosen clock mode. */
+export type WorldFile = Omit<z.infer<typeof RawWorldFileSchema>, 'ticksPerRealSecond' | 'idleTicksPerRealSecond' | 'snapshotEveryTicks' | 'clock'> & {
+  clock: { mode: 'realtime' | 'scaled'; timezone: string; maxDriftSeconds: number };
+  ticksPerRealSecond: number;
+  idleTicksPerRealSecond: number;
+  snapshotEveryTicks: number;
+  sim: { secondsPerTick: number } & z.infer<typeof RawWorldFileSchema>['sim'];
+};
+export const WorldFileSchema = RawWorldFileSchema;
+
+/**
+ * Resolve timing defaults. Real time: 1 in-world second per tick, 1 tick per real second,
+ * 2 ticks per tile. Scaled: the old fast world (2 s per tick, 5 ticks per real second watched,
+ * 0.75 idle, i.e. 10× and 1.5×). Values given in seconds become ticks.
+ */
+function resolve(raw: z.infer<typeof RawWorldFileSchema>): WorldFile {
+  const realtime = raw.clock.mode === 'realtime';
+  const spt = raw.sim.secondsPerTick ?? (realtime ? 1 : 2);
+  const tps = raw.ticksPerRealSecond ?? (realtime ? 1 / spt : 5);
+  const ticks = (seconds: number) => Math.max(1, Math.round(seconds / spt));
+  const mind = { ...raw.mind } as Record<string, unknown>;
+  if (typeof mind.jobTimeoutSeconds === 'number') mind.jobTimeoutTicks = ticks(mind.jobTimeoutSeconds);
+  delete mind.jobTimeoutSeconds;
+  const vq = mind.visitorQueue as Record<string, unknown> | undefined;
+  if (vq) {
+    const q = { ...vq };
+    if (typeof q.ttlSeconds === 'number') q.ttlTicks = ticks(q.ttlSeconds);
+    if (typeof q.cooldownSeconds === 'number') q.cooldownTicks = ticks(q.cooldownSeconds);
+    delete q.ttlSeconds;
+    delete q.cooldownSeconds;
+    mind.visitorQueue = q;
+  }
+  const models = { ...raw.models } as Record<string, unknown>;
+  const queue = models.queue as Record<string, unknown> | undefined;
+  if (queue && typeof queue.staleSeconds === 'number') {
+    const { staleSeconds, ...rest } = queue;
+    models.queue = { ...rest, staleTicks: ticks(staleSeconds as number) };
+  }
+  return {
+    ...raw,
+    clock: { mode: raw.clock.mode, timezone: raw.clock.timezone ?? systemTimezone(), maxDriftSeconds: raw.clock.maxDriftSeconds },
+    ticksPerRealSecond: tps,
+    idleTicksPerRealSecond: raw.idleTicksPerRealSecond ?? (realtime ? tps : 0.75),
+    snapshotEveryTicks: raw.snapshotEveryTicks ?? (raw.snapshotEverySeconds ? ticks(raw.snapshotEverySeconds) : 1000),
+    sim: { ...raw.sim, secondsPerTick: spt, ...(raw.sim.moveTicksPerTile === undefined && realtime && { moveTicksPerTile: 2 }) },
+    mind,
+    models,
+  };
+}
 
 export function parseWorldFile(value: unknown, where = 'world config'): WorldFile {
-  const r = WorldFileSchema.safeParse(value);
+  const r = RawWorldFileSchema.safeParse(value);
   if (!r.success) throw new Error(`${where}: ${z.prettifyError(r.error)}`);
-  return r.data;
+  return resolve(r.data);
 }
 
 export function loadWorldYaml(text: string, env: Record<string, string | undefined>, where?: string): WorldFile {
@@ -55,4 +122,14 @@ export function loadWorldsDir(dir: string, env: Record<string, string | undefine
     .filter((f) => /\.ya?ml$/.test(f))
     .sort()
     .map((f) => loadWorldYaml(readFileSync(join(dir, f), 'utf8'), env, f));
+}
+
+/** Minutes east of UTC for `timezone` at `epochMs` (DST-aware), via Intl. */
+export function tzOffsetMinutes(timezone: string, epochMs: number): number {
+  const part = new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'longOffset' })
+    .formatToParts(new Date(epochMs))
+    .find((p) => p.type === 'timeZoneName')?.value;
+  const m = /GMT([+-])(\d{2}):?(\d{2})?/.exec(part ?? '');
+  if (!m) return 0; // "GMT" = UTC
+  return (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3] ?? 0));
 }
