@@ -643,8 +643,9 @@ Express serves REST for commands and queries; a WebSocket hub streams world delt
 | `GET /worlds/:id/characters/:cid/memories` | spectator | STM, LTM, beliefs, character sheet |
 | `GET /worlds/:id/characters/:cid/diary?day=` | spectator | Diary for a day |
 | `POST /worlds/:id/characters/:cid/poke` | admin | Raise an `admin-poke` trigger |
-| `POST /worlds/:id/visitors` | visitor | Join as a visitor character |
-| `POST /worlds/:id/visitors/:vid/actions` | visitor | Request verb–noun actions or noises; anything aimed at a character goes into its visitor queue |
+| `GET /catalog`, `PUT /catalog/:itemId`, `DELETE /catalog/:itemId` | spectator / admin / admin | The server-wide airdrop catalogue |
+| `POST /worlds/:id/airdrops` | visitor | Drop an enabled catalogue item at a tile |
+| `POST /worlds/:id/mail` | visitor | Post a message to the world's mailbox |
 | `GET /worlds/:id/events?fromSeq=&limit=` | spectator | Page the input log |
 | `GET /worlds/:id/feed?characterId=` | spectator | Brain feed entries |
 | `POST /worlds/:id/seek` | spectator | Open a replay session at a tick |
@@ -677,19 +678,37 @@ interface FeedEntry {
 | Role | Can | Auth v1 |
 | --- | --- | --- |
 | Admin | Everything: worlds, packs, entities, clock, forks, usage | API key with `admin` scope |
-| Visitor | Join a world as their own character and control it; read like a spectator | API key with `visitor` scope, bound to one visitor per world |
+| Visitor | Airdrop catalogue items and post mailbox messages; read like a spectator | Sign in with Vercel (any non-admin account), or an API key with `visitor` scope |
 | Spectator | Read state, feed, diary, replay | Anonymous or key, per world setting |
 
-OIDC sign-in is the planned v2 auth. Visitors are full characters to NPCs: seen, heard and remembered like anyone else. Like NPCs, visitors communicate only through noises and actions, not text.
+Admins are Vercel accounts on an allowlist; API keys still work alongside sign-in.
 
-**Visitor queue**
+**Visitors: airdrops and the mailbox**
 
-Visitors can't make a character respond on demand. Every visitor interaction aimed at a character (a noise at it, an action on it, an item offered) joins that character's visitor queue.
+Visitors are never characters in the world. They interact in two ways, and anything they send is a logged input event.
 
-- When the character's brain is free and its `visitorCooldownTicks` has passed, it takes one request from the queue: a weighted random pick by the world's seeded RNG, with weight falling off by queue position, so older requests are much more likely but not guaranteed. The pick is logged as an input event, so replays match.
-- The picked request becomes a normal trigger. The character may still ignore it.
-- Each queue has a maximum length and a time-to-live; expired or overflowing requests are dropped and the visitor is told.
-- Stronger anti-abuse controls (per-visitor limits, bans) come later, only if needed.
+*Airdrops*
+
+- Admins keep one server-wide **catalogue** of droppable items, edited as JSON on an admin Catalogue page (editor with live validation, templates and preview). Each world switches catalogue items on or off in its settings.
+- Item JSON, version 1 (`"schema": 1`): `id`, `name`, `description`, `icon`, `tags`, `portable`, `expiresAfter`, and `behaviours` built from code-defined blocks: `affectsNeeds` (a named verb with need deltas and an observation), `portable`, `consumable` (N uses), `makesNoise` (a verb that plays a fixed note chain) and `inert`. New blocks are added in code; admins can't script behaviour.
+- **Icons** use a restricted drawing language on a 24×24 grid: `line`, `polyline`, `rect`, `circle`, `ellipse` and a simple `path`, with `shade` (none, light, medium, dense hatching), `weight` (thin, regular, heavy) and `dashed`. No colours, text, images or scripts, so every icon matches the blueprint style; anything else is rejected.
+- A visitor picks an enabled item and a spot; it lands on the nearest free walkable tile. The drop stores a copy of the item's JSON, so later catalogue edits don't change it and replays stay exact.
+- A landing the robot can see raises a `sensed` trigger. The robot sees only the item's tags and learns the rest by trying its verbs.
+- Items vanish when they expire or are used up. Admins can delete any item.
+- Clicking an item shows its name, icon, description, behaviours, who dropped it and when it expires, the robot's current belief about it alongside, and the raw JSON.
+
+*Mailbox*
+
+- Each world has one built-in `mailbox` object, placed by the admin. Visitors post messages of up to 280 characters.
+- A flag shows on the mailbox while mail is waiting. The robot can see the flag but isn't told what it means.
+- Using the mailbox's `read` verb gives the robot the oldest waiting message, one per read. The text reaches its mind as a quoted note from a stranger, never as instructions, and anything it concludes starts as a weak belief labelled as hearsay that its own experience must confirm.
+- The robot can't write; it answers only with noises and behaviour.
+- Waiting messages are private (the public sees a count; admins see and can delete them). Once read, the text and the sender's username appear in the brain feed and diary. Senders can see their message's status: waiting (with its place in line), read (with the robot's reaction), or expired.
+- Protections: the length cap, the quoting, a bad-word filter and admin delete.
+
+*Limits*
+
+Per-visitor active drops and drop cooldown, the world's item cap, mailbox capacity, message expiry, waiting messages per visitor and the post cooldown are all world settings. They default to effectively unlimited while testing. Admins skip every limit and are labelled as admin on what they send.
 
 **Persistence**
 
@@ -731,7 +750,7 @@ The viewer draws the world as a top-down, abstract construction blueprint, and t
 | Sight and hearing range | Dashed construction circles and lines, shown when a character is selected |
 | Noises | Sound arcs drawn outward from the character with the notes as labels (`chirp-C · trill-D`), timed to playback |
 | Alerts (rejected action, need critical, energy low) | Red-line markup: revision clouds and red pen notes, the only strong colour in the scene |
-| Visitor queue | A numbered schedule table pinned to the sheet |
+| Mailbox and airdrops | The mailbox's waiting count as a numbered schedule; airdropped items drawn with their catalogue icon and a drop callout |
 | World, clock, day | The title block in the corner: world name, in-world time, scale, sheet number = day |
 | Timeline scrubber | A scale bar along the bottom edge |
 | Admin tools | Drafting tools: place a symbol, move with a dimension line, erase |
@@ -779,14 +798,14 @@ flowchart LR
 | M4 Model gateway | The same world runs with Jev, `LlmAsDecisionModel` and the local model by config change only; usage and energy are charged correctly including cached tokens. |
 | M5 Memory and beliefs | After 3 in-world days the robot holds a belief that the solar pad doesn't charge at night, and charges before dusk and changes its behaviour. |
 | M6 Sleep | Memories consolidate overnight; the cached-prefix test passes; at least one self-added sheet line appears and later fades. |
-| M7 API and viewer | A browser shows the world live, the brain feed, and a timeline scrubber; a visitor can join, make noises at the robot through the visitor queue, and hear it answer in the browser. |
+| M7 API and viewer | A browser shows the world live, the brain feed, and a timeline scrubber; a visitor can airdrop an item or post a message, and see and hear the robot respond in the browser. |
 | M8 Ship | `docker compose up` on a clean machine runs a world with no cloud keys; a fork with a different model config runs side by side. |
 
 M7 can start once M2 exists, in parallel with M3–M6, since the viewer only needs the event and delta schema.
 
 ## Decision log and open questions
 
-Every decision below came out of the grilling rounds on 17 Nov 2026.
+Every decision below came out of the grilling rounds on 17 Nov 2026 (decisions 39–41 from the airdrop grilling the same day).
 
 | # | Decision | Choice |
 | --- | --- | --- |
@@ -803,7 +822,7 @@ Every decision below came out of the grilling rounds on 17 Nov 2026.
 | 11 | Boredom | Per (verb, object type), with reward scaling and a mood penalty past threshold |
 | 12 | Needs | Data-defined per archetype; energy built in |
 | 13 | Energy sources | In-world only in v1 |
-| 14 | Talking and visitors | No text speech; `vocalize` verb with archetype noises heard by nearby characters; humans join as visitor characters |
+| 14 | Talking and visitors | No text speech; `vocalize` verb with archetype noises heard by nearby characters; visitors interact through airdrops and the mailbox (decision 39) |
 | 15 | Mood | Valence and arousal computed in code, labelled for prompts |
 | 16 | Packaging | Content packs: folders, hot-reload, npm-publishable |
 | 17 | On-device model | Small models on the server host via Ollama / llama.cpp: `tev1:0.8b` for decisions, `llama3.2:1b` for general text |
@@ -824,10 +843,13 @@ Every decision below came out of the grilling rounds on 17 Nov 2026.
 | 32 | Currency | AUD for energy rates, caps and usage; fixed `audPerUsd` config rate |
 | 33 | Gossip | None: noises carry no text, so beliefs stay private |
 | 34 | Noises | 4 fixed pitches (C, D, E, G) per noise; chains of up to 4 notes like `beep-C trill-D`; frontends play them with Web Audio |
-| 35 | Visitor interactions | Per-character queue, weighted random pick favouring the oldest; abuse controls later |
+| 35 | Visitor interactions | Superseded by decision 39 |
 | 36 | Licence | MIT for code, CC BY 4.0 for first-party pack media |
 | 37 | Viewer style | Top-down abstract construction blueprint with diegetic UI; readability first |
 | 38 | First character | Little robots: battery is energy; needs cool, signal, curiosity; synthesised noises (beep, chirp, trill, buzz) |
+| 39 | Visitors | Not characters. They airdrop items from an admin-managed JSON catalogue (block-based behaviours, restricted 24×24 icon language) and post messages to a per-world mailbox |
+| 40 | Messages to robots | Mailbox only, oldest first, one per `read`; quoted as a stranger's note; hearsay beliefs; robots answer only with noises and behaviour |
+| 41 | Visitor limits | All configurable per world; unlimited by default while testing; admins exempt |
 
 **Open questions**
 
@@ -835,9 +857,10 @@ Every decision below came out of the grilling rounds on 17 Nov 2026.
 - [ ] Default `energyPerAud`, and how many decisions a full energy bar should buy per in-world day.
 - [x] Default local models → decision 17.
 - [x] Gossip → decision 33.
-- [x] Visitor rate limits → decision 35; revisit if people abuse the queue.
+- [x] Visitor rate limits → decision 41.
 - [x] Licence → decision 36.
-- [ ] Visitor queue tuning: weight curve, cooldown, queue length and TTL defaults.
+- [ ] Production defaults for the airdrop and mailbox limits.
+- [ ] Revisit the item JSON shape once real catalogue items exist (schema 1 is provisional).
 - [x] First character → decision 38 (little robots).
 - [ ] The robot's name and exact silhouette.
 - [ ] Tune the synth settings for beep, chirp, trill and buzz by ear.
