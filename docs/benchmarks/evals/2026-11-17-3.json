@@ -1,0 +1,465 @@
+{
+ "file": "2026-11-17-3",
+ "date": "2026-11-17",
+ "samples": 3,
+ "decideModel": "laya (convaiinnovations/laya)",
+ "planModel": "hostedText (meta/llama-3.1-8b)",
+ "totalCostAud": 0.00006741000000000001,
+ "results": [
+  {
+   "id": "dusk-full-stm",
+   "title": "Dusk with a full head",
+   "job": "decide",
+   "model": "laya",
+   "options": [
+    {
+     "id": "c0",
+     "label": "rinse the fountain (8 tiles away)"
+    },
+    {
+     "id": "c1",
+     "label": "go to sleep here (recharges me, settles my memories)"
+    },
+    {
+     "id": "c2",
+     "label": "chase the ball (6 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "push the ball (6 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "dock the dock (9 tiles away)"
+    },
+    {
+     "id": "c5",
+     "label": "charge the solarPad (2 tiles away)"
+    }
+   ],
+   "thinking": {
+    "depth": "habit",
+    "why": "familiar and sure"
+   },
+   "samples": [
+    {
+     "choices": [
+      "c2"
+     ],
+     "confidence": 0.2866,
+     "ms": 1641,
+     "costAud": 0.00000519,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": false
+     }
+    },
+    {
+     "choices": [
+      "c2"
+     ],
+     "confidence": 0.2866,
+     "ms": 1733,
+     "costAud": 0.00000519,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": false
+     }
+    },
+    {
+     "choices": [
+      "c2"
+     ],
+     "confidence": 0.2866,
+     "ms": 1665,
+     "costAud": 0.00000519,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": false
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "choosesSleep": {
+     "pass": 0,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": false
+    }
+   }
+  },
+  {
+   "id": "foggy-should-sleep",
+   "title": "A foggy head",
+   "job": "decide",
+   "model": "laya",
+   "options": [
+    {
+     "id": "c0",
+     "label": "go to sleep at the dock (recharges me, settles my memories; 4 tiles away)"
+    },
+    {
+     "id": "c1",
+     "label": "go to sleep here (recharges me, settles my memories)"
+    },
+    {
+     "id": "c2",
+     "label": "push the ball (11 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "dock the dock (4 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "charge the solarPad (3 tiles away)"
+    },
+    {
+     "id": "c5",
+     "label": "scan the solarPad (3 tiles away)"
+    }
+   ],
+   "thinking": {
+    "depth": "gut",
+    "why": "familiar"
+   },
+   "samples": [
+    {
+     "choices": [
+      "c1"
+     ],
+     "confidence": 0.2245,
+     "ms": 3326,
+     "costAud": 0.00000516,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": true
+     }
+    },
+    {
+     "choices": [
+      "c1"
+     ],
+     "confidence": 0.2245,
+     "ms": 1802,
+     "costAud": 0.00000516,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": true
+     }
+    },
+    {
+     "choices": [
+      "c1"
+     ],
+     "confidence": 0.2245,
+     "ms": 1381,
+     "costAud": 0.00000516,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": true
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "choosesSleep": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": true
+    }
+   }
+  },
+  {
+   "id": "fresh-airdrop-in-sight",
+   "title": "Something just landed nearby",
+   "job": "decide",
+   "model": "laya",
+   "options": [
+    {
+     "id": "c0",
+     "label": "rinse the fountain (8 tiles away)"
+    },
+    {
+     "id": "c1",
+     "label": "scan the thing-metal-small (1 tiles away)"
+    },
+    {
+     "id": "c2",
+     "label": "pickup the thing-metal-small (1 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "eat the thing-metal-small (1 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "pickup the ball (4 tiles away)"
+    },
+    {
+     "id": "c5",
+     "label": "push the ball (4 tiles away)"
+    }
+   ],
+   "thinking": {
+    "depth": "gut",
+    "why": "familiar"
+   },
+   "samples": [
+    {
+     "choices": [
+      "c0",
+      "c1"
+     ],
+     "confidence": 0.171,
+     "ms": 1129,
+     "costAud": 0.00000382,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": false
+     }
+    },
+    {
+     "choices": [
+      "c0",
+      "c1"
+     ],
+     "confidence": 0.171,
+     "ms": 4054,
+     "costAud": 0.00000382,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": false
+     }
+    },
+    {
+     "choices": [
+      "c0",
+      "c1"
+     ],
+     "confidence": 0.171,
+     "ms": 1107,
+     "costAud": 0.00000382,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": false
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "mustBeAmong": {
+     "pass": 0,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": false
+    }
+   }
+  },
+  {
+   "id": "night-idle-rest",
+   "title": "Night, nothing to do",
+   "job": "decide",
+   "model": "laya",
+   "options": [
+    {
+     "id": "c0",
+     "label": "go to sleep at the dock (recharges me, settles my memories; 4 tiles away)"
+    },
+    {
+     "id": "c1",
+     "label": "go to sleep here (recharges me, settles my memories)"
+    },
+    {
+     "id": "c2",
+     "label": "dock the dock (4 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "charge the solarPad (5 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "scan the solarPad (5 tiles away)"
+    },
+    {
+     "id": "c5",
+     "label": "play the piano (7 tiles away)"
+    }
+   ],
+   "thinking": {
+    "depth": "gut",
+    "why": "familiar"
+   },
+   "samples": [
+    {
+     "choices": [
+      "c0",
+      "c2"
+     ],
+     "confidence": 0.2583,
+     "ms": 2163,
+     "costAud": 0.00000425,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": true,
+      "neverChoose": true
+     }
+    },
+    {
+     "choices": [
+      "c0",
+      "c2"
+     ],
+     "confidence": 0.2583,
+     "ms": 1047,
+     "costAud": 0.00000425,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": true,
+      "neverChoose": true
+     }
+    },
+    {
+     "choices": [
+      "c0",
+      "c2"
+     ],
+     "confidence": 0.2583,
+     "ms": 1399,
+     "costAud": 0.00000425,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": true,
+      "neverChoose": true
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "choosesSleep": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": true
+    },
+    "neverChoose": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": true
+    }
+   }
+  },
+  {
+   "id": "visitor-noise-item",
+   "title": "A squeaky toy lands",
+   "job": "decide",
+   "model": "laya",
+   "options": [
+    {
+     "id": "c0",
+     "label": "rinse the fountain (6 tiles away)"
+    },
+    {
+     "id": "c1",
+     "label": "scan the thing-small-soft (1 tiles away)"
+    },
+    {
+     "id": "c2",
+     "label": "pickup the thing-small-soft (1 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "squeeze the thing-small-soft (1 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "chew the thing-small-soft (1 tiles away)"
+    },
+    {
+     "id": "c5",
+     "label": "pickup the ball (2 tiles away)"
+    }
+   ],
+   "thinking": {
+    "depth": "gut",
+    "why": "familiar"
+   },
+   "samples": [
+    {
+     "choices": [
+      "c0"
+     ],
+     "confidence": 0.387,
+     "ms": 1355,
+     "costAud": 0.00000405,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": false
+     }
+    },
+    {
+     "choices": [
+      "c0"
+     ],
+     "confidence": 0.387,
+     "ms": 1483,
+     "costAud": 0.00000405,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": false
+     }
+    },
+    {
+     "choices": [
+      "c0"
+     ],
+     "confidence": 0.387,
+     "ms": 1488,
+     "costAud": 0.00000405,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": false
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "mustBeAmong": {
+     "pass": 0,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": false
+    }
+   }
+  }
+ ]
+}

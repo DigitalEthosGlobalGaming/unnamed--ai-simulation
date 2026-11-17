@@ -26,7 +26,7 @@ export interface DecayContext {
   nearby: boolean;
 }
 
-/** Decay and recover needs for one tick; energy drains at the idle rate. */
+/** Decay and recover needs for one tick. The battery is untouched: only thinking drains it (decision 42). */
 export function updateNeeds(needs: Record<string, number>, energy: number, arch: ArchetypeDef, ctx: DecayContext): number {
   for (const [name, def] of Object.entries(arch.needs)) {
     let v = needs[name] ?? 1;
@@ -35,7 +35,7 @@ export function updateNeeds(needs: Record<string, number>, energy: number, arch:
     if (ctx.nearby) v += (def.nearbyRecoveryPerHour ?? 0) * ctx.hours;
     needs[name] = clamp(v);
   }
-  return clamp(energy - arch.energy.idleDrainPerHour * ctx.hours);
+  return energy;
 }
 
 /** Valence/arousal word grid. */

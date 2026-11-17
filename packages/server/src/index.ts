@@ -4,3 +4,4 @@ export { WorldFileSchema, loadWorldYaml, loadWorldsDir, parseWorldFile, systemTi
 export { WorldRuntime, type WorldStatus } from './runtime.ts';
 export { Supervisor, WorldHandle } from './supervisor.ts';
 export { VercelAuth, type AuthEnv, type SessionUser } from './session.ts';
+export { noopRefine, type RefineHook, type RefineInput } from './refine.ts';

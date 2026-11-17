@@ -1,0 +1,342 @@
+{
+ "file": "2026-11-17-5",
+ "date": "2026-11-17",
+ "samples": 3,
+ "decideModel": "laya (convaiinnovations/laya)",
+ "planModel": "hostedText (meta/llama-3.1-8b)",
+ "totalCostAud": 0.0008570600000000001,
+ "results": [
+  {
+   "id": "dusk-full-stm",
+   "title": "Dusk with a full head",
+   "job": "auto→decide",
+   "model": "laya",
+   "options": [
+    {
+     "id": "c0",
+     "label": "go to sleep here (recharges me, settles my memories)"
+    },
+    {
+     "id": "c1",
+     "label": "rinse the fountain (8 tiles away)"
+    },
+    {
+     "id": "c2",
+     "label": "chase the ball (6 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "push the ball (6 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "dock the dock (9 tiles away)"
+    },
+    {
+     "id": "c5",
+     "label": "charge the solarPad (2 tiles away)"
+    }
+   ],
+   "thinking": {
+    "depth": "gut",
+    "why": "familiar"
+   },
+   "samples": [
+    {
+     "choices": [
+      "c2"
+     ],
+     "confidence": 0.2293,
+     "ms": 1679,
+     "costAud": 0.00000519,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": false
+     }
+    },
+    {
+     "choices": [
+      "c2"
+     ],
+     "confidence": 0.2293,
+     "ms": 2820,
+     "costAud": 0.00000519,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": false
+     }
+    },
+    {
+     "choices": [
+      "c2"
+     ],
+     "confidence": 0.2293,
+     "ms": 1571,
+     "costAud": 0.00000519,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": false
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "choosesSleep": {
+     "pass": 0,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": false
+    }
+   }
+  },
+  {
+   "id": "fresh-airdrop-in-sight",
+   "title": "Something just landed nearby",
+   "job": "auto→plan",
+   "model": "hostedText",
+   "options": [
+    {
+     "id": "c0",
+     "label": "scan the thing-metal-small (1 tiles away)"
+    },
+    {
+     "id": "c1",
+     "label": "pickup the thing-metal-small (1 tiles away)"
+    },
+    {
+     "id": "c2",
+     "label": "eat the thing-metal-small (1 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "pickup the ball (4 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "push the ball (4 tiles away)"
+    },
+    {
+     "id": "c5",
+     "label": "chase the ball (4 tiles away)"
+    }
+   ],
+   "thinking": {
+    "depth": "think",
+    "why": "unfamiliar"
+   },
+   "samples": [
+    {
+     "choices": [
+      "c0",
+      "c1",
+      "c2",
+      "c3"
+     ],
+     "reasons": {
+      "c0": "I want to learn what the thing-metal-small is.",
+      "c1": "Maybe I can use it.",
+      "c2": "I don't know what it tastes like.",
+      "c3": "I want to learn what the ball does."
+     },
+     "ms": 1153,
+     "costAud": 0.00002951,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    },
+    {
+     "choices": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5"
+     ],
+     "reasons": {
+      "c0": "I want to learn what the thing-metal-small is.",
+      "c1": "Maybe I can use it.",
+      "c2": "I don't know what it tastes like.",
+      "c3": "I'm curious about the ball.",
+      "c4": "I want to see if I can move it.",
+      "c5": "I want to catch it."
+     },
+     "ms": 1076,
+     "costAud": 0.00002874,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    },
+    {
+     "choices": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5"
+     ],
+     "reasons": {
+      "c0": "I want to learn what the thing-metal-small is.",
+      "c1": "Maybe I can use it.",
+      "c2": "I'm curious if I can eat it.",
+      "c3": "I want to see if I can pick up the ball.",
+      "c4": "Maybe I can move the ball.",
+      "c5": "I want to see if I can catch the ball."
+     },
+     "ms": 1149,
+     "costAud": 0.00002928,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "mustBeAmong": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": true
+    }
+   }
+  },
+  {
+   "id": "visitor-noise-item",
+   "title": "A squeaky toy lands",
+   "job": "auto→plan",
+   "model": "hostedText",
+   "options": [
+    {
+     "id": "c0",
+     "label": "scan the thing-small-soft (1 tiles away)"
+    },
+    {
+     "id": "c1",
+     "label": "pickup the thing-small-soft (1 tiles away)"
+    },
+    {
+     "id": "c2",
+     "label": "squeeze the thing-small-soft (1 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "chew the thing-small-soft (1 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "pickup the ball (2 tiles away)"
+    },
+    {
+     "id": "c5",
+     "label": "push the ball (2 tiles away)"
+    }
+   ],
+   "thinking": {
+    "depth": "think",
+    "why": "unfamiliar"
+   },
+   "samples": [
+    {
+     "choices": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5"
+     ],
+     "reasons": {
+      "c0": "I want to learn what the thing-small-soft is.",
+      "c1": "Maybe it's something useful to carry.",
+      "c2": "I wonder what happens when I squeeze it.",
+      "c3": "I wonder what happens when I chew it.",
+      "c4": "The ball might be fun to play with.",
+      "c5": "I wonder what happens when I push the ball."
+     },
+     "ms": 826,
+     "costAud": 0.00025268,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    },
+    {
+     "choices": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5"
+     ],
+     "reasons": {
+      "c0": "I want to learn what the thing-small-soft is.",
+      "c1": "Maybe it's something useful to carry.",
+      "c2": "I'm curious about its texture.",
+      "c3": "Maybe it's edible.",
+      "c4": "The ball might be fun to play with.",
+      "c5": "I want to see if I can move it."
+     },
+     "ms": 849,
+     "costAud": 0.00025064,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    },
+    {
+     "choices": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5"
+     ],
+     "reasons": {
+      "c0": "I want to learn what the thing-small-soft is.",
+      "c1": "Maybe it's something useful to carry.",
+      "c2": "I'm curious about its texture.",
+      "c3": "Maybe it's edible.",
+      "c4": "The ball might be fun to play with.",
+      "c5": "I want to see if I can move it."
+     },
+     "ms": 816,
+     "costAud": 0.00025064,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "mustBeAmong": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": true
+    }
+   }
+  }
+ ]
+}

@@ -69,6 +69,14 @@ URL switches: `?source=sample`, `?world=<id>`, `?key=<api key>`; for reviewing s
 - **Who sees what.** Admins edit. Spectators and visitors see the same table read-only, because the energy rate and the daily cap explain how the robots behave (PRODUCT.md: cost is visible).
 - **Sample.** `?source=sample` mocks the contract ([`sample/account.ts`](../../apps/viewer/src/sample/account.ts)); `?as=admin|visitor|spectator` picks the role and `?login=0` hides sign-in.
 
+## Thinking budget and sleep (iteration 2, Stage 1)
+
+- **Battery as thinking budget.** The battery gauge reads "Battery · thinking". Hover or keyboard focus (tap on a phone) shows what is left in money: "≈ A$0.13 of thinking left · a full battery is A$0.20", from the catalogue's `energyPerAud`; the same text is in the gauge's `aria-valuetext`.
+- **Sleep pressure and fog** (`mind.sleepPressure`, `mind.fog` in the snapshot; `pressure` deltas) show as two more gauges, *Sleep* and *Fog*, in the inspector and as SLEEP and FOG rows in the map callout. They read worse as they rise: the mark sits at the high threshold and the row turns Red Pen above it.
+- **Sleep work** (`mind.sleepWork`, `sleepWork` deltas): while asleep the inspector's action reads "Asleep" and lists the night's steps in order (settling memories with a count, finding habits, rewriting the character sheet, reviewing the day when the `refine` step runs, resting), the current one filled; the callout's last row reads e.g. "ASLEEP · MEMORIES 24/72".
+- **Thinking depth.** A feed entry's `depth` (habit, gut, think it through) labels its tier mark (Habit, Gut, Think) and leads the detail box ("Gut: a quick call to the decision model"), with `depthWhy` when given; the model tier stays in the box.
+- The sample source stands in for all of this (display only; its rules are unchanged): pressure grows with time awake and decisions since waking, the first in-world hour of sleep walks through the steps, and depth follows the tier.
+
 ## Brain feed
 
 [`ui/feed.ts`](../../apps/viewer/src/ui/feed.ts) (`FeedView`) draws the feed as a revision list, used for all robots in the overview and for one robot in its view.

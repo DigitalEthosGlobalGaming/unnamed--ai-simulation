@@ -242,7 +242,7 @@ export class SettingsView {
       }, 4000);
       this.updateValues();
       // the server may have adjusted the value: show what it kept
-      if (s.kind === 'number' && document.activeElement !== input) input.value = String(this.data.values[f]);
+      if (s.kind === 'number') input.value = String(this.data.values[f]); // e.g. a one-shot top-up reads back 0
     } catch (e) {
       input.disabled = false;
       if (state) state.textContent = '';

@@ -39,6 +39,24 @@ export const ReflectSchema = z.object({
   sheetLines: z.array(z.string()).max(2),
 });
 
+/** Sleep: memory consolidation (reword beliefs, what still pulls, what to let go of). */
+export const ConsolidateSchema = z.object({
+  beliefs: z.array(z.object({ key: z.string(), text: z.string() })).max(10),
+  /** Small models often answer plain strings here; both are accepted. */
+  openItems: z.array(z.union([z.string(), z.object({ text: z.string() })])).max(3),
+  /** Short-term memory ids not worth keeping. */
+  forget: z.array(z.union([z.string(), z.number()])).max(10),
+});
+/** Sleep: one small step on the character sheet, and optionally the goal. */
+export const SheetSchema = z.object({
+  op: z.enum(['add', 'reword', 'remove', 'none']),
+  /** For reword/remove: the line number as listed (1-based). */
+  line: z.number().int().min(1).max(20).optional(),
+  text: z.string().max(160).optional(),
+  goal: z.string().max(120).optional(),
+  why: z.string().max(200).optional(),
+});
+
 const DECIDE_JOBS: JobName[] = ['decide', 'vocalize', 'route'];
 const SCORE_JOBS: JobName[] = ['appraise', 'scoreMemory'];
 
@@ -161,6 +179,11 @@ export class ModelGateway {
 
   /** Run a job. Returns undefined if every entry was skipped or failed (the mind then falls back). */
   async run(req: JobRequest): Promise<ModelAnswerPayload | undefined> {
+    // "Think it through": straight to the plan chain; the decision model only if no plan model answers.
+    if (req.job === 'decide' && req.depth === 'think' && this.config.jobs.plan) {
+      const plan = await this.runChain('plan', req, (m, signal) => this.callPlan(m, req, signal));
+      if (plan) return this.payload(req, plan.answer, plan.usage, plan.model);
+    }
     const first = await this.runChain(req.job, req, (m, signal) => this.call(m, req, signal));
     if (!first) return undefined;
     let { answer, usage, model } = first;
@@ -179,8 +202,8 @@ export class ModelGateway {
         model = again.model;
       }
     }
-    // ...and if still unsure, go to the LLM plan chain.
-    if (req.job === 'decide' && unsure() && this.config.jobs.plan) {
+    // ...and if still unsure, go to the LLM plan chain (not when the robot chose its gut).
+    if (req.job === 'decide' && req.depth !== 'gut' && req.depth !== 'think' && unsure() && this.config.jobs.plan) {
       escalated ??= { from: model.name, confidence: answer.confidence as number };
       const plan = await this.runChain('plan', req, (m, signal) => this.callPlan(m, req, signal));
       if (plan) {
@@ -189,6 +212,10 @@ export class ModelGateway {
         model = plan.model;
       }
     }
+    return this.payload(req, { ...answer, ...(escalated && model.name !== escalated.from && { escalated }) }, usage, model);
+  }
+
+  private payload(req: JobRequest, answer: Record<string, Json>, usage: Usage, model: Built): ModelAnswerPayload {
     const energy = usage.costAud * this.config.energyPerAud;
     this.meter.record(req.job, usage, energy);
     return {
@@ -197,7 +224,7 @@ export class ModelGateway {
       characterId: req.characterId,
       modelId: model.name,
       promptHash: hashJson(req.context),
-      answer: { ...answer, tier: model.tier, ...(escalated && model.name !== escalated.from && { escalated }) },
+      answer: { ...answer, tier: model.tier },
       usage,
     };
   }
@@ -307,7 +334,8 @@ export class ModelGateway {
       return { answer: { value: r.value, confidence: r.confidence }, usage: r.usage };
     }
     const input = req.input === undefined ? '' : `\nInput: ${JSON.stringify(req.input)}`;
-    const r = await m.chat!.generate({ context: req.context, instruction: req.question + input, schema: ReflectSchema, maxOutputTokens: 600, signal });
+    const schema = req.job === 'consolidate' ? ConsolidateSchema : req.job === 'sheet' ? SheetSchema : ReflectSchema;
+    const r = await m.chat!.generate({ context: req.context, instruction: req.question + input, schema, maxOutputTokens: req.job === 'sheet' ? 200 : 600, signal });
     return { answer: r.object as Record<string, Json>, usage: r.usage };
   }
 

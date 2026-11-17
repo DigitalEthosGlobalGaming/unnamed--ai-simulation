@@ -84,7 +84,7 @@ export const ArchetypeDefSchema = z.strictObject({
   type: z.string().min(1),
   tags: z.array(z.string()).default([]),
   needs: z.record(z.string(), NeedDefSchema),
-  energy: z.strictObject({ label: z.string(), idleDrainPerHour: z.number().min(0) }),
+  energy: z.strictObject({ label: z.string(), /** Ignored since iteration 2: only thinking drains the battery. */ idleDrainPerHour: z.number().min(0).default(0) }),
   noises: NoisesSchema.optional(),
   sightRange: z.int().positive().default(6),
   hearingRange: z.int().positive().default(8),

@@ -26,7 +26,7 @@ Terms as they are used in the code and these docs. Code identifiers are in `code
 | Content pack | A versioned bundle of objects, archetypes, handlers, senses and maps. See [content-packs.md](content-packs.md). |
 | Delta | One state change in a tick (`moved`, `needs`, `action`, `vocalize`, `memory`, …). Derived from inputs; see [viewer-integration.md](viewer-integration.md#delta-kinds). |
 | Diary | A per-day log of what a character did and felt. Stored as a read model and used as input to reflection. |
-| Dock | The robot's standby spot; its `rest` verb trickle-charges and cools. |
+| Dock | The robot's home: its `rest` verb is where it usually sleeps, and it cools. It charges nothing (since iteration 2). |
 | Drop (queue) | A job the model queue gave up on (`queued too long`, `superseded`, `no model answered`), returned to the mind as a `model.answer` with `answer.dropped`. |
 | Effect handler | A TypeScript function that resolves a verb against the world and returns an `EffectResult`. |
 | Energy | The built-in need that pays for thinking: every model answer costs `costAud × energyPerAud`. |
@@ -51,7 +51,7 @@ Terms as they are used in the code and these docs. Code identifiers are in `code
 | Pack versions | `name@version#hash` of every loaded pack, stamped on the world and every input; replay refuses a mismatch. |
 | Read model | A table derived from deltas for fast queries: `deltas`, `feed`, `diary`. |
 | Recorder | Wraps a live world: logs each input before queueing it, and takes snapshots. |
-| Reflect | The once-a-night chat-model job in standby: rewords beliefs, adds questions, proposes a sheet line. |
+| Reflect | Iteration 1's nightly chat-model job; replaced by the sleep pipeline (consolidate, sheet). |
 | Replay session | A re-simulation from a snapshot plus the log, streamed over WebSocket with a `sessionId`. Never calls a model. |
 | Salience | 0..1 importance of an observation or trigger; triggers at or above `wakeThreshold` interrupt. |
 | Sense | A pure function from world state to observations for one character (`basic.sight`, `basic.hearing`). |

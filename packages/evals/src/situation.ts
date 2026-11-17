@@ -16,8 +16,9 @@ import {
   type Json,
   type Memory,
   type Registry,
+  type ThinkingDepth,
 } from '@uas/core';
-import { MindSystem, beliefText, freezePrefix } from '@uas/mind';
+import { MindSystem, beliefText, fogOf, freezePrefix, pressureOf } from '@uas/mind';
 import { renderPrompt } from '@uas/models';
 import { World, type WorldState } from '@uas/sim';
 import { basicPack, gardenGrid } from '@uas/pack-basic';
@@ -96,6 +97,10 @@ const CharacterSpec = z.strictObject({
   openItems: z.array(z.strictObject({ kind: z.enum(['promise', 'person', 'question', 'want', 'unfinished']), text: z.string(), weight: z.number().default(1), about: z.string().optional() })).default([]),
   /** The robot has explored: every object is in its map (`known`), not only what it sees now. */
   knowsAll: z.boolean().default(true),
+  /** In-world hours since it last woke (sleep pressure's time part; 0 = just woke). */
+  hoursAwake: z.number().min(0).max(48).default(4),
+  /** Memories formed since its last sleep (fog); defaults to the number of `memories`. */
+  unsettled: z.int().min(0).optional(),
 });
 
 export const SituationSchema = z
@@ -109,8 +114,11 @@ export const SituationSchema = z
       z.strictObject({ kind: z.literal('captured'), world: z.string(), tick: z.int(), date: z.string(), characterId: z.string() }),
     ]),
     tags: z.array(z.string()).default([]),
-    /** `decide`: the decision model; `plan`: the same request sent to the text model as a plan. */
-    job: z.enum(['decide', 'plan']),
+    /**
+     * `decide`: the decision model; `plan`: the same request sent to the text model as a plan;
+     * `auto`: as the brain would route it (habit → its own top option, no call; gut → decide; think → plan).
+     */
+    job: z.enum(['decide', 'plan', 'auto']),
     trigger: z.enum(TRIGGERS).default('action-finished'),
     world: WorldSpec.optional(),
     character: CharacterSpec.optional(),
@@ -279,6 +287,11 @@ export function buildSituation(s: Situation): Built {
     }
   }
   const arch = world.archetype(c.type)!;
+  // Sleep pressure and fog, as the mind keeps them (iteration 2).
+  m.unsettled = cs.unsettled ?? cs.memories.length;
+  m.awakeSinceTick = world.tick - Math.round((cs.hoursAwake * 3600) / world.state.config.secondsPerTick);
+  m.fog = Math.round(fogOf(m, arch.mind.stmSize) * 1000) / 1000;
+  m.sleepPressure = pressureOf(cs.hoursAwake, m.fog);
   freezePrefix(world.registry, arch, m, world.tick, minds.ticksPerDay(world), day);
   return { world, minds, character: c };
 }
@@ -286,6 +299,8 @@ export function buildSituation(s: Situation): Built {
 export interface SituationRequest {
   request: JobRequest;
   candidates: Candidate[];
+  /** How hard the brain would choose to think here (habit, gut or think), and why. */
+  thinking: { depth: ThinkingDepth; why: string };
   built: Built;
 }
 
@@ -293,13 +308,13 @@ export interface SituationRequest {
 export function situationRequest(s: Situation): SituationRequest {
   const built = buildSituation(s);
   const req = built.minds.decisionRequest(built.world, built.character, s.trigger, { perceive: !s.snapshot });
-  const { candidates, ...request } = req;
-  return { request, candidates, built };
+  const { candidates, thinking, ...request } = req;
+  return { request, candidates, thinking, built };
 }
 
 /** The prompt exactly as a model would get it (system, user, options), for golden snapshots. */
 export function promptText(s: Situation): string {
-  const { request, candidates } = situationRequest(s);
+  const { request, candidates, thinking } = situationRequest(s);
   const { system, user } = renderPrompt(request.context);
   return [
     `# ${s.id} (${s.job})`,
@@ -307,6 +322,7 @@ export function promptText(s: Situation): string {
     system,
     '## user',
     user,
+    `## thinking: ${thinking.depth} (${thinking.why})`,
     '## options',
     ...candidates.map((c) => `${c.id}: ${c.label}  [${c.key}] -> ${c.actions.map((a) => `${a.verb}${a.targetId ? ` ${a.targetId}` : ''}${a.args ? ` ${JSON.stringify(a.args)}` : ''}`).join(', ')}`),
     '',

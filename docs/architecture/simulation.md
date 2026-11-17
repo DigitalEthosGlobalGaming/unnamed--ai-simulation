@@ -131,7 +131,7 @@ type EffectHandler = (ctx: EffectContext) => EffectResult;
 // result: ok, reason?, needDeltas?, stateChanges?, spawn?, despawn?, observation
 ```
 
-Source: [`effects.ts`](../../packages/core/src/effects.ts). The actor's mind receives `observation` (and `reason` on failure), never `needDeltas`. Need deltas pass through the mind's `applyNeeds` hook, which applies boredom scaling; without a mind they are added as-is.
+Source: [`effects.ts`](../../packages/core/src/effects.ts). The actor's mind receives `observation` (and `reason` on failure), never `needDeltas`. An `energy` need delta is ignored, with or without a mind: physical actions never change the battery (decision 42; only thinking drains it and only sleep recharges it, both in the mind). Need deltas pass through the mind's `applyNeeds` hook, which applies boredom scaling; without a mind they are added as-is.
 
 ### Built-in verbs
 
@@ -189,7 +189,7 @@ Day and night affect:
 
 - the solar pad, which only charges in daylight ([content-packs.md](../content-packs.md));
 - sight range, halved at night;
-- the mind: standby, mood arousal, beliefs keyed by `@day` or `@night`, and reflection ([mind.md](mind.md)).
+- the mind: mood arousal, beliefs keyed by `@day` or `@night`, and reflection ([mind.md](mind.md)).
 
 The runtime takes a snapshot at every in-world day boundary ([events-and-replay.md](events-and-replay.md#snapshots)).
 

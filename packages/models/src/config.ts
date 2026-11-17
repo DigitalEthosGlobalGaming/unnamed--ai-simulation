@@ -71,7 +71,7 @@ const ChainEntrySchema = z.union([
   }),
 ]);
 
-const JOBS = ['route', 'decide', 'appraise', 'scoreMemory', 'vocalize', 'plan', 'reflect', 'embed'] as const;
+const JOBS = ['route', 'decide', 'appraise', 'scoreMemory', 'vocalize', 'plan', 'reflect', 'consolidate', 'sheet', 'embed'] as const;
 
 export const ModelsConfigSchema = z.strictObject({
   /** Fixed conversion rate, from config so replays stay deterministic. */
@@ -85,7 +85,7 @@ export const ModelsConfigSchema = z.strictObject({
   /** Below this energy every job resolves to local models (or autopilot). */
   energyFloor: z.number().min(0).max(1).default(0.1),
   /** Energy per AUD (TODO: open question in the spec; provisional). */
-  energyPerAud: z.number().min(0).default(2),
+  energyPerAud: z.number().min(0).default(5),
   defaultTimeoutMs: z.int().positive().default(30_000),
   ollamaUrl: z.string().default('http://localhost:11434'),
   /** The host's job queue: local models share one CPU, so they run one at a time. */

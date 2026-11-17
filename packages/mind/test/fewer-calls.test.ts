@@ -17,19 +17,19 @@ function setup() {
 }
 
 describe('fewer model calls', () => {
-  it('a critical battery with a known charger is an obvious choice: autopilot, no model call', () => {
+  it('a head too foggy to think is an obvious choice: sleep, autopilot, no model call', () => {
     const t = setup();
     t.run(5);
     t.minds.drain();
     const m = t.robot().mind!;
-    m.beliefs.push({ key: 'charge:solarPad@day', text: 'charge at the solarPad by day fills my battery', expectedNeedDeltas: { energy: 0.15 }, expectedValence: 0.5, support: 5, firmness: 0.9, lastSupportedDay: 0 });
     m.pendingJobs = [];
-    t.input('admin.edit', { id: 'robot', energy: 0.05 });
+    m.unsettled = 100; // a day's worth of unsettled memories
+    m.awakeSinceTick = -20 * 600; // and a long day awake
     t.input('admin.poke', { characterId: 'robot' });
     const ds = t.run(2);
     const feed = ds.flatMap((d) => (d.kind === 'feed' ? [d.entry] : []));
-    expect(feed.at(-1)).toMatchObject({ tier: 'autopilot', actions: [{ verb: 'moveTo', targetId: 'pad' }, { verb: 'charge', targetId: 'pad' }] });
-    expect(feed.at(-1)!.reason).toMatch(/battery is nearly flat/);
+    expect(feed.at(-1)!.actions.at(-1)!.verb).toBe('rest');
+    expect(feed.at(-1)).toMatchObject({ tier: 'autopilot', reason: 'my head is too foggy; I need to sleep' });
     expect(t.minds.drain().filter((j) => j.job === 'decide')).toEqual([]);
   });
 

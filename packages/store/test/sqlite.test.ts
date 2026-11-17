@@ -47,4 +47,39 @@ describe('SQLite store (Drizzle, WAL)', () => {
     reads.write('w', 30, [{ kind: 'feedStep', characterId: 'robot', feedTick: 7, step: 1, status: 'failed', result: 'it is being held' }]);
     expect(reads.feed('w', 'robot')[0]!.actions.map((a) => [a.status, a.result])).toEqual([['done', undefined], ['failed', 'it is being held']]);
   });
+
+  it('replays a mind world across a full sleep (pipeline, recharge, wake) to identical hashes', () => {
+    const db = openDb(join(mkdtempSync(join(tmpdir(), 'uas-')), 'sleep.db'));
+    const registry = buildRegistry([basicPack()]);
+    const log = new SqliteInputLog(db);
+    const snaps = new SqliteSnapshotStore<WorldState>(db);
+    const world = World.create({ worldId: 's', seed: 9, grid: gardenGrid() }, registry, [
+      { id: 'robot', type: 'robot', pos: { x: 10, y: 10 } },
+      { id: 'dock', type: 'dock', pos: { x: 2, y: 7 } },
+      { id: 'ball', type: 'ball', pos: { x: 12, y: 12 } },
+    ], new MindSystem(), { mind: { brain: 'autopilot' } as Json });
+    const rec = new Recorder(world, log, snaps, { worldId: 's', packVersions: registry.packVersions, snapshotEveryTicks: 1000 });
+    const hashes = [world.hash()];
+    const phases: string[] = [];
+    const usage = { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, costAud: 0, latencyMs: 0, modelId: 't' };
+    for (let t = 0; t < 6000; t++) {
+      if (t === 500) {
+        // A long day and a foggy head, then sleep.
+        rec.submit('admin.edit', { id: 'robot', energy: 0.3 });
+        rec.submit('model.answer', { jobId: 'x', job: 'decide', characterId: 'robot', modelId: 't', promptHash: '', usage, answer: { actions: [{ verb: 'rest', reason: 'sleep', args: { ticks: 100 } }] } });
+      }
+      for (const d of rec.step().changes) if (d.kind === 'sleep') phases.push(d.phase);
+      hashes.push(world.hash());
+    }
+    expect(phases).toEqual(expect.arrayContaining(['asleep', 'awake']));
+    for (const snap of snaps.list('s')) {
+      const w = replay({
+        worldId: 's', log, snapshots: snaps, restore: (x) => World.fromSnapshot(x.state, registry, new MindSystem()), fromTick: snap.tick, toTick: 6000,
+        onTick: (x) => {
+          if (x.hash() !== hashes[x.tick]) throw new Error(`diverged at ${x.tick} from ${snap.tick}`);
+        },
+      });
+      expect(w.hash()).toBe(hashes[6000]);
+    }
+  });
 });

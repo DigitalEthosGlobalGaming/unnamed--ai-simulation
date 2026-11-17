@@ -9,6 +9,7 @@ import {
   type Entity,
   type FeedEntry,
   type FeedStepStatus,
+  type ThinkingDepth,
   type InputEvent,
   type JobName,
   type JobRequest,
@@ -26,13 +27,24 @@ import { buildCandidates, carrying, choose, confident, score } from './autopilot
 import { mindConfigOf, type MindConfig } from './config.ts';
 import { admit, hearsay, recall, updateBelief } from './memory.ts';
 import { band, clamp, computeMood, feltWord, round3, updateNeeds } from './needs.ts';
-import { buildPrompt, freezePrefix, timeWord } from './prompt.ts';
+import { buildPrompt, consolidateQuestion, freezePrefix, sheetQuestion, timeWord } from './prompt.ts';
+import { SLEEP, allowedDepth, applySheetEdit, detectHabits, ensureLockedCore, fogOf, fogWord, pressureOf, shallower } from './sleep.ts';
 
 const ROUTINE: TriggerKind[] = ['action-finished', 'idle-timeout'];
+/** Typical salience per trigger, for building a request outside the tick (evals). */
+const TRIGGER_SALIENCE: Record<TriggerKind, number> = {
+  'action-finished': 0.3,
+  'idle-timeout': 0.3,
+  'action-rejected': 0.6,
+  'need-threshold': 0.6,
+  sensed: 0.6,
+  'heard-noise': 0.6,
+  'woke-up': 1,
+  'admin-poke': 1,
+};
 const NO_OUTCOME = new Set(['moveTo', 'wait', 'follow', 'vocalize']);
 const REST_VERBS = new Set(['rest', 'dock']);
 const EMIT_EVERY = 50;
-const LOW_BATTERY_AT_NIGHT = 0.45;
 /** While the model queue is busy, triggers below this salience are handled by autopilot. */
 const BUSY_SALIENCE = 0.7;
 /** Clock jumps shorter than this (drift corrections) aren't felt as being switched off. */
@@ -93,6 +105,9 @@ export class MindSystem implements SimPlugin {
       energyFloorLatched: false,
       nextId: 1,
       lastLevels: {},
+      sleepPressure: 0,
+      fog: 0,
+      awakeSinceTick: world.tick,
     };
     freezePrefix(world.registry, arch, m, world.tick, this.ticksPerDay(world), world.day);
     c.mind = m;
@@ -111,6 +126,7 @@ export class MindSystem implements SimPlugin {
       const mind = { ...((world.state.ext.mind as Record<string, Json> | undefined) ?? {}) };
       if (typeof ch.energyPerAud === 'number') mind.energyPerAud = ch.energyPerAud;
       if (typeof ch.needDecayMultiplier === 'number') mind.needDecayMultiplier = ch.needDecayMultiplier;
+      for (const k of ['batteryPlanAbove', 'batteryGutAbove', 'batteryHabitAbove'] as const) if (typeof ch[k] === 'number') mind[k] = ch[k];
       world.state.ext.mind = mind;
       return true;
     }
@@ -135,6 +151,7 @@ export class MindSystem implements SimPlugin {
     // The host's queue gave up on this job (stale, superseded or every model failed).
     if (typeof answer.dropped === 'string') {
       if (job!.draftId) this.settleDraft(world, c, job!.draftId, job!.job);
+      if (job!.job === 'consolidate' || job!.job === 'sheet') this.sleepJobDone(world, c, job!.job, undefined);
       if ((job!.job === 'decide' || job!.job === 'vocalize') && !c.current && c.queue.length === 0) {
         const arch = world.archetype(c.type)!;
         this.autopilot(world, c, arch, mindConfigOf(world.state.ext), !world.isDaylight, job!.trigger, 'fallback', undefined, answer.dropped);
@@ -144,7 +161,7 @@ export class MindSystem implements SimPlugin {
     switch (job!.job) {
       case 'decide':
       case 'vocalize':
-        this.applyChoice(world, c, job!.candidates ?? [], answer, p, energyCost, job!.trigger);
+        this.applyChoice(world, c, job!.candidates ?? [], answer, p, energyCost, job!.trigger, job!.depth ? { depth: job!.depth, ...(job!.depthWhy && { depthWhy: job!.depthWhy }) } : {});
         break;
       case 'appraise':
       case 'scoreMemory': {
@@ -159,6 +176,10 @@ export class MindSystem implements SimPlugin {
       }
       case 'reflect':
         this.applyReflection(world, c, answer);
+        break;
+      case 'consolidate':
+      case 'sheet':
+        this.sleepJobDone(world, c, job!.job, answer);
         break;
       default:
         break;
@@ -178,8 +199,9 @@ export class MindSystem implements SimPlugin {
     for (const k of Object.keys(deltas).sort()) {
       // Boredom scales felt gains; energy is a resource, not a feeling, so it isn't scaled.
       const d = deltas[k]! > 0 && k !== 'energy' ? deltas[k]! * mult : deltas[k]!;
-      if (k === 'energy') values.energy = actor.energy = clamp(actor.energy + d);
-      else if (k in actor.needs) values[k] = actor.needs[k] = clamp(actor.needs[k]! + d);
+      // Physical actions never change the battery (decision 42): only thinking drains it, only sleep recharges.
+      if (k === 'energy') continue;
+      if (k in actor.needs) values[k] = actor.needs[k] = clamp(actor.needs[k]! + d);
     }
     if (m.sleep === 'asleep') return world.emit({ kind: 'needs', id: actor.id, values: roundAll(values) });
     const step = world.verbDefOf(world.entity(target.id), action.verb)?.boredomStep ?? arch.mind.boredomStep;
@@ -251,8 +273,8 @@ export class MindSystem implements SimPlugin {
     const obs = this.perceive(world, c, arch);
     const nearby = obs.some((o) => o.kind === 'seen' && world.entity(o.subjectId!)?.kind === 'character');
     c.energy = updateNeeds(c.needs, c.energy, arch, { hours, active, resting, nearby, decayMultiplier: cfg.needDecayMultiplier });
-    if (c.energy <= 0) m.energyFloorLatched = true;
-    else if (m.energyFloorLatched && c.energy > cfg.energyFloor) m.energyFloorLatched = false;
+    if (c.energy <= 0) m.energyFloorLatched = true; // cleared only by sleep
+    this.updatePressure(world, c, arch);
 
     this.interoception(world, c, arch);
     m.mood.bias = round3(m.mood.bias * Math.pow(0.5, hours));
@@ -290,7 +312,8 @@ export class MindSystem implements SimPlugin {
       switch (d.status) {
         case 'started':
           m.actionStart = { tick: world.tick, needs: { ...c.needs }, energy: c.energy, verb: d.action.verb };
-          if (m.sleep === 'drowsy' && d.action.verb === 'rest') this.setSleep(world, c, 'asleep');
+          // Resting is sleeping: it falls asleep whenever it chooses to rest (no forced bedtime).
+          if (m.sleep !== 'asleep' && d.action.verb === 'rest') this.fallAsleep(world, c);
           break;
         case 'done':
         case 'failed': {
@@ -300,7 +323,8 @@ export class MindSystem implements SimPlugin {
           if (d.action.verb === 'vocalize' && Array.isArray(d.action.args?.notes)) {
             m.usedChains = [...m.usedChains, { notes: d.action.args.notes as string[], valence: m.mood.valence }].slice(-8);
           }
-          if (m.actionStart && !NO_OUTCOME.has(d.action.verb) && (objectType || d.action.verb === 'rest')) {
+          // Asleep, resting makes no new memories (they would fog the head it is clearing).
+          if (m.actionStart && m.sleep !== 'asleep' && !NO_OUTCOME.has(d.action.verb) && (objectType || d.action.verb === 'rest')) {
             this.outcome(world, c, d.action.verb, objectType, d.observation ?? d.reason ?? '', isNight);
           }
           // A failed step doesn't throw away the valid steps after it: only re-think when nothing is left.
@@ -355,6 +379,11 @@ export class MindSystem implements SimPlugin {
     // Surprise: it went differently from what I expect of it (by day or by night).
     const expected = m.beliefs.find((b) => b.key === `${key}@${when}`) ?? m.beliefs.find((b) => b.key.startsWith(`${key}@`));
     const surprise = expected ? Object.keys(felt).some((k) => Math.abs(felt[k]! - (expected.expectedNeedDeltas[k] ?? 0)) > 0.05) : false;
+    if (objectType && valence > 0) {
+      const k = `${key}@${when}`;
+      const days = m.outcomeDays?.[k] ?? [];
+      if (!days.includes(world.day)) m.outcomeDays = { ...(m.outcomeDays ?? {}), [k]: [...days, world.day].slice(-10) };
+    }
     const draftId = `d${m.nextId++}`;
     m.drafts.push({
       id: draftId,
@@ -412,6 +441,7 @@ export class MindSystem implements SimPlugin {
     const store = mem.store === 'stm' ? m.stm : m.ltm;
     const { admitted, evicted } = admit(store, mem, mem.store === 'stm' ? cap : this.ltmCapacity(m, arch), world.tick, this.ticksPerDay(world), arch.mind);
     if (!admitted) return;
+    if (mem.store === 'stm') m.unsettled = (m.unsettled ?? 0) + 1;
     world.emit({ kind: 'memory', id: c.id, memory: structuredClone(mem), ...(evicted && { evicted: evicted.id }) });
     updateBelief(m, mem);
   }
@@ -493,74 +523,213 @@ export class MindSystem implements SimPlugin {
 
   // ------------------------------------------------------------------ sleep (standby)
 
-  private sleepCycle(world: World, c: Character, arch: ArchetypeDef, cfg: MindConfig, isNight: boolean): void {
+  /** Sleep pressure from time awake and fog; recharge while asleep (decision 43). */
+  private updatePressure(world: World, c: Character, arch: ArchetypeDef): void {
     const m = c.mind!;
-    const coolLow = (c.needs.cool ?? 1) < (arch.needs.cool?.low ?? 0.25);
-    if (m.sleep === 'awake' && (isNight || coolLow)) this.setSleep(world, c, 'drowsy');
-    else if (m.sleep === 'drowsy' && !isNight && !coolLow) this.setSleep(world, c, 'awake');
+    const spt = world.state.config.secondsPerTick;
+    m.awakeSinceTick ??= world.tick;
+    if (m.sleep === 'asleep') {
+      // Sleep repays time awake (faster than it built up) and recharges, scaled by pressure.
+      m.awakeSinceTick = Math.min(world.tick, m.awakeSinceTick + SLEEP.repayRate);
+      c.energy = clamp(c.energy + SLEEP.rechargePerHour * (m.sleepPressure ?? 0) * (spt / 3600));
+    }
+    const fog = round3(fogOf(m, arch.mind.stmSize));
+    const pressure = pressureOf(((world.tick - m.awakeSinceTick) * spt) / 3600, fog);
+    if (Math.abs(pressure - (m.sleepPressure ?? 0)) >= 0.01 || Math.abs(fog - (m.fog ?? 0)) >= 0.01) {
+      world.emit({ kind: 'pressure', id: c.id, sleepPressure: pressure, fog });
+      m.sleepPressure = pressure;
+      m.fog = fog;
+    } else if (m.sleepPressure === undefined) {
+      m.sleepPressure = pressure;
+      m.fog = fog;
+    }
+  }
+
+  /** No forced bedtime: drowsy is only a label; asleep starts when it chooses to rest. */
+  private sleepCycle(world: World, c: Character, arch: ArchetypeDef, _cfg: MindConfig, _isNight: boolean): void {
+    const m = c.mind!;
+    const pressure = m.sleepPressure ?? 0;
+    if (m.sleep === 'awake' && pressure >= SLEEP.drowsyAt) this.setSleep(world, c, 'drowsy');
+    else if (m.sleep === 'drowsy' && pressure < SLEEP.drowsyAt - 0.1) this.setSleep(world, c, 'awake');
     else if (m.sleep === 'asleep') {
-      if (!isNight && (c.needs.cool ?? 1) >= 0.6) {
-        this.setSleep(world, c, 'awake');
-        freezePrefix(world.registry, arch, m, world.tick, this.ticksPerDay(world), world.day);
-        m.triggers.push({ kind: 'woke-up', tick: world.tick, salience: 1 });
+      const sleptHours = ((world.tick - (m.asleepSinceTick ?? world.tick)) * world.state.config.secondsPerTick) / 3600;
+      const strong = m.triggers.some((t) => t.salience >= SLEEP.strongWake && t.kind !== 'action-finished');
+      const workDone = !m.sleepWork || m.sleepWork.step === 'done';
+      // Rested, or full and no longer really tired (a robot that barely thinks still needs its sleep).
+      const full = c.energy >= SLEEP.fullAbove && pressure < SLEEP.fullWakeBelow;
+      if (sleptHours >= SLEEP.minSleepHours && ((workDone && (pressure < SLEEP.restedBelow || full)) || strong)) {
+        this.wakeUp(world, c, arch, strong ? 'woken by something' : pressure < SLEEP.restedBelow ? 'rested' : 'battery full');
         return;
       }
-      const tod = world.timeOfDay;
-      const nightOf = tod < 0.5 ? world.day - 1 : world.day;
-      if (isNight && nightOf > m.reflectedDay) this.sleepWork(world, c, arch, cfg, nightOf);
       if (!c.current && c.queue.length === 0) world.replaceQueue(c, [this.restAction(world, c)]);
     }
+  }
+
+  private fallAsleep(world: World, c: Character): void {
+    const m = c.mind!;
+    m.asleepSinceTick = world.tick;
+    m.planSteps = undefined;
+    this.setSleep(world, c, 'asleep');
+    this.startSleepWork(world, c);
+  }
+
+  private wakeUp(world: World, c: Character, arch: ArchetypeDef, why: string): void {
+    const m = c.mind!;
+    const cfg = mindConfigOf(world.state.ext);
+    this.setSleep(world, c, 'awake');
+    m.asleepSinceTick = undefined;
+    if (c.energy > cfg.batteryHabitAbove) m.energyFloorLatched = false;
+    m.sheet = ensureLockedCore(m.sheet, arch.sheet);
+    freezePrefix(world.registry, arch, m, world.tick, this.ticksPerDay(world), world.day);
+    this.diary(world, c, `woke up (${why}); ${arch.energy.label} ${feltWord(c.energy)}`);
+    m.triggers.push({ kind: 'woke-up', tick: world.tick, salience: 1 });
   }
 
   private setSleep(world: World, c: Character, phase: MindState['sleep']): void {
     c.mind!.sleep = phase;
     world.emit({ kind: 'sleep', id: c.id, phase });
-    this.diary(world, c, phase === 'asleep' ? 'went into standby' : phase === 'drowsy' ? 'started to feel drowsy' : 'came out of standby');
+    this.diary(world, c, phase === 'asleep' ? 'fell asleep' : phase === 'drowsy' ? 'started to feel drowsy' : 'awake');
   }
 
   private restAction(world: World, c: Character): Action {
     const dock = world.entitiesAt(c.pos).find((e) => e.kind === 'object' && world.verbsOf(e.type).includes('rest'));
-    return dock ? { verb: 'rest', targetId: dock.id, reason: 'standby at the dock' } : { verb: 'rest', reason: 'standby', args: { ticks: 200 } };
+    return dock ? { verb: 'rest', targetId: dock.id, reason: 'asleep at the dock' } : { verb: 'rest', reason: 'asleep', args: { ticks: 200 } };
   }
 
-  /** Consolidate, prune beliefs, one sheet edit, then reflect. Once per night. */
-  private sleepWork(world: World, c: Character, arch: ArchetypeDef, cfg: MindConfig, nightOf: number): void {
+  // ------------------------------------------------------------------ the sleep pipeline (decision 47)
+
+  /**
+   * Paid from the battery, in order: consolidation → habit detection → character-sheet rewrite
+   * (one step, the goal, history kept) → the `refine` hook (host side). Each model step falls back
+   * to code when there are no models, the battery is empty, or the job fails.
+   */
+  private startSleepWork(world: World, c: Character): void {
     const m = c.mind!;
-    m.reflectedDay = nightOf;
+    const arch = world.archetype(c.type)!;
+    const cfg = mindConfigOf(world.state.ext);
+    m.sleepWork = undefined;
+    this.sleepStep(world, c, 'consolidating', 0, m.stm.length);
+    // Code part of consolidation: memories worth keeping move to long-term memory.
+    let moved = 0;
     for (const mem of [...m.stm]) {
-      if (mem.recallDays.length >= 2 || mem.strength >= 0.8) {
+      if (mem.recallDays.length >= 2 || mem.strength >= 0.7) {
         const promoted: Memory = { ...structuredClone(mem), store: 'ltm' };
         const { admitted } = admit(m.ltm, promoted, this.ltmCapacity(m, arch), world.tick, this.ticksPerDay(world), arch.mind);
         if (admitted) {
           m.stm = m.stm.filter((x) => x.id !== mem.id);
           world.emit({ kind: 'memory', id: c.id, memory: structuredClone(promoted) });
+          moved++;
         }
       }
     }
-    m.beliefs = m.beliefs.filter((b) => b.lastSupportedDay >= nightOf - 5);
-    world.emit({ kind: 'beliefs', id: c.id, beliefs: structuredClone(m.beliefs) });
+    this.sleepStep(world, c, 'consolidating', moved, moved + m.stm.length);
+    // A nap with nothing to settle isn't worth paying for: code does the steps.
+    if (this.canThinkAsleep(c, cfg) && m.stm.length > 0) {
+      this.dispatch(world, c, arch, 'consolidate', !world.isDaylight, 'woke-up', consolidateQuestion(m));
+    } else this.sleepJobDone(world, c, 'consolidate', undefined);
+  }
 
-    // Self-noticed pattern: the outcome I went back to most today, if it felt good.
+  private canThinkAsleep(c: Character, cfg: MindConfig): boolean {
+    return cfg.brain === 'models' && !c.mind!.energyFloorLatched && c.energy >= cfg.batteryHabitAbove;
+  }
+
+  private sleepStep(world: World, c: Character, step: NonNullable<MindState['sleepWork']>['step'], done?: number, total?: number): void {
+    const m = c.mind!;
+    m.sleepWork = { step, day: m.sleepWork?.day ?? world.day, ...(done !== undefined && { done }), ...(total !== undefined && { total }) };
+    world.emit({ kind: 'sleepWork', id: c.id, step, ...(done !== undefined && { done }), ...(total !== undefined && { total }) });
+  }
+
+  /** A sleep job answered (or failed: `answer` undefined); apply it and run the next step. */
+  private sleepJobDone(world: World, c: Character, job: 'consolidate' | 'sheet', answer: Record<string, Json> | undefined): void {
+    const m = c.mind!;
+    const arch = world.archetype(c.type)!;
+    const cfg = mindConfigOf(world.state.ext);
+    const day = m.sleepWork?.day ?? world.day;
+    if (job === 'consolidate') {
+      if (answer) {
+        if (Array.isArray(answer.beliefs)) {
+          for (const b of answer.beliefs) {
+            if (!isRecord(b) || typeof b.key !== 'string' || typeof b.text !== 'string') continue;
+            const belief = m.beliefs.find((x) => x.key === b.key);
+            if (belief) belief.text = b.text.slice(0, 200);
+          }
+        }
+        if (Array.isArray(answer.openItems)) {
+          for (const i of answer.openItems.slice(0, 3)) {
+            const text = typeof i === 'string' ? i : isRecord(i) && typeof i.text === 'string' ? i.text : undefined;
+            if (text) this.openItem(world, m, 'question', text.slice(0, 200));
+          }
+        }
+      }
+      // Settled: short-term memory clears (the newest few stay), which lifts the fog.
+      const total = m.sleepWork?.total ?? m.stm.length;
+      m.stm = SLEEP.keepStm > 0 ? m.stm.slice(-SLEEP.keepStm) : [];
+      m.unsettled = 0;
+      m.beliefs = m.beliefs.filter((b) => b.lastSupportedDay >= day - 5);
+      world.emit({ kind: 'beliefs', id: c.id, beliefs: structuredClone(m.beliefs) });
+      this.sleepStep(world, c, 'consolidating', total, total);
+      // Habit detection (code, free).
+      this.sleepStep(world, c, 'habits');
+      m.habits = detectHabits(m.outcomeDays ?? {}, day, m.habits);
+      world.emit({ kind: 'habits', id: c.id, habits: structuredClone(m.habits) });
+      // Character-sheet rewrite: one small step.
+      this.sleepStep(world, c, 'sheet');
+      m.sheet = ensureLockedCore(m.sheet, arch.sheet);
+      // One sheet step per sleep, but naps don't rewrite it: at most one model step per in-world day.
+      const lastStep = [...(m.sheetHistory ?? [])].reverse().find((e) => e.op !== 'goal');
+      const due = !lastStep || lastStep.day < world.day;
+      if (this.canThinkAsleep(c, cfg) && due) {
+        this.dispatch(world, c, arch, 'sheet', !world.isDaylight, 'woke-up', sheetQuestion(m, this.suggestedLine(m, day)));
+        return;
+      }
+      return this.sleepJobDone(world, c, 'sheet', undefined);
+    }
+    // job === 'sheet'
+    const lastStep = [...(m.sheetHistory ?? [])].reverse().find((e) => e.op !== 'goal');
+    if (!answer && lastStep && lastStep.day >= world.day) {
+      // Already stepped today (this was a nap): nothing to change.
+      this.sleepStep(world, c, 'refine');
+      this.sleepStep(world, c, 'done');
+      return;
+    }
+    const suggestion = this.suggestedLine(m, day);
+    const step =
+      answer && typeof answer.op === 'string'
+        ? { op: answer.op as 'add' | 'reword' | 'remove' | 'none', ...(typeof answer.line === 'number' && { line: answer.line }), ...(typeof answer.text === 'string' && { text: answer.text }) }
+        : suggestion
+          ? { op: 'add' as const, text: suggestion }
+          : { op: 'none' as const };
+    const { sheet, edit } = applySheetEdit(m.sheet, step, day, world.tick, answer ? 'model' : 'code', answer && typeof answer.why === 'string' ? answer.why.slice(0, 200) : undefined);
+    m.sheet = sheet;
+    const history = [...(m.sheetHistory ?? []), edit];
+    if (answer && typeof answer.goal === 'string' && answer.goal.trim() && answer.goal.trim() !== m.goal) {
+      const goal = answer.goal.trim().slice(0, 120);
+      history.push({ day, tick: world.tick, op: 'goal', ...(m.goal && { before: m.goal }), after: goal, by: 'model' });
+      m.goal = goal;
+    }
+    m.sheetHistory = history.slice(-60);
+    world.emit({ kind: 'sheet', id: c.id, sheet: structuredClone(m.sheet), ...(m.goal && { goal: m.goal }), edit });
+    // The refine hook runs host side (it may read eval reports); the mind only marks the step.
+    this.sleepStep(world, c, 'refine');
+    this.diary(world, c, `slept on day ${day}: ${edit.op === 'none' ? 'left my sheet as it was' : `${edit.op} "${edit.after ?? edit.before}"`}`);
+    m.diaryToday = [];
+    m.reflectedDay = day;
+    this.sleepStep(world, c, 'done');
+  }
+
+  /** The pattern I went back to most today, if it felt good (a code suggestion for the sheet). */
+  private suggestedLine(m: MindState, day: number): string | undefined {
     const counts = new Map<string, number>();
     for (const mem of [...m.stm, ...m.ltm]) {
-      if (mem.day === nightOf && mem.kind === 'outcome' && mem.valence > 0 && mem.about.objectType !== 'self') {
+      if (mem.day === day && mem.kind === 'outcome' && mem.valence > 0 && mem.about.objectType && mem.about.objectType !== 'self') {
         const k = `${mem.about.verb} at the ${mem.about.objectType}`;
         counts.set(k, (counts.get(k) ?? 0) + 1);
       }
     }
     const top = [...counts.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0];
-    if (top && top[1] >= 3) this.noticeSheetLine(m, `I keep going back to ${top[0]}.`, nightOf);
-    const faded = m.sheet.find((l) => l.source === 'self' && !l.locked && Math.max(...(l.seenDays ?? [0])) < nightOf - arch.mind.sheetFadeNights);
-    if (faded) m.sheet = m.sheet.filter((l) => l !== faded);
-
-    if (cfg.brain === 'models' && !m.energyFloorLatched) {
-      this.dispatch(world, c, arch, 'reflect', true, 'woke-up', {
-        question: 'Reflect on your day. Which beliefs need rewording, what is still pulling at you, and what lines describe you now?',
-        input: { diary: m.diaryToday.slice(-40), beliefs: m.beliefs.map((b) => ({ key: b.key, text: b.text })) },
-      });
-    }
-    this.diary(world, c, `reflected on day ${nightOf}`);
-    m.diaryToday = [];
+    const habit = m.habits?.[0];
+    if (top && top[1] >= 2) return `I like to ${top[0]}.`;
+    return habit ? `I have a habit: ${habit.name}.` : undefined;
   }
 
   private noticeSheetLine(m: MindState, text: string, day: number): void {
@@ -600,6 +769,7 @@ export class MindSystem implements SimPlugin {
     m.pendingJobs = m.pendingJobs.filter((j) => j.deadlineTick > world.tick);
     for (const j of expired) {
       if (j.draftId) this.settleDraft(world, c, j.draftId, j.job);
+      if (j.job === 'consolidate' || j.job === 'sheet') this.sleepJobDone(world, c, j.job, undefined);
       if (j.job === 'decide' && !c.current && c.queue.length === 0) this.autopilot(world, c, arch, cfg, isNight, j.trigger, 'fallback', undefined, 'no answer in time');
     }
   }
@@ -611,11 +781,6 @@ export class MindSystem implements SimPlugin {
     m.triggers = [];
     if (m.sleep === 'asleep') return;
     const busy = !!c.current || c.queue.length > 0;
-    // Drowsy heads for standby, unless the battery is low enough to be worth thinking about.
-    if (m.sleep === 'drowsy' && c.energy >= LOW_BATTERY_AT_NIGHT) {
-      if (!busy || top.kind === 'need-threshold') this.goToStandby(world, c, top.kind);
-      return;
-    }
     if (busy && top.salience < arch.mind.wakeThreshold) return; // carry on
     const pending = m.pendingJobs.find((j) => j.job === 'decide' || j.job === 'vocalize');
     if (pending) {
@@ -625,7 +790,8 @@ export class MindSystem implements SimPlugin {
       m.pendingJobs = m.pendingJobs.filter((j) => j !== pending);
     }
     const modelsBusy = world.state.ext.modelsBusy === true;
-    const useModels = cfg.brain === 'models' && !m.energyFloorLatched && !(modelsBusy && top.salience < BUSY_SALIENCE);
+    const allowed = allowedDepth(c.energy, cfg, m.energyFloorLatched);
+    const useModels = cfg.brain === 'models' && (allowed === 'gut' || allowed === 'think') && !(modelsBusy && top.salience < BUSY_SALIENCE);
 
     if (top.kind === 'heard-noise') {
       if (useModels) this.dispatchVocalize(world, c, arch, isNight);
@@ -643,13 +809,73 @@ export class MindSystem implements SimPlugin {
       this.queue(world, c, obvious.actions, top.kind, 'autopilot', { reason: obvious.reason });
       return;
     }
-    // Waiting again after waiting, with nothing new (a routine trigger), needs no model call.
-    const idleAgain = m.idle === true && ROUTINE.includes(top.kind);
-    if (useModels && !idleAgain && !(ROUTINE.includes(top.kind) && confident(scored))) {
-      this.dispatch(world, c, arch, 'decide', isNight, top.kind, { question: 'Which action next?', candidates: modelOptions(scored) });
+    // How hard to think: habit (free), gut (decision model) or think it through (plan model).
+    const { depth, why } = this.chooseDepth(c, m, top, scored, isNight, cfg, allowed, useModels);
+    if (depth !== 'habit') {
+      this.dispatch(world, c, arch, 'decide', isNight, top.kind, { question: 'Which action next?', candidates: modelOptions(scored), depth, depthWhy: why });
       return;
     }
-    this.autopilot(world, c, arch, cfg, isNight, top.kind, 'autopilot', scored);
+    const habit = this.habitPick(m, scored, isNight);
+    if (habit) {
+      const actions = habit.s.candidate.actions.map((a, i, all) => ({ ...a, reason: a.reason && i < all.length - 1 ? a.reason : `habit: ${habit.h.name}` }));
+      this.queue(world, c, actions, top.kind, 'autopilot', { depth: 'habit', depthWhy: why });
+      return;
+    }
+    this.autopilot(world, c, arch, cfg, isNight, top.kind, 'autopilot', scored, undefined, { depth: 'habit', depthWhy: why });
+  }
+
+  /**
+   * The start rule (decision 44): unfamiliar or important → think it through; familiar → gut or
+   * habit. Then the battery caps it: plan model, decision model, habits, autopilot only.
+   */
+  chooseDepth(
+    c: Character,
+    m: MindState,
+    top: { kind: TriggerKind; salience: number },
+    scored: ReturnType<typeof score>,
+    isNight: boolean,
+    cfg: MindConfig,
+    allowed = allowedDepth(c.energy, cfg, m.energyFloorLatched),
+    useModels = cfg.brain === 'models' && (allowed === 'gut' || allowed === 'think'),
+  ): { depth: ThinkingDepth; why: string } {
+    if (!useModels) {
+      const why = cfg.brain !== 'models' ? 'no models in this world' : allowed === 'none' ? 'battery empty: autopilot only until I sleep' : allowed === 'habit' ? 'battery low: habits only' : 'models busy';
+      return { depth: 'habit', why };
+    }
+    // The safety net: too tired to think, sleep is obvious (see obviousChoice).
+    if ((m.sleepPressure ?? 0) >= SLEEP.forceAt) return { depth: 'habit', why: 'too tired to think: time to sleep' };
+    const best = [...scored].sort((a, b) => b.value - a.value)[0];
+    const habit = this.habitPick(m, scored, isNight);
+    const important = top.kind === 'need-threshold' || top.kind === 'admin-poke' || top.kind === 'woke-up' || top.salience >= 0.8;
+    // Sleeping and wandering aren't unfamiliar: the sheet says what sleep does, and walking is walking.
+    const builtIn = !!best && (best.candidate.key.startsWith('rest:') || best.candidate.key === 'explore:self' || best.candidate.key === 'wait:self');
+    const unfamiliar = !best || (!builtIn && (!best.believed || best.firmness < 0.3));
+    let want: ThinkingDepth;
+    let why: string;
+    if (m.idle === true && ROUTINE.includes(top.kind)) [want, why] = ['habit', 'nothing new since I last waited'];
+    else if (unfamiliar || important) [want, why] = ['think', important ? `important (${top.kind})` : 'unfamiliar'];
+    else if (habit || (ROUTINE.includes(top.kind) && confident(scored))) [want, why] = ['habit', habit ? `familiar: ${habit.h.name}` : 'familiar and sure'];
+    else [want, why] = ['gut', 'familiar'];
+    const depth = shallower(want, allowed as ThinkingDepth);
+    if (depth !== want) why += `; battery allows ${allowed === 'think' ? 'thinking it through' : allowed === 'gut' ? 'a gut call' : 'habits'}`;
+    return { depth, why };
+  }
+
+  /**
+   * A habit that applies now (same time of day), is on offer and still sensible: within 0.1 of
+   * the best option's utility and worth doing. Habits are a free shortcut to a good option, not a compulsion, so
+   * boredom and needs still steer them.
+   */
+  private habitPick(m: MindState, scored: ReturnType<typeof score>, isNight: boolean) {
+    const when = isNight ? 'night' : 'day';
+    const ranked = [...scored].sort((a, b) => b.value - a.value || (a.candidate.id < b.candidate.id ? -1 : 1));
+    const top = ranked.filter((x) => x.value >= (ranked[0]?.value ?? 0) - 0.1);
+    for (const h of m.habits ?? []) {
+      if (!h.key.endsWith(`@${when}`)) continue;
+      const s = top.find((x) => `${x.candidate.key}@${when}` === h.key && x.value > 0);
+      if (s) return { h, s };
+    }
+    return undefined;
   }
 
   private autopilot(
@@ -662,25 +888,12 @@ export class MindSystem implements SimPlugin {
     tier: 'autopilot' | 'fallback',
     scored = score(c, c.mind!, arch, buildCandidates(world, c, c.mind!), isNight, hoursToDusk(world)),
     reason?: string,
+    extra: Partial<FeedEntry> = {},
   ): void {
     const pick = choose(scored, world.rng('autopilot'), arch.mind.exploreRate);
     if (!pick) return;
     const actions = pick.candidate.actions.map((a, i) => ({ ...a, reason: a.reason && i < pick.candidate.actions.length - 1 ? a.reason : pick.reason }));
-    this.queue(world, c, actions, trigger, tier, reason ? { reason } : {});
-  }
-
-  private goToStandby(world: World, c: Character, trigger: TriggerKind): void {
-    const m = c.mind!;
-    const dock = Object.entries(m.known)
-      .filter(([, k]) => k.affordances.includes('rest') && k.type !== c.type)
-      .sort((a, b) => manhattan(c.pos, a[1].pos) - manhattan(c.pos, b[1].pos) || (a[0] < b[0] ? -1 : 1))[0];
-    const actions: Action[] = dock
-      ? [
-          { verb: 'moveTo', targetId: dock[0], reason: 'time to head to the dock' },
-          { verb: 'rest', targetId: dock[0], reason: 'standby at the dock' },
-        ]
-      : [{ verb: 'rest', reason: 'standby right here', args: { ticks: 200 } }];
-    this.queue(world, c, actions, trigger, 'autopilot');
+    this.queue(world, c, actions, trigger, tier, { ...(reason && { reason }), ...extra });
   }
 
   private queue(world: World, c: Character, actions: Action[], trigger: TriggerKind, tier: FeedEntry['tier'], extra: Partial<FeedEntry> = {}, keepPlan = false): void {
@@ -708,6 +921,7 @@ export class MindSystem implements SimPlugin {
     p: ModelAnswerPayload,
     energyCost: number,
     trigger: TriggerKind,
+    thinking: Partial<FeedEntry> = {},
   ): void {
     const choices = Array.isArray(answer.choices) ? answer.choices.filter(isRecord) : [];
     const reasons = isRecord(answer.reasons) ? answer.reasons : {};
@@ -732,6 +946,7 @@ export class MindSystem implements SimPlugin {
     }
     const tier = (['local', 'decision', 'llm'] as const).find((t) => t === answer.tier) ?? 'decision';
     const extra: Partial<FeedEntry> = {
+      ...thinking,
       modelId: p.modelId,
       ...(typeof answer.confidence === 'number' && { confidence: answer.confidence }),
       ...(isRecord(answer.escalated) && typeof answer.escalated.from === 'string' && typeof answer.escalated.confidence === 'number' && {
@@ -783,7 +998,7 @@ export class MindSystem implements SimPlugin {
     job: JobName,
     isNight: boolean,
     trigger: TriggerKind,
-    o: { question: string; candidates?: Candidate[]; input?: Json; draftId?: string; multi?: number },
+    o: { question: string; candidates?: Candidate[]; input?: Json; draftId?: string; multi?: number; depth?: ThinkingDepth; depthWhy?: string },
   ): void {
     const m = c.mind!;
     const cfg = mindConfigOf(world.state.ext);
@@ -792,8 +1007,9 @@ export class MindSystem implements SimPlugin {
       jobId,
       job,
       tick: world.tick,
-      deadlineTick: world.tick + cfg.jobTimeoutTicks * (job === 'reflect' ? 10 : 1),
+      deadlineTick: world.tick + cfg.jobTimeoutTicks * (job === 'reflect' || job === 'consolidate' || job === 'sheet' ? 10 : 1),
       trigger,
+      ...(o.depth && { depth: o.depth, ...(o.depthWhy && { depthWhy: o.depthWhy }) }),
       ...(o.candidates && { candidates: o.candidates }),
       ...(o.draftId && { draftId: o.draftId }),
     });
@@ -811,7 +1027,7 @@ export class MindSystem implements SimPlugin {
     isNight: boolean,
     trigger: TriggerKind,
     jobId: string,
-    o: { question: string; candidates?: Candidate[]; input?: Json; multi?: number },
+    o: { question: string; candidates?: Candidate[]; input?: Json; multi?: number; depth?: ThinkingDepth },
   ): JobRequest {
     const m = c.mind!;
     return {
@@ -833,6 +1049,7 @@ export class MindSystem implements SimPlugin {
       ...(o.candidates && { options: o.candidates.map((x) => ({ id: x.id, label: x.label })) }),
       ...(o.candidates && { multi: { max: o.multi ?? 3 } }),
       ...(o.input !== undefined && { input: o.input }),
+      ...(o.depth && o.depth !== 'habit' && { depth: o.depth }),
     };
   }
 
@@ -841,7 +1058,12 @@ export class MindSystem implements SimPlugin {
    * queueing, charging or recording anything: for evals and "save this moment as a test".
    * `perceive` runs the senses first (needed for a hand-built world whose mind hasn't looked yet).
    */
-  decisionRequest(world: World, c: Character, trigger: TriggerKind, opts: { perceive?: boolean } = {}): JobRequest & { candidates: Candidate[] } {
+  decisionRequest(
+    world: World,
+    c: Character,
+    trigger: TriggerKind,
+    opts: { perceive?: boolean; salience?: number } = {},
+  ): JobRequest & { candidates: Candidate[]; thinking: { depth: ThinkingDepth; why: string } } {
     const arch = world.archetype(c.type)!;
     const m = c.mind!;
     if (opts.perceive) {
@@ -849,9 +1071,16 @@ export class MindSystem implements SimPlugin {
       m.triggers = [];
     }
     const isNight = !world.isDaylight;
-    const candidates = modelOptions(score(c, m, arch, buildCandidates(world, c, m), isNight, hoursToDusk(world)));
-    const req = this.request(world, c, arch, 'decide', isNight, trigger, `${c.id}:${world.tick}:eval`, { question: 'Which action next?', candidates });
-    return { ...req, candidates };
+    const scored = score(c, m, arch, buildCandidates(world, c, m), isNight, hoursToDusk(world));
+    const candidates = modelOptions(scored);
+    const cfg = mindConfigOf(world.state.ext);
+    const thinking = this.chooseDepth(c, m, { kind: trigger, salience: opts.salience ?? TRIGGER_SALIENCE[trigger] }, scored, isNight, cfg);
+    const req = this.request(world, c, arch, 'decide', isNight, trigger, `${c.id}:${world.tick}:eval`, {
+      question: 'Which action next?',
+      candidates,
+      ...(thinking.depth !== 'habit' && { depth: thinking.depth }),
+    });
+    return { ...req, candidates, thinking };
   }
 
   // ------------------------------------------------------------------ helpers
@@ -868,9 +1097,11 @@ export class MindSystem implements SimPlugin {
         .map((s) => ({ s, gain: m.beliefs.find((b) => b.key === `${s.candidate.key}@${when}`)?.expectedNeedDeltas[need] ?? 0 }))
         .filter((x) => x.gain > 0.03)
         .sort((a, b) => b.gain - a.gain)[0];
-    if (c.energy < 0.1) {
-      const best = believed('energy');
-      if (best) return { actions: best.s.candidate.actions, reason: `my ${arch.energy.label} is nearly flat; ${best.s.reason}` };
+    // Safety net, not the main path: past this the robot sleeps without asking (it still learns its
+    // rhythm below it). The locked sheet line says sleep settles memories.
+    if ((m.sleepPressure ?? 0) >= SLEEP.forceAt) {
+      const sleep = scored.filter((s) => s.candidate.key.startsWith('rest:')).sort((a, b) => b.value - a.value)[0];
+      if (sleep) return { actions: sleep.candidate.actions, reason: 'my head is too foggy; I need to sleep' };
     }
     const coolCritical = arch.needs.cool?.critical ?? 0.1;
     if ((c.needs.cool ?? 1) < coolCritical) {

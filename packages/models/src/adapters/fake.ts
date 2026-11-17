@@ -101,6 +101,13 @@ export class FakeChatModel implements ChatModel {
       { choices: ranked.slice(0, 1).map((r) => ({ id: r.id, reason: 'it seems like the best idea right now' })) },
       { value: 0.6 },
       { beliefs: [], openItems: [], sheetLines: [] },
+      { beliefs: [], openItems: [], forget: [] },
+      // Sheet rewrite: take the code's suggestion, if the question offers one.
+      (() => {
+        const line = /^Suggested line: (.+)$/m.exec(req.instruction)?.[1];
+        const goal = /^Suggested goal: (.+)$/m.exec(req.instruction)?.[1];
+        return line ? { op: 'add', text: line.slice(0, 160), ...(goal && { goal: goal.slice(0, 120) }), why: 'it fits what I did' } : { op: 'none', ...(goal && { goal: goal.slice(0, 120) }) };
+      })(),
     ];
     for (const c of candidates) {
       const parsed = req.schema.safeParse(c);

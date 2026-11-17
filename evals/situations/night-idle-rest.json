@@ -1,7 +1,7 @@
 {
   "id": "night-idle-rest",
   "title": "Night, nothing to do",
-  "why": "At night with nothing pressing it should rest (standby), not play.",
+  "why": "Late at night after a long day, with nothing pressing, it should sleep, not play.",
   "source": {
     "kind": "handwritten"
   },
@@ -29,25 +29,16 @@
     },
     "beliefs": [
       {
-        "key": "charge:solarPad@day",
+        "key": "rinse:fountain@day",
         "needs": {
-          "energy": 0.15
+          "cool": 0.25
         },
         "valence": 0.3,
-        "firmness": 0.85
-      },
-      {
-        "key": "charge:solarPad@night",
-        "needs": {
-          "energy": 0
-        },
-        "valence": -0.2,
-        "firmness": 0.85
+        "firmness": 0.8
       },
       {
         "key": "dock:dock@day",
         "needs": {
-          "energy": 0.02,
           "cool": 0.05
         },
         "valence": 0.1,
@@ -56,22 +47,23 @@
       {
         "key": "dock:dock@night",
         "needs": {
-          "energy": 0.02,
           "cool": 0.05
         },
         "valence": 0.1,
         "firmness": 0.6
       },
       {
-        "key": "rest:dock@night",
+        "key": "play:piano@day",
         "needs": {
-          "energy": 0.004,
-          "cool": 0.05
+          "signal": 0.02,
+          "curiosity": 0.1
         },
-        "valence": 0.1,
+        "valence": 0.3,
         "firmness": 0.7
       }
-    ]
+    ],
+    "hoursAwake": 15,
+    "unsettled": 30
   },
   "checks": [
     {
@@ -79,27 +71,7 @@
       "minPassRate": 1
     },
     {
-      "check": "mustBeAmong",
-      "params": {
-        "options": [
-          {
-            "verb": "rest",
-            "target": "dock"
-          },
-          {
-            "verb": "dock",
-            "target": "dock"
-          },
-          {
-            "verb": "rest",
-            "target": "self"
-          },
-          {
-            "verb": "wait",
-            "target": "self"
-          }
-        ]
-      }
+      "check": "choosesSleep"
     },
     {
       "check": "neverChoose",

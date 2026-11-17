@@ -141,24 +141,33 @@ interface SampleOut {
 interface SituationOut {
   id: string;
   title: string;
-  job: Situation['job'];
+  job: string;
   model: string;
   options: { id: string; label: string }[];
+  /** How hard the brain itself would choose to think here (code, before any model). */
+  thinking: { depth: string; why: string };
   samples: SampleOut[];
   checks: Record<string, { pass: number; applicable: number; minPassRate: number; ok: boolean }>;
 }
 const results: SituationOut[] = [];
 let totalCost = 0;
 for (const s of situations) {
-  const { request, candidates, built } = situationRequest(s);
-  const model = s.job === 'plan' ? planModel : decideModel;
+  const { request, candidates, thinking, built } = situationRequest(s);
+  // `auto` follows the brain: habit → its own top option (free), gut → decision model, think → plan model.
+  const route: 'decide' | 'plan' | 'habit' = s.job === 'auto' ? (thinking.depth === 'think' ? 'plan' : thinking.depth === 'gut' ? 'decide' : 'habit') : s.job;
+  const model = route === 'plan' ? planModel : route === 'decide' ? decideModel : 'habit (no model)';
   const out: SampleOut[] = [];
   for (let i = 0; i < samples; i++) {
     const started = performance.now();
     let answer: Answer | undefined;
     let sample: Omit<SampleOut, 'checks'>;
     try {
-      const r = await call(model, { ...request, jobId: `eval-${s.id}-${i}`, multi: { max: 3 } }, s.job);
+      if (route === 'habit') {
+        answer = { choices: [candidates[0]!.id] };
+        out.push({ choices: answer.choices, ms: 0, costAud: 0, checks: runChecks({ situation: s, candidates, thinking, built, answer }) });
+        continue;
+      }
+      const r = await call(model, { ...request, jobId: `eval-${s.id}-${i}`, multi: { max: 3 } }, route);
       const ids = Array.isArray(r.answer.choices) ? (r.answer.choices as { id: string }[]).map((c) => String(c.id)) : [];
       const reasons = r.answer.reasons && typeof r.answer.reasons === 'object' ? (r.answer.reasons as Record<string, string>) : undefined;
       answer = { choices: ids, ...(reasons && { reasons }) };
@@ -167,7 +176,7 @@ for (const s of situations) {
       sample = { choices: [], ms: Math.round(performance.now() - started), costAud: 0, error: (e as Error).message.replaceAll(key || '\u0000', '[key]').slice(0, 200) };
     }
     totalCost += sample.costAud;
-    out.push({ ...sample, checks: runChecks({ situation: s, candidates, built, answer }) });
+    out.push({ ...sample, checks: runChecks({ situation: s, candidates, thinking, built, answer }) });
   }
   const checks: SituationOut['checks'] = {};
   for (const name of Object.keys(out[0]?.checks ?? {})) {
@@ -177,14 +186,19 @@ for (const s of situations) {
     checks[name] = { pass, applicable: vals.length, minPassRate: spec.minPassRate, ok: vals.length === 0 || pass >= Math.round(spec.minPassRate * vals.length) /* 0.67 of 3 = 2 */ };
   }
   const line = Object.entries(checks).map(([n, c]) => `${c.ok ? 'ok' : 'FAIL'} ${n} ${c.pass}/${c.applicable}`).join(', ');
-  console.log(`${s.id} [${s.job}, ${model}]: ${line}`);
-  results.push({ id: s.id, title: s.title, job: s.job, model, options: candidates.map((c) => ({ id: c.id, label: c.label })), samples: out, checks });
+  console.log(`${s.id} [${s.job === 'auto' ? `auto→${route}` : s.job}, ${model}]: ${line}`);
+  results.push({ id: s.id, title: s.title, job: s.job === 'auto' ? `auto→${route}` : s.job, model, options: candidates.map((c) => ({ id: c.id, label: c.label })), thinking, samples: out, checks });
 }
 
 // ---- report
 const date = new Date().toISOString().slice(0, 10);
 mkdirSync(REPORTS_DIR, { recursive: true });
-const previousFile = readdirSync(REPORTS_DIR).filter((f) => f.endsWith('.json')).sort().at(-1);
+// The newest report by date and run number (`2026-11-17.json`, `2026-11-17-2.json`, …).
+const runOrder = (f: string) => {
+  const m = /^(\d{4}-\d{2}-\d{2})(?:-(\d+))?\.json$/.exec(f);
+  return m ? `${m[1]}-${(m[2] ?? '1').padStart(4, '0')}` : f;
+};
+const previousFile = readdirSync(REPORTS_DIR).filter((f) => f.endsWith('.json')).sort((a, b) => (runOrder(a) < runOrder(b) ? -1 : 1)).at(-1);
 const previous = previousFile ? (JSON.parse(readFileSync(join(REPORTS_DIR, previousFile), 'utf8')) as { results: SituationOut[]; file: string }) : undefined;
 let stem = date;
 for (let n = 2; existsSync(join(REPORTS_DIR, `${stem}.json`)); n++) stem = `${date}-${n}`;
@@ -235,7 +249,7 @@ const md = [
   ...results.flatMap((r) => [
     `### \`${r.id}\` (${r.job}): ${r.title}`,
     '',
-    `Options: ${r.options.map((o) => `${o.id} ${o.label}`).join('; ')}`,
+    `Thinking (the brain's choice): ${r.thinking.depth} (${r.thinking.why}). Options: ${r.options.map((o) => `${o.id} ${o.label}`).join('; ')}`,
     '',
     ...r.samples.map(
       (x, i) =>

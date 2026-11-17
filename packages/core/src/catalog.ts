@@ -55,7 +55,7 @@ const pathOf = (p: readonly PropertyKey[]) =>
   p.reduce<string>((acc, k) => (typeof k === 'number' ? `${acc}[${k}]` : acc ? `${acc}.${String(k)}` : String(k)), '');
 
 /**
- * Validate an item: schema, icon language, need keys (from the world's archetypes, plus
+ * Validate an item: schema, icon language, need keys (from the world's archetypes; never
  * `energy`) and block consistency. Errors carry paths like `behaviours[0].needs.hunger`.
  */
 export function validateCatalogItem(raw: unknown, opts: { needKeys?: readonly string[]; noiseNames?: readonly string[] } = {}): CatalogResult {
@@ -69,7 +69,9 @@ export function validateCatalogItem(raw: unknown, opts: { needKeys?: readonly st
   item.behaviours.forEach((b, i) => {
     if (b.block === 'affectsNeeds') {
       if (Object.keys(b.needs).length === 0) errors.push({ path: `behaviours[${i}].needs`, message: 'name at least one need' });
-      if (opts.needKeys) for (const k of Object.keys(b.needs)) if (!opts.needKeys.includes(k)) errors.push({ path: `behaviours[${i}].needs.${k}`, message: `unknown need (known: ${opts.needKeys.join(', ')})` });
+      // Decision 46: items can never change the battery (only sleep recharges; only admins top up).
+      if ('energy' in b.needs) errors.push({ path: `behaviours[${i}].needs.energy`, message: 'items can never change the battery' });
+      if (opts.needKeys) for (const k of Object.keys(b.needs)) if (k !== 'energy' && !opts.needKeys.includes(k)) errors.push({ path: `behaviours[${i}].needs.${k}`, message: `unknown need (known: ${opts.needKeys.join(', ')})` });
     }
     if (b.block === 'makesNoise' && opts.noiseNames) {
       b.notes.forEach((n, j) => {
@@ -150,10 +152,10 @@ export const CATALOG_TEMPLATES: { name: string; item: CatalogItem }[] = [
   {
     name: 'snack',
     item: {
-      schema: 1, id: 'battery-snack', name: 'Battery snack', description: 'A small cell. Gives a little charge.', icon: ICONS.battery,
+      schema: 1, id: 'battery-snack', name: 'Fizzy cell', description: 'A small cell that fizzes pleasantly. It does not charge anything.', icon: ICONS.battery,
       tags: ['metal', 'small'], portable: true, expiresAfter: '24h',
       behaviours: [
-        { block: 'affectsNeeds', verb: 'eat', range: 0, durationSeconds: 5, needs: { energy: 0.1 }, observation: 'a tingle of charge' },
+        { block: 'affectsNeeds', verb: 'eat', range: 0, durationSeconds: 5, needs: { curiosity: 0.05, signal: 0.05 }, observation: 'a fizzy tingle' },
         { block: 'consumable', uses: 1 },
       ],
     },

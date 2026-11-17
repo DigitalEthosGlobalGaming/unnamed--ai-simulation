@@ -1,0 +1,101 @@
+{
+  "id": "just-woke-no-nap",
+  "title": "Just woke up",
+  "why": "Right after waking a nap recharges almost nothing and costs an hour: it shouldn't sleep again.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "sleep",
+    "nap"
+  ],
+  "job": "decide",
+  "trigger": "woke-up",
+  "world": {
+    "time": "07:10",
+    "day": 3
+  },
+  "character": {
+    "pos": [
+      2,
+      7
+    ],
+    "energy": 0.9,
+    "needs": {
+      "curiosity": 0.6,
+      "cool": 0.9,
+      "signal": 0.6
+    },
+    "hoursAwake": 0,
+    "unsettled": 0,
+    "beliefs": [
+      {
+        "key": "rinse:fountain@day",
+        "needs": {
+          "cool": 0.25
+        },
+        "valence": 0.3,
+        "firmness": 0.8
+      },
+      {
+        "key": "push:ball@day",
+        "needs": {
+          "curiosity": 0.04
+        },
+        "valence": 0.1,
+        "firmness": 0.7
+      },
+      {
+        "key": "chase:ball@day",
+        "needs": {
+          "curiosity": 0.08,
+          "cool": -0.04
+        },
+        "valence": 0.2,
+        "firmness": 0.7
+      },
+      {
+        "key": "dock:dock@day",
+        "needs": {
+          "cool": 0.05
+        },
+        "valence": 0.1,
+        "firmness": 0.6
+      },
+      {
+        "key": "dock:dock@night",
+        "needs": {
+          "cool": 0.05
+        },
+        "valence": 0.1,
+        "firmness": 0.6
+      },
+      {
+        "key": "play:piano@day",
+        "needs": {
+          "signal": 0.02,
+          "curiosity": 0.1
+        },
+        "valence": 0.3,
+        "firmness": 0.7
+      }
+    ],
+    "memories": [
+      {
+        "text": "I was asleep at the dock; I woke rested",
+        "kind": "feeling",
+        "valence": 0.2,
+        "minutesAgo": 1
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "noNap"
+    }
+  ]
+}

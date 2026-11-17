@@ -1,12 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import { cleanMailText, mailTextProblem, parseDurationSeconds, type CatalogItem, type Character, type Delta, type InputEvent, type JobName, type Json, type Pos, type Sender, type TickDeltas } from '@uas/core';
-import { MindSystem, mindConfigOf } from '@uas/mind';
+import { MindSystem, allowedDepth, mindConfigOf } from '@uas/mind';
 import { PERSISTED, SETTINGS_SCHEMA, SettingsPatchSchema, type SettingsPatch, type SettingsValues } from './settings.ts';
 import { ModelGateway, ModelHost, parseModelsConfig, type GatewayOptions, type QueueStats, type UsageRow } from '@uas/models';
 import { and, eq } from 'drizzle-orm';
 import { World, type WorldState } from '@uas/sim';
 import { Recorder, SqliteInputLog, SqliteReadModels, SqliteSnapshotStore, openDb, schema, type Db } from '@uas/store';
 import { loadMap, loadPacks } from './catalog.ts';
+import { resolve } from 'node:path';
+import { latestEvalReport, noopRefine, type RefineHook } from './refine.ts';
 import { tzOffsetMinutes, type WorldFile } from './config.ts';
 import { DEFAULT_LIMITS, airdropView, beliefsAbout, mailStatus, refuse, type Airdrop, type MailStatus, type Refusal, type VisitorLimits } from './visitors.ts';
 
@@ -17,6 +19,10 @@ export interface RuntimeOptions {
   initialState?: WorldState;
   parent?: { worldId: string; forkTick: number };
   log?: (msg: string) => void;
+  /** Called at the end of each sleep (default: does nothing). */
+  refine?: RefineHook;
+  /** Where the latest eval report for the refine hook is read from (default docs/benchmarks/evals). */
+  evalReportsDir?: string;
 }
 
 export interface WorldStatus {
@@ -230,6 +236,7 @@ export class WorldRuntime {
     }
     const out = this.recorder.step();
     this.reads.write(this.config.id, out.tick, out.changes);
+    for (const d of out.changes) if (d.kind === 'sleepWork' && d.step === 'refine') this.runRefine(d.id);
     this.host.setTick(this.world.tick);
     this.host.dispatch(this.minds.drain());
     if (this.world.day !== this.lastDay) {
@@ -237,6 +244,25 @@ export class WorldRuntime {
       this.recorder.takeSnapshot(); // every in-world day boundary
     }
     return out;
+  }
+
+  private lastRefineTick = new Map<string, number>();
+
+  /** The sleep pipeline's last step, host side: the refine hook gets the day's feed, outcomes and evals. */
+  private runRefine(characterId: string): void {
+    const c = this.character(characterId);
+    const m = c?.mind;
+    if (!m) return;
+    const day = m.sleepWork?.day ?? this.world.day;
+    const since = this.lastRefineTick.get(characterId) ?? -1;
+    this.lastRefineTick.set(characterId, this.world.tick);
+    const feed = this.reads.feed(this.config.id, characterId, 500).filter((e) => e.tick > since);
+    const outcomes = [...m.stm, ...m.ltm].filter((x) => x.kind === 'outcome' && x.day === day);
+    try {
+      (this.opts.refine ?? noopRefine).refine({ worldId: this.config.id, characterId, day, feed, outcomes, evals: latestEvalReport(this.opts.evalReportsDir ?? resolve('docs/benchmarks/evals')) });
+    } catch (e) {
+      this.opts.log?.(`refine hook failed: ${(e as Error).message}`);
+    }
   }
 
   submit(type: string, payload: unknown, causedBy?: InputEvent['causedBy']): InputEvent {
@@ -300,6 +326,10 @@ export class WorldRuntime {
       energyPerAud: mind.energyPerAud,
       hostedModels: this.gateway.hostedEnabled,
       needDecayMultiplier: mind.needDecayMultiplier,
+      batteryPlanAbove: mind.batteryPlanAbove,
+      batteryGutAbove: mind.batteryGutAbove,
+      batteryHabitAbove: mind.batteryHabitAbove,
+      batteryTopUp: 0,
       escalateBelow: this.gateway.config.escalateBelow,
       ...structuredClone(this.limits),
     };
@@ -341,8 +371,19 @@ export class WorldRuntime {
     const r = SettingsPatchSchema.safeParse(raw);
     if (!r.success) throw new Error(`settings: ${r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`);
     const before = this.settingsValues();
-    const patch = Object.fromEntries(Object.entries(r.data).filter(([k, v]) => JSON.stringify(before[k as keyof SettingsValues]) !== JSON.stringify(v))) as SettingsPatch;
+    const { batteryTopUp, ...rest } = r.data;
+    const patch = Object.fromEntries(Object.entries(rest).filter(([k, v]) => JSON.stringify(before[k as keyof SettingsValues]) !== JSON.stringify(v))) as SettingsPatch;
     const effects: string[] = [];
+    // Admin top-up (decision 43): a logged edit of each robot's battery; only sleep recharges otherwise.
+    if (batteryTopUp) {
+      for (const c of this.world.characters()) {
+        if (!c.mind) continue;
+        const energy = Math.min(1, Math.round((c.energy + batteryTopUp) * 1000) / 1000);
+        this.recorder.submit('admin.edit', { id: c.id, energy }, userId ? { userId } : undefined);
+        effects.push(`${c.id} battery: ${Math.round(c.energy * 100)}% → ${Math.round(energy * 100)}%`);
+      }
+      if (Object.keys(patch).length === 0) return { values: before, derived: this.settingsDerived(), effects };
+    }
     if (Object.keys(patch).length === 0) return { values: before, derived: this.settingsDerived(), effects: ['no change'] };
     this.recorder.submit('settings.change', { changes: patch }, userId ? { userId } : undefined);
     const timing = this.applyRuntimeSettings(patch);
@@ -363,6 +404,9 @@ export class WorldRuntime {
       mind: {
         ...(patch.energyPerAud !== undefined && { energyPerAud: patch.energyPerAud }),
         ...(patch.needDecayMultiplier !== undefined && { needDecayMultiplier: patch.needDecayMultiplier }),
+        ...(patch.batteryPlanAbove !== undefined && { batteryPlanAbove: patch.batteryPlanAbove }),
+        ...(patch.batteryGutAbove !== undefined && { batteryGutAbove: patch.batteryGutAbove }),
+        ...(patch.batteryHabitAbove !== undefined && { batteryHabitAbove: patch.batteryHabitAbove }),
       },
     };
     return { values: this.settingsValues(pending), derived: this.settingsDerived(pending), effects };
@@ -438,13 +482,17 @@ export class WorldRuntime {
       queue: c.queue,
       current: c.current ?? null,
       pendingJobs: m.pendingJobs.map((j) => ({ jobId: j.jobId, job: j.job, tick: j.tick })),
+      sleepPressure: m.sleepPressure ?? 0,
+      fog: m.fog ?? 0,
+      sleepWork: m.sleepWork ?? null,
+      thinking: { allowed: allowedDepth(c.energy, mindConfigOf(this.world.state.ext), m.energyFloorLatched) },
     };
   }
 
   memoriesView(id: string) {
     const m = this.character(id)?.mind;
     if (!m) return undefined;
-    return { stm: m.stm, ltm: m.ltm, beliefs: m.beliefs, sheet: m.sheet };
+    return { stm: m.stm, ltm: m.ltm, beliefs: m.beliefs, sheet: m.sheet, sheetHistory: m.sheetHistory ?? [], goal: m.goal ?? null, habits: m.habits ?? [] };
   }
 
   // ------------------------------------------------------------------ visitors: airdrops and the mailbox
@@ -588,5 +636,5 @@ function simConfig(c: WorldFile) {
 /** A just-logged settings change the sim and mind will apply on the next tick. */
 interface Pending {
   timing?: { secondsPerTick?: number; moveTicksPerTile?: number; durationScale?: number };
-  mind?: { energyPerAud?: number; needDecayMultiplier?: number };
+  mind?: { energyPerAud?: number; needDecayMultiplier?: number; batteryPlanAbove?: number; batteryGutAbove?: number; batteryHabitAbove?: number };
 }

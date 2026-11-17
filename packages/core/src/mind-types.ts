@@ -2,7 +2,7 @@ import type { EntityId, Json } from './json.ts';
 import type { Pos } from './grid.ts';
 import type { Action, Character } from './entities.ts';
 import type { WorldView } from './effects.ts';
-import type { JobName, TriggerKind } from './events.ts';
+import type { JobName, SleepWorkStep, ThinkingDepth, TriggerKind } from './events.ts';
 
 // ---------------------------------------------------------------- senses
 
@@ -87,6 +87,28 @@ export interface SheetLine {
   seenDays?: number[];
 }
 
+/** One step of a sheet rewrite (one per sleep), kept as history. */
+export interface SheetEdit {
+  day: number;
+  tick: number;
+  op: 'add' | 'reword' | 'remove' | 'goal' | 'none';
+  before?: string;
+  after?: string;
+  /** Who chose it: a model's sheet job, or code (no model, or the job failed). */
+  by: 'model' | 'code';
+  why?: string;
+}
+
+/** A pattern repeated over several days: the free thinking tier. */
+export interface Habit {
+  /** `verb:type@day|night`, like a belief key. */
+  key: string;
+  name: string;
+  /** Days it was seen (most recent last). */
+  days: number[];
+  since: number;
+}
+
 // ---------------------------------------------------------------- brain
 
 export interface Trigger {
@@ -114,6 +136,9 @@ export interface PendingJob {
   candidates?: Candidate[];
   /** appraise / scoreMemory: the outcome draft they refine. */
   draftId?: string;
+  /** decide: how hard it chose to think, and why (for the feed entry). */
+  depth?: ThinkingDepth;
+  depthWhy?: string;
 }
 
 export interface OutcomeDraft {
@@ -162,6 +187,24 @@ export interface MindState {
   idle?: boolean;
   /** Recent failures per candidate key (`verb:type`); two in a row set the option aside for a while. */
   failures?: Record<string, { n: number; tick: number }>;
+  /** Sleep pressure 0..1, from time awake and fog (iteration 2). */
+  sleepPressure?: number;
+  /** Short-term-memory fullness as felt, 0..1 (a perceivable "fog"). */
+  fog?: number;
+  /** Memories formed since the last consolidation (they fog the head until sleep settles them). */
+  unsettled?: number;
+  /** When it last woke (or was created): time awake builds sleep pressure. */
+  awakeSinceTick?: number;
+  /** When it fell asleep (minimum sleep, recharge). */
+  asleepSinceTick?: number;
+  /** The sleep pipeline while asleep. */
+  sleepWork?: { step: SleepWorkStep; done?: number; total?: number; day: number };
+  habits?: Habit[];
+  /** One self-chosen long-term goal. */
+  goal?: string;
+  sheetHistory?: SheetEdit[];
+  /** Days each `verb:type@when` went well, for habit detection. */
+  outcomeDays?: Record<string, number[]>;
   /** The latest queued feed entry's steps, so each can be marked when it resolves. */
   feedSteps?: { tick: number; steps: { verb: string; targetId?: string; open: boolean }[] };
 }
@@ -197,4 +240,6 @@ export interface JobRequest {
   multi?: { max: number };
   /** Extra structured input, e.g. the outcome being appraised. */
   input?: Json;
+  /** Decide jobs: how hard to think. `think` goes straight to the plan chain; `gut` never escalates to it. */
+  depth?: Exclude<ThinkingDepth, 'habit'>;
 }

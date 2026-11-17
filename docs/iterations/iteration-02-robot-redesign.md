@@ -1,6 +1,6 @@
 # Iteration 2: thinking budget, sleep and living objects
 
-Status: **Planned** (agreed 17 Nov 2026). Design: the spec's [Thinking budget, sleep and living objects](../../Unnamed%20AI%20Simulation%20—%20Spec.md#thinking-budget-sleep-and-living-objects-iteration-2) section and decisions 42–53.
+Status: **In progress**: Stage 1 built (17 Nov 2026). Design: the spec's [Thinking budget, sleep and living objects](../../Unnamed%20AI%20Simulation%20—%20Spec.md#thinking-budget-sleep-and-living-objects-iteration-2) section and decisions 42–53.
 
 **Goal:** make the robot worth watching. Its battery becomes its thinking budget, sleep becomes how it recharges and grows, objects come alive with state and products, and its thoughts show on the map.
 
@@ -21,17 +21,17 @@ Stages land in order, and the owner tries each one in the real app before the ne
 
 Owner: backend (viewer: battery and sleep display).
 
-- [ ] Energy drains only from token-costing calls (decide, plan, reflect, consolidation, sheet rewrite, appraisal, scoring); remove every physical drain (idle drain, `chase`, `splash`, need-delta `energy` from actions).
-- [ ] `energyPerAud` default 5 (a full battery = A$0.20); the A$0.50 daily cap stays.
-- [ ] Tier ladder by battery band (plan model → decision model → habit/autopilot → autopilot only), with configurable bands in World settings.
-- [ ] Thinking-depth choice: habit (free) / gut (decision model) / think it through (plan model). Start rule: unfamiliar or important → think it through; familiar → gut or habit. Record the choice in the feed entry.
-- [ ] Sleep pressure from time awake and STM fullness; STM fullness is a perceivable "fog" sense.
-- [ ] Recharge only during sleep, scaled by pressure; minimum sleep 1 in-world hour; wake when rested or full; strong events can wake it after the minimum.
-- [ ] Sleep pipeline, paid from the battery: consolidation → habit detection → character-sheet rewrite (locked core, one step per sleep, one self-chosen goal, history kept) → `refine` hook (empty, typed extension point that takes the day's feed, outcomes and eval results and returns no proposals).
-- [ ] Locked sheet core includes "sleeping recharges me and settles my memories".
-- [ ] Items can't change `energy` (catalogue validation rejects it); admin battery top-up in World settings as a logged input.
-- [ ] Tests: no physical drain; tier stepping; nap gives ~nothing; minimum sleep; wake rules; sleep pipeline order and cost; refine hook called with the right inputs; replay determinism across a full sleep.
-- [ ] Eval situations updated: remove solar-pad checks; add "battery low, should choose habit or gut", "foggy, should sleep", "just woke, shouldn't nap".
+- [x] Energy drains only from token-costing calls (decide, plan, reflect, consolidation, sheet rewrite, appraisal, scoring); remove every physical drain (idle drain, `chase`, `splash`, need-delta `energy` from actions).
+- [x] `energyPerAud` default 5 (a full battery = A$0.20); the A$0.50 daily cap stays.
+- [x] Tier ladder by battery band (plan model → decision model → habit/autopilot → autopilot only), with configurable bands in World settings.
+- [x] Thinking-depth choice: habit (free) / gut (decision model) / think it through (plan model). Start rule: unfamiliar or important → think it through; familiar → gut or habit. Record the choice in the feed entry.
+- [x] Sleep pressure from time awake and STM fullness; STM fullness is a perceivable "fog" sense.
+- [x] Recharge only during sleep, scaled by pressure; minimum sleep 1 in-world hour; wake when rested or full; strong events can wake it after the minimum.
+- [x] Sleep pipeline, paid from the battery: consolidation → habit detection → character-sheet rewrite (locked core, one step per sleep, one self-chosen goal, history kept) → `refine` hook (empty, typed extension point that takes the day's feed, outcomes and eval results and returns no proposals).
+- [x] Locked sheet core includes "sleeping recharges me and settles my memories".
+- [x] Items can't change `energy` (catalogue validation rejects it); admin battery top-up in World settings as a logged input.
+- [x] Tests: no physical drain; tier stepping; nap gives ~nothing; minimum sleep; wake rules; sleep pipeline order and cost; refine hook called with the right inputs; replay determinism across a full sleep.
+- [x] Eval situations updated: remove solar-pad checks; add "battery low, should choose habit or gut", "foggy, should sleep", "just woke, shouldn't nap".
 
 **Done when:** in a scratch world the robot spends its battery thinking, gets foggy, chooses to sleep, recharges, and its sheet and habits change overnight; the daily cap is never exceeded.
 
@@ -84,4 +84,9 @@ Owner: viewer.
 
 ## Changes to the plan
 
-None yet.
+- **Stage 1, fog.** "STM fullness" is measured as memories formed since the last sleep against 4 × the STM size, not the STM's length: the STM keeps only its strongest few and is nearly always full, so its length fogged the head within an hour. ([D35](../decisions.md#deviations-from-the-spec) has the other provisional sleep numbers.)
+- **Stage 1, waking when full.** "Full" means a full battery *and* low sleep pressure (< 0.3). A robot that barely thinks never drains its battery, and would otherwise wake after every minimum hour without ever sleeping its pressure off.
+- **Stage 1, the solar pad and dock** stay as objects but charge nothing; `chase` and `splash` no longer cost battery; the sim also ignores `energy` need deltas from any handler. The "Battery snack" seed item became a "Fizzy cell" (curiosity and signal) under the same id.
+- **Stage 1, sleep jobs.** Two new jobs with their own chains, `consolidate` and `sheet`, replace the nightly `reflect`; their prompts are in the prompt builder ready to become Stage 3 templates. The `refine` hook runs host side in the world runtime (it reads the latest eval report from disk).
+- **Stage 1, top-up** is a one-shot `batteryTopUp` World setting (logged as `admin.edit` per robot), so the generic settings UI renders it.
+- **Stage 1, choosing to sleep.** The first Stage 1 eval had Laya never choosing sleep (0/9): the decision model doesn't see the character sheet, so "sleep here" meant nothing to it. Sleep options now say what sleep does ("go to sleep here (recharges me, settles my memories)"), the state has a `sleepiness` word next to `head` (fog), a tired robot is less keen on everything else, and pressure ≥ 0.8 makes sleep an obvious choice as a safety net (the eval's `dusk-full-stm` sits at 0.81, where Laya still picked play over sleep). Naps don't pay for sleep work (no consolidation with an empty STM; one sheet step per in-world day).

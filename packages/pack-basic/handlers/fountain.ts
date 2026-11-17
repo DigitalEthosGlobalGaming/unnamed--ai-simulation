@@ -8,5 +8,5 @@ export const rinse: EffectHandler = ({ target }) =>
 /** Fun, but water in the joints costs a little battery. */
 export const splash: EffectHandler = ({ target }) =>
   target.state.flowing
-    ? { ok: true, needDeltas: { curiosity: 0.12, cool: 0.05, energy: -0.03 }, observation: 'water sprayed everywhere and your circuits fizzed' }
+    ? { ok: true, needDeltas: { curiosity: 0.12, cool: 0.05 }, observation: 'water sprayed everywhere and your circuits fizzed' }
     : { ok: false, reason: 'the fountain is dry', observation: 'nothing came out' };

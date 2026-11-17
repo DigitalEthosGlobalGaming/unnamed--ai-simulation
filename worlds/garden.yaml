@@ -46,7 +46,7 @@ models:
   # Hard real-money cap per world per (UTC) day for hosted models. When it's reached, hosted
   # entries are skipped: decisions fall back to local Laya, then autopilot. Survives restarts.
   dailyCapAud: ${UAS_DAILY_CAP_AUD:-0.5}
-  energyPerAud: 2          # TODO(open question): provisional; ~0.3 battery per A$0.15 of thinking
+  energyPerAud: 5          # battery per A$ of thinking: a full battery = A$0.20 (decision 45); only sleep recharges
   # Decisions below this confidence are asked again of `escalateTo` (Jev), then the plan chain.
   escalateBelow: ${UAS_ESCALATE_BELOW:-0.35}
   escalateTo: [jev]
@@ -121,3 +121,6 @@ models:
     plan: [{ use: "${UAS_PLANNER:-hostedText}", minEnergy: 0.5, timeoutMs: 60000 }, { use: planner, timeoutMs: 60000 }]
     # Reflection runs during standby, so it may take its time.
     reflect: [{ use: "${UAS_REFLECTOR:-hostedText}", onlyAtNight: true, timeoutMs: 120000 }, { use: local, timeoutMs: 120000 }]
+    # Sleep work (iteration 2), paid from the battery: consolidation, then one character-sheet step.
+    consolidate: [{ use: "${UAS_REFLECTOR:-hostedText}", timeoutMs: 120000 }, { use: local, timeoutMs: 120000 }]
+    sheet: [{ use: "${UAS_REFLECTOR:-hostedText}", timeoutMs: 60000 }, { use: local, timeoutMs: 60000 }]

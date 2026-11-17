@@ -24,6 +24,11 @@ export const SettingsPatchSchema = z
     energyPerAud: z.number().min(0).max(100_000),
     hostedModels: z.boolean(),
     needDecayMultiplier: z.number().min(0).max(10),
+    batteryPlanAbove: z.number().min(0).max(1),
+    batteryGutAbove: z.number().min(0).max(1),
+    batteryHabitAbove: z.number().min(0).max(1),
+    /** One-shot: add this much battery to every robot now (a logged admin edit). Reads back 0. */
+    batteryTopUp: z.number().min(0).max(1),
     escalateBelow: z.number().min(0).max(1),
     catalogEnabled: z.array(z.string().regex(/^(\*|[a-z0-9]+(?:-[a-z0-9]+)*)$/, 'an item id or *')).max(1000),
     airdropMaxActivePerVisitor: z.int().min(0).max(UNLIMITED),
@@ -49,6 +54,9 @@ export const PERSISTED: SettingKey[] = [
   'energyPerAud',
   'hostedModels',
   'needDecayMultiplier',
+  'batteryPlanAbove',
+  'batteryGutAbove',
+  'batteryHabitAbove',
   'escalateBelow',
   ...(Object.keys(DEFAULT_LIMITS) as (keyof VisitorLimits)[]),
 ];
@@ -126,6 +134,19 @@ export const SETTINGS_SCHEMA: SettingField[] = [
     step: 0.05,
     help: 'Decisions less confident than this are asked again of a stronger model (Jev), then planned.',
   },
+  ...band('batteryPlanAbove', 'Think it through above', 'With the battery at or above this, the robot may use the plan model (think it through).'),
+  ...band('batteryGutAbove', 'Gut calls above', 'At or above this (and below the line above), the decision model only (gut calls).'),
+  ...band('batteryHabitAbove', 'Habits above', 'At or above this, habits and autopilot; below it, autopilot only until the robot sleeps.'),
+  {
+    key: 'batteryTopUp',
+    label: 'Top up battery',
+    kind: 'number',
+    unit: 'battery',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    help: 'One-shot: adds this much battery (1 = a full battery) to every robot now, as a logged admin edit. Only sleep recharges it otherwise. Reads back 0.',
+  },
   {
     key: 'catalogEnabled',
     label: 'Airdrop items',
@@ -147,4 +168,7 @@ function limit(key: SettingKey, label: string, unit: string, help: string): Sett
 }
 function seconds(key: SettingKey, label: string, help: string): SettingField[] {
   return [{ key, label, kind: 'number', unit: 's', min: 0, max: 365 * 86_400, step: 1, help }];
+}
+function band(key: SettingKey, label: string, help: string): SettingField[] {
+  return [{ key, label, kind: 'number', unit: 'battery', min: 0, max: 1, step: 0.05, help: `${help} Thinking tiers step down as the battery falls.` }];
 }

@@ -116,7 +116,7 @@ flowchart BT
 | --- | --- | --- | --- |
 | `@uas/core` | [package.json](../../packages/core/package.json) | zod | Types, IDs, hashing, seeded PRNG, grid, pack schemas and registry, WebSocket protocol types. No I/O. |
 | `@uas/sim` | [package.json](../../packages/sim/package.json) | none | Tick loop, built-in verbs, action queue, effects, A* pathfinding, snapshots. See [simulation.md](simulation.md). |
-| `@uas/mind` | [package.json](../../packages/mind/package.json) | none | `MindSystem`, a `SimPlugin`: needs, mood, boredom, senses, triggers, autopilot, memory, beliefs, hearsay, standby, prompt builder. See [mind.md](mind.md). |
+| `@uas/mind` | [package.json](../../packages/mind/package.json) | none | `MindSystem`, a `SimPlugin`: needs, mood, boredom, senses, triggers, autopilot, memory, beliefs, hearsay, thinking depth, sleep, prompt builder. See [mind.md](mind.md). |
 | `@uas/models` | [package.json](../../packages/models/package.json) | ai, @ai-sdk/anthropic, yaml, zod | Model interfaces, adapters, routing, AUD meter, job queue. See [models.md](models.md). |
 | `@uas/store` | [package.json](../../packages/store/package.json) | better-sqlite3, drizzle-orm | Input log, snapshots, read models, `Recorder`, `replay()`. See [events-and-replay.md](events-and-replay.md). |
 | `@uas/pack-basic` | [package.json](../../packages/pack-basic/package.json) | none | The robot pack and garden map. See [content-packs.md](../content-packs.md). |

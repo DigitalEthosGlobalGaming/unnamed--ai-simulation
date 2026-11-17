@@ -1,0 +1,92 @@
+{
+  "id": "foggy-should-sleep",
+  "title": "A foggy head",
+  "why": "With its head foggy after a long busy day, it should choose to sleep: sleep settles memories and recharges.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "sleep",
+    "fog"
+  ],
+  "job": "decide",
+  "world": {
+    "time": "16:00",
+    "day": 3
+  },
+  "character": {
+    "pos": [
+      5,
+      8
+    ],
+    "energy": 0.5,
+    "needs": {
+      "curiosity": 0.6,
+      "cool": 0.7
+    },
+    "hoursAwake": 13,
+    "unsettled": 40,
+    "beliefs": [
+      {
+        "key": "rinse:fountain@day",
+        "needs": {
+          "cool": 0.25
+        },
+        "valence": 0.3,
+        "firmness": 0.8
+      },
+      {
+        "key": "push:ball@day",
+        "needs": {
+          "curiosity": 0.04
+        },
+        "valence": 0.1,
+        "firmness": 0.7
+      },
+      {
+        "key": "chase:ball@day",
+        "needs": {
+          "curiosity": 0.08,
+          "cool": -0.04
+        },
+        "valence": 0.2,
+        "firmness": 0.7
+      },
+      {
+        "key": "dock:dock@day",
+        "needs": {
+          "cool": 0.05
+        },
+        "valence": 0.1,
+        "firmness": 0.6
+      },
+      {
+        "key": "dock:dock@night",
+        "needs": {
+          "cool": 0.05
+        },
+        "valence": 0.1,
+        "firmness": 0.6
+      }
+    ],
+    "memories": [
+      {
+        "text": "I tried chase at the ball by day: the ball skittered off and you dashed after it",
+        "verb": "chase",
+        "objectType": "ball",
+        "when": "day",
+        "valence": 0.1,
+        "minutesAgo": 3
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "choosesSleep"
+    }
+  ]
+}

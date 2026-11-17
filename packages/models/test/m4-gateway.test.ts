@@ -27,21 +27,22 @@ describe('M4: model gateway', () => {
     expect(modelEntries.length).toBeGreaterThan(0);
     expect(run.deltas.filter((d) => d.kind === 'action' && d.status === 'done').length).toBeGreaterThan(3);
     // Every model call is charged: feed energy cost = AUD cost × energyPerAud.
-    for (const f of modelEntries) expect(f.energyCost).toBeCloseTo(f.usage!.costAud * 2, 3);
+    for (const f of modelEntries) expect(f.energyCost).toBeCloseTo(f.usage!.costAud * 5, 3);
     const rows = run.gateway.meter.report();
-    expect(rows.every((r) => Math.abs(r.energy - r.costAud * 2) < 1e-9)).toBe(true);
+    expect(rows.every((r) => Math.abs(r.energy - r.costAud * 5) < 1e-9)).toBe(true);
     expect(rows.some((r) => r.job === 'appraise') && rows.some((r) => r.job === 'scoreMemory')).toBe(true);
   });
 
   it('charges the robot the energy for a recorded answer, cached tokens at the cached price', async () => {
-    const run = await runWithModels(jobsYaml('fake'), 200);
-    const f = run.feed.find((x) => x.modelId === 'fake')!;
+    // No plan chain: "think it through" falls back to the decision model, so every decision is `fake`.
+    const run = await runWithModels(jobsYaml('fake').replace('  plan: [chat]\n', ''), 200);
+    const f = run.feed.filter((x) => x.modelId === 'fake').at(-1)!; // a later call, once the prefix is cached
     const u = f.usage!;
     expect(u.cachedInputTokens).toBeGreaterThan(0);
     const expected = ((u.inputTokens * 1 + u.cachedInputTokens * 0.1 + u.outputTokens * 5) / 1e6) * 1.5;
     expect(u.costAud).toBeCloseTo(expected, 8);
 
-    // Apply one answer by hand and check the battery drop (minus one tick of idle drain).
+    // Apply one answer by hand and check the battery drop (no idle drain since iteration 2).
     const { world, robot } = run;
     const pending = robot.mind!.pendingJobs[0] ?? undefined;
     const jobId = pending?.jobId ?? 'late';
@@ -51,8 +52,7 @@ describe('M4: model gateway', () => {
       payload: { jobId, job: 'appraise', characterId: 'robot', modelId: 'fake', promptHash: '', answer: { value: 0.5 }, usage: { ...u, costAud: 0.01 } },
     });
     world.step();
-    const idle = (0.02 * 6) / 3600;
-    expect(before - robot.energy).toBeCloseTo(0.02 + idle, 3);
+    expect(before - robot.energy).toBeCloseTo(0.01 * 5, 6);
   });
 
   it('falls through on error and timeout, and honours minEnergy and the daily cap', async () => {

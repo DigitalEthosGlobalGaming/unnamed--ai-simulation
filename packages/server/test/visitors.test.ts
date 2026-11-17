@@ -76,7 +76,7 @@ describe('visitors: catalogue, airdrops and the mailbox (REST)', () => {
     await settle();
     expect((await anon().airdrops('vgarden')).map((x) => x.id)).toContain(d.id);
     const detail = await anon().airdrop('vgarden', d.id);
-    expect(detail.item.name).toBe('Battery snack');
+    expect(detail.item.name).toBe('Fizzy cell');
     expect(Array.isArray(detail.beliefs)).toBe(true);
 
     await admin().updateSettings('vgarden', { airdropMaxActivePerVisitor: 1, catalogEnabled: ['battery-snack', 'heavy-rock'] });

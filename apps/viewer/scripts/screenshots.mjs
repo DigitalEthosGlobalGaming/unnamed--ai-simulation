@@ -91,6 +91,19 @@ const sampleShots = [
   },
   { name: 'mobile-feed', vp: [390, 844], q: 'select=rb-01&drawer=full', mobile: true, steps: [{ js: () => document.querySelector('.feed-view')?.scrollIntoView() }] },
   { name: 'mobile-feed-popover', vp: [390, 844], q: 'select=rb-01&drawer=full', mobile: true, steps: [{ js: () => document.querySelector('.feed-view')?.scrollIntoView() }, { click: '.fe-row .tier-btn' }] },
+  // Iteration 2: thinking budget, sleep pressure and fog, sleep work, thinking depth.
+  { name: 'desktop-budget', vp: [1440, 900], q: 'select=rb-02', steps: [{ hover: '.gauge[data-key="energy"]' }] },
+  { name: 'desktop-asleep', vp: [1440, 900], q: 'select=rb-01&at=40900' },
+  { name: 'desktop-asleep-work', vp: [1440, 900], q: 'select=rb-01&at=40180' },
+  { name: 'mobile-budget', vp: [390, 844], q: 'select=rb-02&drawer=full', mobile: true },
+  {
+    name: 'desktop-settings-bands',
+    vp: [1440, 900],
+    q: 'as=admin',
+    click: '#tab-settings',
+    steps: [{ js: () => document.querySelector('#set-batteryPlanAbove')?.scrollIntoView({ block: 'start' }) }, { type: { sel: '#set-batteryTopUp', value: '0.25' } }, { js: () => document.querySelector('#set-batteryTopUp').dispatchEvent(new Event('change', { bubbles: true })), wait: 900 }],
+  },
+  { name: 'desktop-depth-popover', vp: [1440, 900], q: 'select=rb-03', steps: [{ click: '.fe-row .tier-btn' }] },
   // Visitors: airdrops, the mailbox and the catalogue (sample mocks the API).
   { name: 'desktop-drops', vp: [1440, 900], q: 'as=visitor&view=12,10,1.6' },
   { name: 'desktop-item-card', vp: [1440, 900], q: 'as=admin&open=drop:d1', wait: 3800, steps: [{ click: '[data-act="json"]' }] },
@@ -197,6 +210,7 @@ for (const s of shots) {
   }
   for (const st of s.steps ?? []) {
     if (st.click) await page.click(st.click);
+    if (st.hover) await page.hover(st.hover);
     if (st.type) await page.fill(st.type.sel, st.type.value);
     if (st.js) await page.evaluate(st.js);
     if (st.tile) {

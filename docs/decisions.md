@@ -12,13 +12,13 @@ The design decisions (1 to 53) and open questions are recorded in the spec: [Dec
 | 4 | Tile grid | Yes |
 | 5 | JSON verbs + TypeScript handlers as content packs | Yes |
 | 6 | Verbs visible, effects learned through beliefs | Yes |
-| 7 | At zero energy: autopilot and local model only; hard daily AUD cap | Built for iteration 1; superseded by 42–44 (**iteration 2, not started**) |
+| 7 | At zero energy: autopilot and local model only; hard daily AUD cap | Superseded by 42–44 (built, iteration 2 Stage 1): empty → autopilot only until it sleeps; the cap stays |
 | 8 | Self-written senses in v2 | Not started (by design); `Sense` and `features` are in place |
 | 9 | Generic `DecisionModel` / `ChatModel`, routing chains in config, cached-token aware | Yes |
 | 10 | Drizzle, SQLite default, Postgres optional | Partly: SQLite only ([D20](#deviations-from-the-spec)) |
 | 11 | Boredom per (verb, object type) with reward scaling and mood penalty | Yes |
 | 12 | Needs data-defined per archetype; energy built in | Yes |
-| 13 | Energy sources in-world only | Built for iteration 1; superseded by 43 (**iteration 2, not started**) |
+| 13 | Energy sources in-world only | Superseded by 43 (built): sleep is the only recharge; the pad and dock charge nothing |
 | 14 | No text speech; `vocalize`; humans join as visitor characters | Speech and noises yes; visitor characters removed by decision 39 |
 | 15 | Mood as valence and arousal in code | Yes |
 | 16 | Content packs: folders, hot reload, npm-publishable | Partly: folders only ([D21](#deviations-from-the-spec)) |
@@ -47,12 +47,12 @@ The design decisions (1 to 53) and open questions are recorded in the spec: [Dec
 | 39 | Visitors are not characters: they airdrop catalogue items (blocks, 24×24 icon language) and post to a per-world mailbox | Yes, backend ([visitors.md](architecture/visitors.md)) |
 | 40 | Mailbox only, oldest first, one per `read`; a quoted stranger's note; hearsay beliefs | Yes ([mind.md](architecture/mind.md#beliefs)) |
 | 41 | Visitor limits per world, unlimited by default, admins exempt | Yes ([server-and-api.md](architecture/server-and-api.md#live-world-settings)) |
-| 42 | Battery is the thinking budget; physical actions are free | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
-| 43 | Sleep is the only recharge, scaled by sleep pressure | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
-| 44 | Thinking tiers step down with the battery; habit, gut or think it through | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
-| 45 | Full battery = A$0.20 of thinking; A$0.50 daily cap as backstop | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
-| 46 | Items can never change the battery | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
-| 47 | Sleep: consolidation, habits, sheet rewrite, empty `refine` hook | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
+| 42 | Battery is the thinking budget; physical actions are free | Yes (Stage 1): every model job drains it, including sleep's; idle drain, action and item energy effects are gone ([mind.md](architecture/mind.md#needs-and-battery)) |
+| 43 | Sleep is the only recharge, scaled by sleep pressure | Yes (Stage 1): pressure from time awake and fog, 1 h minimum, wake when rested or full or on a strong event, admin top-up ([D35](#deviations-from-the-spec) on the provisional numbers) |
+| 44 | Thinking tiers step down with the battery; habit, gut or think it through | Partly (Stage 1): bands in World settings, the start rule and the depth in the feed are built; learning to adjust the start rule is not ([mind.md](architecture/mind.md#thinking-depth-decision-44)) |
+| 45 | Full battery = A$0.20 of thinking; A$0.50 daily cap as backstop | Yes: `energyPerAud` 5 by default; existing worlds keep their stored rate until changed in settings |
+| 46 | Items can never change the battery | Yes: catalogue validation rejects `energy`, and the airdrop handler ignores it in older items |
+| 47 | Sleep: consolidation, habits, sheet rewrite, empty `refine` hook | Yes (Stage 1): in that order, paid from the battery, code fallbacks; `refine` is a typed no-op ([mind.md](architecture/mind.md#sleep)) |
 | 48 | Editable, versioned prompt templates with a Prompts admin page | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
 | 49 | Object schema 2: state, rules, products, items that create objects, described appearance | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
 | 50 | Solar pad and charging removed; dock is home, rest and cool-down | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
@@ -96,10 +96,10 @@ Where the code does something different from [the spec](../Unnamed%20AI%20Simula
 | D6 | Senses | Run only when nearby state changed; interoception is a sense; sight boosts entities with open items; hearing boosts unfamiliar patterns | Every sense runs every tick (or `runEvery`) and is diffed; interoception is built into the mind; the open-item and unfamiliar-pattern boosts are not implemented | [`system.ts`](../packages/mind/src/system.ts), [`sight.ts`](../packages/pack-basic/senses/sight.ts), [`hearing.ts`](../packages/pack-basic/senses/hearing.ts) |
 | D7 | Routing | A `route` job (router) moves jobs up or down a tier per event; `embed` job on the local model | The mind chooses autopilot or a model itself; no `route` or `embed` job is dispatched; the gateway skips `embed` | [`system.ts`](../packages/mind/src/system.ts), [`gateway.ts`](../packages/models/src/gateway.ts) |
 | D8 | Escalation | Low confidence escalates to the LLM | Escalates to the `plan` chain, which can be any chat model (the garden defaults to `fakeChat`) | [`gateway.ts`](../packages/models/src/gateway.ts), [`garden.yaml`](../worlds/garden.yaml) |
-| D9 | Zero energy | Autopilot and the local model only | Autopilot only, latched until energy is above `energyFloor`; separately, the gateway skips paid models below `energyFloor` | [`system.ts`](../packages/mind/src/system.ts), [`gateway.ts`](../packages/models/src/gateway.ts) |
+| D9 | Zero energy | Autopilot and the local model only | Iteration 2: below `batteryHabitAbove`, or once emptied, autopilot only until it wakes from sleep (decision 44); the gateway still skips paid models below `energyFloor` | [`sleep.ts`](../packages/mind/src/sleep.ts), [`gateway.ts`](../packages/models/src/gateway.ts) |
 | D10 | Beliefs | Keyed `verb:objectType`; change only during sleep; unsupported for N days are replaced | Keyed `verb:objectType@day` / `@night`; updated on every admitted outcome memory (prompts only see them after waking, through the cached prefix); dropped after 5 days without support | [`memory.ts`](../packages/mind/src/memory.ts), [`system.ts`](../packages/mind/src/system.ts) |
 | D11 | Memory worth and recall | `e^(−Δt/τ)`; a memory placed in a prompt counts as a recall | `0.5^(Δt/halfLife)`; STM in prompts is not counted as a recall (it would freeze STM against newcomers); recall happens on first sight of an object type; recalls within 600 ticks don't add to the count | [`memory.ts`](../packages/mind/src/memory.ts), [`system.ts`](../packages/mind/src/system.ts) |
-| D12 | Sleep | Separate Consolidate, Reflect and EditSheet states; drowsy when "rest need low or night"; wake when rest restored or dawn | Three phases (`awake`, `drowsy`, `asleep`); night work runs in one tick and reflection is an async job; drowsy when night or `cool` low; wake when daylight and `cool` ≥ 0.6. Reflection can only reword existing beliefs, not change their numbers | [`system.ts`](../packages/mind/src/system.ts) |
+| D12 | Sleep | Separate Consolidate, Reflect and EditSheet states; drowsy when "rest need low or night"; wake when rest restored or dawn | Iteration 2: no forced bedtime; asleep when it chooses to rest; `drowsy` is a label (pressure ≥ 0.7); the pipeline (consolidate → habits → sheet → refine) runs once per sleep as `sleepWork` steps; wake rules in [mind.md](architecture/mind.md#sleep). Reflection-style rewording only rewords beliefs, never their numbers | [`system.ts`](../packages/mind/src/system.ts), [`sleep.ts`](../packages/mind/src/sleep.ts) |
 | D13 | Visitor queue | The pick is logged as an input event | Removed with the visitor queue (decision 39) | |
 | D14 | Snapshots | Retention: all from the last 24 real hours, then one per in-world day | Every snapshot is kept | [`sqlite.ts`](../packages/store/src/sqlite.ts) |
 | D15 | Forks | The fork's reads before `forkTick` resolve through the parent | The fork starts from the parent's state at the fork tick with an empty log; nothing resolves through the parent. Forks are not restarted after a server restart | [`app.ts`](../packages/server/src/app.ts), [`main.ts`](../packages/server/src/main.ts) |
@@ -122,10 +122,12 @@ Where the code does something different from [the spec](../Unnamed%20AI%20Simula
 | D32 | Candidates | Visible affordances plus built-ins (up to ~12) | Decision models are offered only the 6 most relevant (top by utility, plus one untried). Candidates also include `go and look around`, leave out what can't work while carrying, and set aside options that failed twice in a row | [`system.ts`](../packages/mind/src/system.ts) |
 | D33 | Auth | API keys in v1, OIDC later | API keys plus Sign in with Vercel (OIDC + PKCE). Admins come from `UAS_ADMIN_VERCEL_USERS`, other signed-in users are visitors; sessions are in SQLite behind a signed httpOnly cookie, with an Origin check for cookie-authenticated mutations | [server-and-api.md](architecture/server-and-api.md#sign-in-with-vercel) |
 | D34 | Live settings | Clock changes via `PATCH /clock`; config otherwise static | `PATCH /worlds/:id/settings` changes tick rate, walking speed, cap, energy rate, hosted on/off, need decay and escalation live, logged as `settings.change` (+ `sim.config`) | [server-and-api.md](architecture/server-and-api.md#live-world-settings) |
+| D35 | Sleep numbers (an open question) | "Production defaults for sleep pressure, minimum sleep and recharge curve" | Provisional: pressure = 0.6 × hours awake ÷ 16 + 0.4 × fog; fog = memories since the last sleep ÷ (4 × STM size) (the STM itself is always nearly full, so its length would fog the head within an hour); recharge 0.3 × pressure per hour asleep; sleep repays time awake 2× faster; minimum 1 h; wake when pressure < 0.05, or battery ≥ 0.98 with pressure < 0.3 (so a robot that barely thinks still sleeps its pressure off), or on a trigger ≥ 0.9 after the minimum | [`sleep.ts`](../packages/mind/src/sleep.ts) |
+| D36 | Physical drain removed everywhere | Physical actions are free | Also enforced in the sim: an `energy` need delta from any effect handler is ignored, with or without a mind | [`world.ts`](../packages/sim/src/world.ts) |
 
 Open questions from the spec that are still open, with the provisional values in use:
 
-- `energyPerAud`: 2 (in [`garden.yaml`](../worlds/garden.yaml) and the defaults).
+- Sleep numbers: provisional ([D35](#deviations-from-the-spec)).
 - Catalogue item JSON is schema 1, provisional ([visitors.md](architecture/visitors.md)).
 - The mail word filter is a small local list; hearsay firmness is 0.15.
 - The robot's name and silhouette, and synth tuning by ear.

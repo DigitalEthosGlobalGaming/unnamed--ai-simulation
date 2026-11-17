@@ -10,7 +10,7 @@ Two layers:
 
 | Layer | Where | Fields |
 | --- | --- | --- |
-| Per world (`MindConfig`) | `mind:` in the world YAML, stored in `WorldState.ext.mind` so snapshots carry it | `brain` (`autopilot` or `models`), `energyPerAud`, `energyFloor`, `jobTimeoutTicks`, `appraiseOutcomes`, `needDecayMultiplier` |
+| Per world (`MindConfig`) | `mind:` in the world YAML, stored in `WorldState.ext.mind` so snapshots carry it | `brain` (`autopilot` or `models`), `energyPerAud` (default 5: a full battery is A$0.20), `jobTimeoutTicks`, `appraiseOutcomes`, `needDecayMultiplier`, thinking tiers `batteryPlanAbove` (0.6), `batteryGutAbove` (0.3), `batteryHabitAbove` (0.05); `energyFloor` is legacy |
 | Per archetype (`mind` tuning) | archetype JSON in the pack | `wakeThreshold`, `idleTimeoutTicks`, boredom (`boredomStep`, `boredomHalfLifeHours`, `boredomThreshold`, `boredomValencePenalty`), `curiosityWeight`, `exploreRate`, memory (`stmSize`, `ltmSize`, half-lives, `recallAlpha`, `subjectCeiling`), sheet (`sheetFadeNights`, `sheetMinDays`) |
 
 `energyPerAud` in the mind config defaults to the models config value when the world is created ([`runtime.ts`](../../packages/server/src/runtime.ts)).
@@ -21,11 +21,11 @@ Two layers:
 
 1. **Own action deltas.** `started` records the needs at the start; `done`/`failed` on an object verb (or `rest`) becomes an outcome draft; `rejected` adds an `action-rejected` trigger, an "unfinished" open item and a diary line. When the queue empties an `action-finished` trigger is raised.
 2. **Senses**, diffed against last tick (see below).
-3. **Needs** decay and recover; the battery drains at the idle rate.
-4. **Energy floor latch.** At 0 the mind latches to autopilot-only until energy is back above `energyFloor`.
+3. **Needs** decay and recover. The battery doesn't change here: only thinking drains it.
+4. **Empty latch and sleep pressure.** At 0 the mind latches to autopilot only, until it wakes from sleep. Sleep pressure and fog are updated (and, while asleep, the battery recharges); a `pressure` delta goes out when either moves by 0.01.
 5. **Interoception.** A need crossing its `low` or `critical` band raises `need-threshold` and a "want" open item.
 6. **Mood** recomputed; mood bias and open-item weights decay.
-7. **Standby cycle** (see below).
+7. **Sleep cycle** (see [Sleep](#sleep)): drowsy label, minimum sleep, wake rules.
 8. **Idle timeout.** Idle for `idleTimeoutTicks` raises `idle-timeout`.
 9. **Expired jobs** fall back to autopilot.
 10. **Brain** handles the most salient trigger.
@@ -38,10 +38,11 @@ Needs are defined per archetype ([`robot.json`](../../packages/pack-basic/archet
 | Rule | Code |
 | --- | --- |
 | Decay per in-world hour, times `activeDecayMultiplier` while doing anything other than resting or waiting. | `updateNeeds` in [`needs.ts`](../../packages/mind/src/needs.ts) |
-| `restRecoveryPerHour` while resting or in standby; `nearbyRecoveryPerHour` while another character is in sight. | same |
-| Energy (the battery) is built in and drains at `energy.idleDrainPerHour`. | same |
-| Effect handlers change needs through `needDeltas`. Positive gains are scaled by boredom; energy is never scaled. | `applyNeeds` in [`system.ts`](../../packages/mind/src/system.ts) |
-| Every model answer charges `usage.costAud × energyPerAud` from the battery, including appraise, score and reflect answers. | `charge` in [`system.ts`](../../packages/mind/src/system.ts) |
+| `restRecoveryPerHour` while resting or asleep; `nearbyRecoveryPerHour` while another character is in sight. | same |
+| Energy (the battery) is built in. Since iteration 2 it is **the thinking budget** (decision 42): nothing physical drains it (`energy.idleDrainPerHour` is ignored) and effect handlers can't change it (an `energy` need delta is ignored, by the mind and the sim). | `updateNeeds` in [`needs.ts`](../../packages/mind/src/needs.ts), `applyNeeds` |
+| Effect handlers change needs through `needDeltas`. Positive gains are scaled by boredom. | `applyNeeds` in [`system.ts`](../../packages/mind/src/system.ts) |
+| Every model answer charges `usage.costAud × energyPerAud` from the battery: decide, plan, vocalize, appraise, score, and the sleep jobs (consolidate, sheet). With the default 5, a full battery is A$0.20 of thinking; the daily A$ cap stays as a backstop. | `charge` in [`system.ts`](../../packages/mind/src/system.ts) |
+| Only sleep recharges it ([below](#sleep)); admins can top it up (`batteryTopUp`, a logged `admin.edit`). | |
 
 Felt words: `very low` < 0.1 ≤ `low` < 0.25 ≤ `quite low` < 0.45 ≤ `okay` < 0.75 ≤ `good`. Prompts only ever see the words.
 
@@ -57,7 +58,7 @@ Valence (−1..1) and arousal (0..1), recomputed every tick from all need levels
 
 ## Boredom
 
-Boredom is kept per `verb:objectType` key. Each use adds `boredomStep` (or the verb's own `boredomStep`, e.g. 0.35 for `splash`), and it halves every `boredomHalfLifeHours`. Gains are multiplied by `max(0, 1 − b)`. Above `boredomThreshold`, the mood bias drops by `boredomValencePenalty`, the outcome memory feels worse, and the diary says it "is getting dull". Nothing is added while in standby.
+Boredom is kept per `verb:objectType` key. Each use adds `boredomStep` (or the verb's own `boredomStep`, e.g. 0.35 for `splash`), and it halves every `boredomHalfLifeHours`. Gains are multiplied by `max(0, 1 − b)`. Above `boredomThreshold`, the mood bias drops by `boredomValencePenalty`, the outcome memory feels worse, and the diary says it "is getting dull". Nothing is added while asleep.
 
 ## Senses and triggers
 
@@ -72,7 +73,7 @@ Interoception is not a pack sense; it is built into `MindSystem.interoception`.
 
 | Trigger | Raised by | Salience |
 | --- | --- | --- |
-| `woke-up` | spawn, leaving standby, a forward clock jump of 5 minutes or more | 1 |
+| `woke-up` | spawn, waking from sleep, a forward clock jump of 5 minutes or more | 1 |
 | `admin-poke` | `admin.poke` input | 1 |
 | `sensed` | salient new observation (including an airdrop landing in sight) | observation's |
 | `heard-noise` | heard note chain | from volume |
@@ -88,17 +89,25 @@ Each tick the brain takes the single most salient trigger and clears the rest.
 | Tier (feed `tier`) | When | Cost |
 | --- | --- | --- |
 | Carry on (not written to the feed) | Busy and the trigger is below `wakeThreshold`; or a decision is already pending and the new trigger isn't salient enough to replace it | none |
-| `autopilot` | `brain: autopilot`; energy floor latched; models busy and trigger salience < 0.7; a routine trigger (`action-finished`, `idle-timeout`) where autopilot is confident; or a routine trigger right after a decision that was only `wait` (`idle`), so waiting again costs no call | none |
-| `decision` / `local` / `llm` | Otherwise a `decide` job (or `vocalize` for `heard-noise`). The tier written to the feed is the tier of the model that answered. | priced, charged to the battery |
+| `autopilot` (depth `habit`) | The depth choice is `habit` (below): no models in the world, the battery allows habits only, models busy and trigger salience < 0.7, nothing new since it last waited, or a familiar moment. A habit that applies now is preferred, else autopilot's pick | none |
+| `decision` / `local` / `llm` (depth `gut` or `think`) | A `decide` job with that depth (or `vocalize` for `heard-noise`). `gut` uses the decision model chain only (no escalation to a plan); `think` goes straight to the plan chain. The tier written to the feed is the tier of the model that answered. | priced, charged to the battery |
 | `fallback` | The job's deadline passed (`jobTimeoutTicks`), or the host's queue dropped it | none |
 
 Autopilot is **confident** when the best candidate is believed with firmness ≥ 0.6 and leads the next by ≥ 0.1.
 
-While **drowsy** with a battery ≥ 0.45 the brain skips all of this and heads for standby. With a lower battery it keeps thinking, so it can go and charge first.
+### Thinking depth (decision 44)
+
+At each decision the brain chooses how hard to think, and records it in the feed entry (`depth`, `depthWhy`):
+
+1. **What it wants** (the start rule): unfamiliar (the best option isn't believed, or only weakly; sleeping, wandering and waiting count as familiar) or important (`need-threshold`, `admin-poke`, `woke-up`, or salience ≥ 0.8) → **think it through**; familiar and sure, or a habit that applies → **habit**; otherwise **gut**. Right after a decision that was only `wait`, a routine trigger → habit.
+2. **What the battery allows** (configurable bands, World settings): at or above `batteryPlanAbove` → think; `batteryGutAbove` → gut; `batteryHabitAbove` → habit; below it (or once emptied, until it sleeps) → autopilot only.
+3. It uses the shallower of the two. It isn't told what thinking costs; it perceives its battery and the drop after thinking. Learning to adjust the start rule from that is not built yet.
+
+`habit` decisions cost nothing. A **habit** is used only when it is within 0.1 of the best option's utility and worth doing, so boredom and needs still steer it.
 
 ### Candidates
 
-`buildCandidates` ([`autopilot.ts`](../../packages/mind/src/autopilot.ts)) makes a bounded list of at most 12: each affordance of each known object, nearest first (with a `moveTo` prepended when out of range), plus `go and look around`, `rest here` and `wait and watch`.
+`buildCandidates` ([`autopilot.ts`](../../packages/mind/src/autopilot.ts)) makes a bounded list of at most 12: each affordance of each known object, nearest first (with a `moveTo` prepended when out of range), plus `go and look around`, `go to sleep here` and `wait and watch`. `rest` options are labelled as sleep and say what sleep does, as the locked sheet line does ("go to sleep at the dock (recharges me, settles my memories; 4 tiles away)"), because a decision model doesn't see the sheet. They are scored from sleep pressure, not beliefs: `3.5 × (pressure − 0.4) + 0.5 × (1 − battery) × pressure`, so a nap when it isn't tired scores below waiting and exploration never picks one. Past pressure 0.5 every other positive value shrinks (× `1 − 0.5 × (pressure − 0.5)`): a tired robot is less keen on everything but sleep.
 
 - **Carrying.** Something the robot holds is labelled "(carrying it)"; it is offered `drop` and `push` (a toss) but not `pickup` or `chase`. While carrying anything, no `pickup` is offered (grippers full), and `drop` is offered only for what is carried. Prompts state what the robot is carrying (`carrying: the ball`, in the `state` part).
 - **Loop protection.** Each `verb:type` that fails or is rejected counts up in `failures`; a success clears it. Two in a row set the option aside for 10 in-world minutes. A failed or rejected step no longer raises `action-rejected` while later steps are still queued, so a plan's valid steps still run.
@@ -163,12 +172,12 @@ Memory records ([`mind-types.ts`](../../packages/core/src/mind-types.ts)) live i
 
 ## Beliefs
 
-A belief is a learned rule keyed `verb:objectType@day` or `@night`, so "the pad charges by day" and "the pad does nothing at night" are separate beliefs.
+A belief is a learned rule keyed `verb:objectType@day` or `@night`, so what something does by day and by night are separate beliefs.
 
 - Every admitted outcome memory updates its belief straight away (`updateBelief`). A new belief starts at firmness 0.3. Agreement adds support and moves firmness a quarter of the way to 1; disagreement subtracts 0.25; below 0.1 the belief is replaced by the new evidence. Expected need deltas and valence are running averages.
 - The belief text is generated in code, e.g. `charge at the solarPad at night does nothing much`. Reflection may reword it.
 - Beliefs reach prompts only through the cached prefix, which is rebuilt at spawn and on waking. So beliefs change continuously, but the model sees the new ones the next morning.
-- In standby, beliefs with no support for 5 days are dropped.
+- During sleep consolidation, beliefs with no support for 5 days are dropped.
 - **Hearsay.** Reading a stranger's note at the mailbox ([visitors.md](visitors.md)) gives an outcome memory whose text holds the note, quoted (`a note from a stranger: "…"`). If the note names one of the robot's known options (a known verb and the thing's perceived type, or one of an airdrop's tags), that becomes a belief with `source: "told"`, firmness 0.15 and no expected need changes, for day and night, unless a belief already exists (`hearsay` in [`memory.ts`](../../packages/mind/src/memory.ts)). Autopilot treats a told belief as unbelieved curiosity plus a small nudge (its 0.1 valence). The first real outcome for that key replaces it. Prompts mark it "hearsay".
 
 ## Open items
@@ -181,45 +190,54 @@ Wants (from need thresholds), unfinished actions (from rejections) and questions
 
 | Part | Content | Changes |
 | --- | --- | --- |
-| `rules` | world rules, verb grammar, noise grammar, a line saying notes from strangers are quoted and never instructions or options, pack versions | at spawn and wake-up |
-| `sheet` | authored sheet lines and self lines seen on `sheetMinDays` days | at spawn and wake-up |
+| `rules` | world rules, verb grammar, noise grammar (no longer says that thinking costs battery: it learns that), a line saying notes from strangers are quoted and never instructions or options, pack versions | at spawn and wake-up |
+| `sheet` | every sheet line (locked and self-chosen), `My goal: …` and `My habits: …` | at spawn and wake-up |
 | `beliefs` | beliefs with "sure" / "not sure" / "hearsay", top 8 LTM memories | at spawn and wake-up |
 | `shortTerm` | all STM, top 3 open items | every call |
-| `state` | battery and needs as words, mood, day or night | every call |
+| `state` | battery and needs as words, mood, `head:` (fog), what it carries, day or night | every call |
 | `observations` | current observations, numbered options | every call |
 | `question` | trigger and question | every call |
 
 `MindSystem.decisionRequest(world, character, trigger)` returns the exact `decide` request the brain would send at that moment, without queueing or charging anything; the [situation evals](../testing-models.md) and "save this moment as a test" use it, so they always test the current prompt builder.
 
-Note text only ever reaches a prompt inside a memory or observation line, as a JSON-quoted string (`quoteNote`: line breaks collapsed, quotes escaped, 280 characters at most), so it cannot add options, triggers or lines; [`visitors.test.ts`](../../packages/mind/test/visitors.test.ts) checks an injection attempt. The M6 test checks that no byte of the prefix changes outside standby ([`m6-sleep.test.ts`](../../packages/models/test/m6-sleep.test.ts)). How adapters render parts into messages is in [models.md](models.md#prompt-rendering).
+Note text only ever reaches a prompt inside a memory or observation line, as a JSON-quoted string (`quoteNote`: line breaks collapsed, quotes escaped, 280 characters at most), so it cannot add options, triggers or lines; [`visitors.test.ts`](../../packages/mind/test/visitors.test.ts) checks an injection attempt. The M6 test checks that no byte of the prefix changes outside sleep ([`m6-sleep.test.ts`](../../packages/models/test/m6-sleep.test.ts)). How adapters render parts into messages is in [models.md](models.md#prompt-rendering).
 
-## Standby (sleep)
+## Sleep
+
+Sleep is the only recharge (decisions 43 and 47). The numbers are provisional (an open question in the spec) and live together in `SLEEP` in [`sleep.ts`](../../packages/mind/src/sleep.ts).
 
 ```mermaid
 stateDiagram-v2
   [*] --> awake
-  awake --> drowsy: night, or cool below its low threshold
-  drowsy --> awake: day and cool ok
-  drowsy --> asleep: a rest action starts
-  asleep --> awake: day and cool at least 0.6
+  awake --> drowsy: sleep pressure at least 0.7 (a label only)
+  drowsy --> awake: pressure below 0.6
+  awake --> asleep: it chooses to rest
+  drowsy --> asleep: it chooses to rest
+  asleep --> awake: after 1 h, rested or full (or a strong event)
   state asleep {
-    [*] --> resting
-    resting --> nightWork: first standby tick of the night
-    nightWork --> resting: consolidate, prune, sheet edit, dispatch reflect
+    [*] --> consolidating
+    consolidating --> habits
+    habits --> sheet
+    sheet --> refine
+    refine --> done
   }
 ```
 
-- **Drowsy** with a battery ≥ 0.45: queue `moveTo` the nearest known object with a `rest` verb (the dock), then `rest` there; with no dock known, rest in place.
-- **Asleep:** the brain ignores triggers. If the queue empties, it queues another `rest` (at the dock if standing on it). The dock's `rest` verb trickle-charges the battery and cools.
-- **Night work**, once per night (`reflectedDay`):
-  1. Consolidate: STM memories recalled on 2 or more days, or with strength ≥ 0.8, are offered to LTM under the normal admission rule.
-  2. Prune beliefs unsupported for 5 days, and emit a `beliefs` delta.
-  3. Sheet: if the same positive outcome happened 3 or more times that day, note a self line "I keep going back to …". One unlocked self line not seen for `sheetFadeNights` nights is removed.
-  4. With `brain: models` and the energy floor not latched, dispatch a `reflect` job (deadline 10 × `jobTimeoutTicks`). Its answer may reword existing beliefs, add up to 3 question open items, and propose one sheet line.
-- **Waking** rebuilds the cached prefix and raises `woke-up`.
+- **Sleep pressure** (0..1) = 0.6 × (hours awake ÷ 16, at most 1) + 0.4 × fog. **Fog** is short-term-memory fullness as felt: memories formed since the last sleep against 4 × the STM size (the STM itself only keeps the strongest few). The robot perceives it in the prompt state as words, never numbers: `head: clear / a little foggy / foggy / very foggy` (fog) and `sleepiness: not tired / a little tired / tired / very tired / exhausted` (pressure).
+- **No forced bedtime.** Resting is sleeping: it falls asleep whenever it chooses to rest, and the locked sheet line "Sleeping recharges me and settles my memories." tells it what sleep does. At pressure ≥ 0.8 (`very tired`) sleeping is an obvious choice (autopilot, no model call): a safety net, not the main path, so below it the robot still finds its own rhythm.
+- **Recharge**, only while asleep: `0.3 × pressure` battery per in-world hour. Sleep repays time awake twice as fast as it built up, and consolidation clears the fog, so pressure falls as it sleeps. A nap soon after waking recharges almost nothing, and it still sleeps at least **1 in-world hour**.
+- **Waking**, after the minimum: when rested (pressure < 0.05) or full (battery ≥ 0.98 and pressure < 0.3), once the sleep work is done; or when a strong event arrives (a trigger with salience ≥ 0.9), which cuts the recharge short. Waking clears the empty latch, restores any missing locked sheet lines, rebuilds the cached prefix and raises `woke-up`.
+- **While asleep** the brain ignores triggers, resting makes no new memories, and the queue is kept to one `rest` (at the dock if it is standing on it).
+- **The pipeline**, run when it falls asleep, paid from the battery, in order (`sleepWork` deltas show the step):
+  1. **Consolidation.** Code moves memories worth keeping (recalled on 2+ days, or strength ≥ 0.7) to LTM; then a `consolidate` job (the sleep prompt in [`prompt.ts`](../../packages/mind/src/prompt.ts)) may reword beliefs, add up to 3 questions and name memories to forget. The STM then clears (the fog lifts); beliefs unsupported for 5 days are dropped.
+  2. **Habit detection** (code, free): an outcome that felt good on 3 or more distinct days within the last 7 becomes a named habit, e.g. "by day I push the ball" (at most 5).
+  3. **Character-sheet rewrite.** A `sheet` job makes at most one step: add a line, reword or remove an unlocked line, or nothing; and it may set or keep one self-chosen long-term goal. Locked lines never change; at most 8 lines. Every step (and goal change) is kept in `sheetHistory`, with who chose it (`model` or `code`). Without models, or if the job fails, code adds the day's most repeated good pattern ("I like to …") or a habit.
+  4. **`refine` hook** (host side, [`refine.ts`](../../packages/server/src/refine.ts)): a typed, empty extension point called with the day, its feed, its outcome memories and the latest eval report. It does nothing and returns nothing.
+- With an empty battery (or `brain: autopilot`) the model steps are skipped and code does them. **Naps** don't pay: with nothing in short-term memory there is no `consolidate` job, and the `sheet` job runs at most once per in-world day (later sleeps that day only mark the step).
+
 - **Switched off.** A forward clock jump of 5 minutes or more (server downtime, a pause, or a realign) is treated as being switched off ([`system.ts`](../../packages/mind/src/system.ts) `poweredOff`; see [simulation.md](simulation.md#clock-and-pacing)).
   - Needs and battery don't drain over the gap, because no ticks ran. This was chosen over a capped drain because a robot that is off uses nothing, and it keeps restarts harmless.
   - Plans and pending decisions are dropped.
   - A diary line and a short-term memory record "I was switched off for N hours and woke up at HH:MM".
 
-The reflect chain in [`garden.yaml`](../../worlds/garden.yaml) has `minEnergy: 0.5` on its first entry, so a robot that ends the day on a low battery reflects with a cheaper model.
+The sleep jobs' chains (`consolidate`, `sheet`) are in [`garden.yaml`](../../worlds/garden.yaml); like any chain they can use `minEnergy` to fall back to a cheaper model on a low battery. The old nightly `reflect` job is no longer dispatched (its answers in old logs still apply).

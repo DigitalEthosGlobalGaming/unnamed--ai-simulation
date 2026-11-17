@@ -1657,6 +1657,9 @@ a {
 }
 .set-state {
   display: block;
+  max-width: 24ch;
+  margin-left: auto;
+  white-space: normal;
   min-height: 1.2em;
   font-family: var(--font-draft);
   font-size: 0.8125rem;
@@ -2680,5 +2683,80 @@ a {
   .tier-btn,
   .fe-expand {
     min-height: 32px;
+  }
+}
+
+/* ------------------------------------------------------- iteration 2: thinking budget and sleep */
+.gauge {
+  position: relative;
+}
+.gauge-sub {
+  display: block;
+  margin-top: -2px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  text-transform: lowercase;
+}
+.gauge[tabindex='0'] {
+  cursor: help;
+}
+.gauge-tip {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  top: calc(100% + 4px);
+  display: none;
+  padding: 4px 8px;
+  background: var(--sheet-deep);
+  border: 1.5px solid var(--ink);
+  font-family: var(--font-draft);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.gauge:hover .gauge-tip,
+.gauge:focus .gauge-tip {
+  display: block;
+}
+/* Rising readings (sleep pressure, fog): the mark sits at the "high" threshold. */
+.gauge.is-rising .gauge-low {
+  border-bottom-color: var(--ink-3);
+}
+.sleep-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-draft);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.03em;
+}
+.sleep-steps li {
+  padding: 2px 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  color: var(--ink-3);
+}
+.sleep-steps li.is-done {
+  color: var(--ink-2);
+  border-style: dashed;
+}
+.sleep-steps li.is-now {
+  color: var(--sheet-deep);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+@media (max-width: 719px) {
+  .gauge-sub {
+    display: inline;
+    margin: 0 0 0 4px;
   }
 }

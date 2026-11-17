@@ -2,7 +2,7 @@ import type { JobName, JobRequest, ModelAnswerPayload } from '@uas/core';
 import type { ModelGateway } from './gateway.ts';
 
 /** Lower runs first. Reflect only runs when nothing else is waiting in its lane. */
-export const JOB_PRIORITY: Record<JobName, number> = { decide: 0, vocalize: 1, route: 1, plan: 2, appraise: 3, scoreMemory: 4, reflect: 5, embed: 6 };
+export const JOB_PRIORITY: Record<JobName, number> = { decide: 0, vocalize: 1, route: 1, plan: 2, appraise: 3, scoreMemory: 4, consolidate: 5, sheet: 5, reflect: 5, embed: 6 };
 
 interface Entry {
   req: JobRequest;

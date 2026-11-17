@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CATALOG_SEED, CATALOG_TEMPLATES, airdropVerbs, cleanMailText, mailTextProblem, parseDurationSeconds, parseIcon, perceivedType, quoteNote, validateCatalogItem } from '../src/index.ts';
 
-const rules = { needKeys: ['energy', 'cool', 'curiosity', 'signal'], noiseNames: ['beep', 'chirp', 'trill', 'buzz', 'honk'] };
+const rules = { needKeys: ['cool', 'curiosity', 'signal'], noiseNames: ['beep', 'chirp', 'trill', 'buzz', 'honk'] };
 const base = () => structuredClone(CATALOG_TEMPLATES.find((t) => t.name === 'snack')!.item) as Record<string, unknown>;
 
 describe('icon language', () => {
@@ -53,6 +53,9 @@ describe('catalogue items (schema 1)', () => {
     expect(errs((i) => (i.expiresAfter = '3 weeks'))).toEqual(['expiresAfter']);
     expect(errs((i) => ((i.behaviours as Record<string, unknown>[])[0]!.needs = { hunger: 0.2 }))).toEqual(['behaviours[0].needs.hunger']);
     expect(errs((i) => ((i.behaviours as Record<string, unknown>[])[0]!.needs = { energy: 2 }))).toEqual(['behaviours[0].needs.energy']);
+    // Decision 46: items can never change the battery.
+    const r = validateCatalogItem({ ...base(), behaviours: [{ block: 'affectsNeeds', verb: 'eat', needs: { energy: 0.1 }, observation: 'zap' }] }, rules);
+    expect(r.ok ? [] : r.errors).toEqual([{ path: 'behaviours[0].needs.energy', message: 'items can never change the battery' }]);
     expect(errs((i) => ((i.behaviours as unknown[]).push({ block: 'teleport' })))).toEqual(['behaviours[2].block']);
     expect(errs((i) => ((i.behaviours as unknown[]).push({ block: 'consumable', uses: 2 })))).toEqual(['behaviours']);
     expect(errs((i) => ((i.behaviours as unknown[]).push({ block: 'makesNoise', verb: 'eat', notes: ['beep-C'] })))).toEqual(['behaviours[2].verb']);

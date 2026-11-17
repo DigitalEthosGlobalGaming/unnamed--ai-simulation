@@ -35,6 +35,8 @@ cool: good
 signal: okay
 curiosity: good
 mood: restless
+head: clear
+sleepiness: not tired
 carrying: nothing
 it is day (evening, dusk soon)
 
@@ -43,17 +45,18 @@ I notice:
 - it is light
 Options:
 c0: push the ball (2 tiles away)
-c1: rest here
-c2: pickup the ball (2 tiles away)
-c3: dock the dock (20 tiles away)
-c4: chase the ball (2 tiles away)
-c5: wait and watch
+c1: pickup the ball (2 tiles away)
+c2: dock the dock (20 tiles away)
+c3: chase the ball (2 tiles away)
+c4: wait and watch
+c5: go and look around
 
 Trigger: action-finished. Which action next?
+## thinking: gut (familiar)
 ## options
 c0: push the ball (2 tiles away)  [push:ball] -> moveTo ball, push ball
-c1: rest here  [rest:self] -> rest {"ticks":100}
-c2: pickup the ball (2 tiles away)  [pickup:ball] -> moveTo ball, pickup ball
-c3: dock the dock (20 tiles away)  [dock:dock] -> moveTo dock, dock dock
-c4: chase the ball (2 tiles away)  [chase:ball] -> chase ball
-c5: wait and watch  [wait:self] -> wait {"ticks":50}
+c1: pickup the ball (2 tiles away)  [pickup:ball] -> moveTo ball, pickup ball
+c2: dock the dock (20 tiles away)  [dock:dock] -> moveTo dock, dock dock
+c3: chase the ball (2 tiles away)  [chase:ball] -> chase ball
+c4: wait and watch  [wait:self] -> wait {"ticks":50}
+c5: go and look around  [explore:self] -> moveTo {"x":4,"y":2}

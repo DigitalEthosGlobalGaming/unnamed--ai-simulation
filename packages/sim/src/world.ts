@@ -590,8 +590,8 @@ export class World implements WorldView {
       const values: Record<string, number> = {};
       for (const key of Object.keys(r.needDeltas).sort()) {
         const d = r.needDeltas[key]!;
-        if (key === 'energy') values.energy = actor.energy = clamp01(actor.energy + d);
-        else if (key in actor.needs) values[key] = actor.needs[key] = clamp01(actor.needs[key]! + d);
+        // Physical actions never change the battery (decision 42): only thinking drains it, only sleep recharges.
+        if (key in actor.needs) values[key] = actor.needs[key] = clamp01(actor.needs[key]! + d);
       }
       this.emit({ kind: 'needs', id: actor.id, values });
     }

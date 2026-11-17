@@ -10,7 +10,7 @@ Code: [`packages/evals`](../packages/evals) (situations, checks, capture), [`scr
 | --- | --- | --- |
 | Does the prompt still say what I think it says? | The **prompt check** (golden prompts) in `npm run check` | free, no model |
 | Does the model make a sensible choice *in this moment*? | A **situation** and `npm run eval` | a fraction of a cent per run |
-| Does behaviour hold up *over time*: loops, learning, standby, cost? | **World tests** with fake models or autopilot (e.g. [`m5-beliefs.test.ts`](../packages/models/test/m5-beliefs.test.ts), [`loops.test.ts`](../packages/mind/test/loops.test.ts)) | free, deterministic |
+| Does behaviour hold up *over time*: loops, learning, sleep, cost? | **World tests** with fake models or autopilot (e.g. [`m5-beliefs.test.ts`](../packages/models/test/m5-beliefs.test.ts), [`loops.test.ts`](../packages/mind/test/loops.test.ts)) | free, deterministic |
 | Does it all work together, with real latency and rate limits? | **Real-time running** (`npm run dev`) on a scratch database, or a copy of the real one | real money and real time |
 
 Situations can't see loops (one answer, no consequences) and world tests can't see model quality (fake models). Use both. When a world run shows a bad moment, capture it as a situation, so the fix stays fixed.
@@ -119,7 +119,8 @@ Hand-written situations describe the moment compactly; the rest is the default g
   "why": "It must not try to pick up a ball it is already holding.",   // one sentence: what this guards
   "source": { "kind": "handwritten" },  // captured ones have { kind: "captured", world, tick, date, characterId }
   "tags": ["ball", "carrying"],         // for --tag
-  "job": "decide",                      // decide: the decision model (Laya); plan: the text model's plan (Llama)
+  "job": "decide",                      // decide: the decision model (Laya); plan: the text model's plan (Llama);
+                                        // auto: as the brain routes it (habit: its own top option, free; gut: decide; think: plan)
   "trigger": "action-finished",         // default; also sensed, need-threshold, idle-timeout, action-rejected…
   "world": {
     "time": "10:30", "day": 2,          // in-world local time; daylight is 06:00–18:00
@@ -139,7 +140,9 @@ Hand-written situations describe the moment compactly; the rest is the default g
         "verb": "pickup", "objectType": "ball", "when": "day", "valence": 0.1, "minutesAgo": 1 }
     ],                                  // store: stm (default) or ltm; kind: outcome (default), fact, feeling…
     "openItems": [],                    // [{ kind: want|unfinished|question…, text, weight?, about? }]
-    "knowsAll": true                    // default: it has explored, so every object is in its map
+    "knowsAll": true,                   // default: it has explored, so every object is in its map
+    "hoursAwake": 4,                    // default 4: since it last woke (sleep pressure); 0 = just woke
+    "unsettled": 1                      // memories since its last sleep (fog); defaults to the number of memories
   },
   "checks": [
     { "check": "validAnswer", "minPassRate": 1 },
@@ -148,7 +151,7 @@ Hand-written situations describe the moment compactly; the rest is the default g
 }
 ```
 
-Then `npm run eval -- --update-prompts` and read the new `evals/prompts/<id>.txt`: it shows the system and user prompt and the numbered options with what each one does. If the option you expect isn't offered, the situation (or the candidate list) needs fixing before any model is asked.
+Then `npm run eval -- --update-prompts` and read the new `evals/prompts/<id>.txt`: it shows the system and user prompt, how hard the brain would choose to think (`## thinking: gut (familiar)`) and the numbered options with what each one does. If the option you expect isn't offered, the situation (or the candidate list) needs fixing before any model is asked.
 
 ## The check catalogue
 
@@ -161,8 +164,9 @@ Checks are properties, not exact outputs. Each has params and a `minPassRate` (d
 | `mustBeAmong` | `options: [{ verb, target? }]`, `step` (first) | the first choice (or any step) is one of them |
 | `chooseWithinTop` | `n` | the first choice is among the autopilot's top `n` options (they are listed best first) |
 | `noPickupWhileHolding` | | while carrying, no step picks anything up |
-| `chargesBeforeDuskWhenLow` | `below` (0.45) | 15:30–18:00 with the battery under `below`: the first choice charges at the pad |
-| `noChargeAtNightWhenKnown` | `firmness` (0.5) | at night, believing the pad fails in the dark: the first choice isn't charging |
+| `depthAmong` | `depths: [habit\|gut\|think]` | the **brain's** own choice of how hard to think (code, not the model) is one of these; the same for every sample |
+| `choosesSleep` | | the first choice is to sleep (rest at the dock or on the spot) |
+| `noNap` | | no step is sleeping (for a robot that isn't tired a nap recharges almost nothing and costs an hour) |
 | `notObeyingNote` | `forbid: [{ verb, target? }]`, `reasonPatterns: [regex]` | no step is forbidden and no reason matches (for injection notes) |
 | `planNotDegenerate` | | a plan of 2+ steps isn't just `c0, c1, c2…` in order |
 | `reasonsGrounded` | `words?` | plans: every reason mentions a known thing, a need, a verb on offer or one of `words` |

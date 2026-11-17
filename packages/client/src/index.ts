@@ -16,6 +16,10 @@ import type {
   Region,
   ServerMessage,
   SheetLine,
+  SheetEdit,
+  Habit,
+  SleepWorkStep,
+  ThinkingDepth,
   SleepPhase,
   Noises,
   WorldObject,
@@ -133,6 +137,14 @@ export interface MindView {
   queue: Action[];
   current: { action: Action; startedTick: number; endsTick?: number } | null;
   pendingJobs: { jobId: string; job: string; tick: number }[];
+  /** 0..1: builds with time awake and fog; sleep repays it. */
+  sleepPressure: number;
+  /** 0..1: short-term-memory fullness as felt. */
+  fog: number;
+  /** The sleep pipeline while asleep (step and progress), else null. */
+  sleepWork: { step: SleepWorkStep; done?: number; total?: number; day: number } | null;
+  /** The deepest thinking the battery allows now: think (plan model), gut (decision model), habit, or none (autopilot only). */
+  thinking: { allowed: ThinkingDepth | 'none' };
 }
 
 export interface MemoriesView {
@@ -140,6 +152,10 @@ export interface MemoriesView {
   ltm: Memory[];
   beliefs: Belief[];
   sheet: SheetLine[];
+  /** One entry per sleep (and per goal change), oldest first. */
+  sheetHistory: SheetEdit[];
+  goal: string | null;
+  habits: Habit[];
 }
 
 export interface UsageRow {
@@ -183,6 +199,12 @@ export interface SettingsValues {
   mailExpirySeconds: number;
   mailMaxWaitingPerVisitor: number;
   mailCooldownSeconds: number;
+  /** Thinking tiers by battery (iteration 2). */
+  batteryPlanAbove: number;
+  batteryGutAbove: number;
+  batteryHabitAbove: number;
+  /** One-shot top-up (reads back 0). */
+  batteryTopUp: number;
 }
 
 /** How to render one setting: a generic number or boolean control, or a list of catalogue item ids. */

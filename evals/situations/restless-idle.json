@@ -34,14 +34,6 @@
     },
     "beliefs": [
       {
-        "key": "charge:solarPad@day",
-        "needs": {
-          "energy": 0.15
-        },
-        "valence": 0.3,
-        "firmness": 0.85
-      },
-      {
         "key": "splash:fountain@day",
         "needs": {
           "curiosity": 0.0,
@@ -66,6 +58,14 @@
         },
         "valence": -0.1,
         "firmness": 0.6
+      },
+      {
+        "key": "rinse:fountain@day",
+        "needs": {
+          "cool": 0.25
+        },
+        "valence": 0.3,
+        "firmness": 0.8
       }
     ],
     "memories": [

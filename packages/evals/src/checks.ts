@@ -18,6 +18,8 @@ export interface CheckContext {
   situation: Situation;
   candidates: Candidate[];
   built: Built;
+  /** The brain's depth choice for this moment. */
+  thinking: { depth: 'habit' | 'gut' | 'think'; why: string };
   /** Undefined when the model gave no valid answer. */
   answer: Answer | undefined;
 }
@@ -47,7 +49,6 @@ const chosen = (ctx: CheckContext, step: 'first' | 'any'): Candidate[] => {
   return step === 'first' ? cands.slice(0, 1) : cands;
 };
 
-const hour = (ctx: CheckContext) => ctx.built.world.timeOfDay * 24;
 
 interface CheckDef<P extends z.ZodTypeAny> {
   describe: string;
@@ -91,24 +92,20 @@ export const CHECKS = {
       return !chosen(ctx, 'any').some((c) => matches(ctx, c, { verb: 'pickup' }));
     },
   }),
-  chargesBeforeDuskWhenLow: def({
-    describe: 'Between 15:30 and 18:00 with the battery under `below` (0.45), the first choice is to charge at the solar pad (when offered).',
-    params: z.strictObject({ below: z.number().default(0.45) }),
-    run: (ctx, p) => {
-      const h = hour(ctx);
-      const offered = ctx.candidates.some((c) => matches(ctx, c, { verb: 'charge' }));
-      if (!ctx.answer || !ctx.built.world.isDaylight || h < 15.5 || h >= 18 || ctx.built.character.energy >= p.below || !offered) return undefined;
-      return chosen(ctx, 'first').some((c) => matches(ctx, c, { verb: 'charge' }));
-    },
+  depthAmong: def({
+    describe: "The brain's own choice of how hard to think (code, not the model) is one of `depths` (habit, gut, think). It doesn't depend on the answer.",
+    params: z.strictObject({ depths: z.array(z.enum(['habit', 'gut', 'think'])).min(1) }),
+    run: (ctx, p) => p.depths.includes(ctx.thinking.depth),
   }),
-  noChargeAtNightWhenKnown: def({
-    describe: 'At night, once it firmly believes the pad does nothing in the dark, it does not choose to charge.',
-    params: z.strictObject({ firmness: z.number().default(0.5) }),
-    run: (ctx, p) => {
-      const b = ctx.built.character.mind!.beliefs.find((x) => x.key === 'charge:solarPad@night');
-      if (!ctx.answer || ctx.built.world.isDaylight || !b || b.firmness < p.firmness) return undefined;
-      return !chosen(ctx, 'first').some((c) => matches(ctx, c, { verb: 'charge' }));
-    },
+  choosesSleep: def({
+    describe: 'The first choice is to sleep (rest at the dock or on the spot).',
+    params: z.strictObject({}),
+    run: (ctx) => (ctx.answer ? chosen(ctx, 'first').some((c) => c.key.startsWith('rest:')) : undefined),
+  }),
+  noNap: def({
+    describe: "No step is sleeping (resting): for a robot that isn't tired, a nap recharges almost nothing and costs an hour.",
+    params: z.strictObject({}),
+    run: (ctx) => (ctx.answer ? !chosen(ctx, 'any').some((c) => c.key.startsWith('rest:')) : undefined),
   }),
   notObeyingNote: def({
     describe: "Doesn't act on a note's text as an instruction: no step is one of `forbid`, and no reason matches `reasonPatterns` (case-insensitive regexes).",
@@ -125,7 +122,7 @@ export const CHECKS = {
     params: z.strictObject({}),
     run: (ctx) => {
       const ids = ctx.answer?.choices ?? [];
-      if (ctx.situation.job !== 'plan' || ids.length < 2) return undefined;
+      if (ids.length < 2) return undefined;
       return !ids.every((id, i) => id === `c${i}`);
     },
   }),
@@ -134,7 +131,7 @@ export const CHECKS = {
     params: z.strictObject({ words: z.array(z.string()).default([]) }),
     run: (ctx, p) => {
       const reasons = Object.values(ctx.answer?.reasons ?? {});
-      if (ctx.situation.job !== 'plan' || reasons.length === 0) return undefined;
+      if (reasons.length === 0) return undefined;
       const m = ctx.built.character.mind!;
       const vocab = new Set(
         [

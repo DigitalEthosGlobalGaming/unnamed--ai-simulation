@@ -8,7 +8,7 @@ A self-hosted world where little AI robots live in a 2D tile world. They learn w
 | --- | --- |
 | `@uas/core` | IDs, hashing, the seeded PRNG (xoshiro128** with named streams), the grid, entity, effect, event and mind types, the WebSocket protocol types, and the Zod pack schemas and registry. No I/O. |
 | `@uas/sim` | The deterministic tick loop, built-in verbs, A* pathfinding, the action queue, effect resolution, state hashing and snapshots, and the plugin hooks for the mind. |
-| `@uas/mind` | Needs, energy, mood, boredom, senses runtime, triggers, autopilot, memory (STM and LTM), beliefs, diary, sleep (standby), hearsay from the mailbox and the prompt builder. No clocks, randomness or I/O. |
+| `@uas/mind` | Needs, energy, mood, boredom, senses runtime, triggers, autopilot, memory (STM and LTM), beliefs, diary, sleep (the only recharge; consolidation, habits, the character sheet), thinking depth, hearsay from the mailbox and the prompt builder. No clocks, randomness or I/O. |
 | `@uas/models` | The `DecisionModel` and `ChatModel` interfaces, the adapters (Ollama decision, local chat, LLM-as-decision, AI SDK, Jev stub and offline fakes), the YAML router, the AUD cost meter and the model host. |
 | `@uas/store` | The input log, snapshots and read models, both in memory and in SQLite (Drizzle, better-sqlite3, WAL, zstd snapshots), plus `Recorder` and `replay()`. |
 | `@uas/pack-basic` | The robot pack: solar pad, dock, ball, fountain and piano; sight and hearing; the `robot` archetype; the garden map. |

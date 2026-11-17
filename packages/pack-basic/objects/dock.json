@@ -10,7 +10,6 @@
       "durationTicks": 60,
       "handler": "basic.dock",
       "params": {
-        "energy": 0.02,
         "cool": 0.05
       }
     },
@@ -19,7 +18,6 @@
       "durationTicks": 200,
       "handler": "basic.dock",
       "params": {
-        "energy": 0.004,
         "cool": 0.05
       }
     }

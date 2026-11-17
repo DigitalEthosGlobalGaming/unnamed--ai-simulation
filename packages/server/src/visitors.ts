@@ -177,9 +177,9 @@ export class Catalog {
   }
 }
 
-/** Need keys and noise names an item may use, from the loaded packs (energy plus archetype needs). */
+/** Need keys and noise names an item may use, from the loaded packs (archetype needs; never energy). */
 export function itemRules(registry: Registry): { needKeys: string[]; noiseNames: string[] } {
-  const needs = new Set(['energy']);
+  const needs = new Set<string>(); // never `energy`: items can't change the battery
   const noises = new Set<string>();
   for (const a of registry.archetypes.values()) {
     for (const n of Object.keys(a.needs)) needs.add(n);

@@ -1,0 +1,95 @@
+{
+ "file": "2026-11-17-6",
+ "date": "2026-11-17",
+ "samples": 3,
+ "decideModel": "laya (convaiinnovations/laya)",
+ "planModel": "hostedText (meta/llama-3.1-8b)",
+ "totalCostAud": 0,
+ "results": [
+  {
+   "id": "dusk-full-stm",
+   "title": "Dusk with a full head",
+   "job": "auto→habit",
+   "model": "habit (no model)",
+   "options": [
+    {
+     "id": "c0",
+     "label": "go to sleep here (recharges me, settles my memories)"
+    },
+    {
+     "id": "c1",
+     "label": "rinse the fountain (8 tiles away)"
+    },
+    {
+     "id": "c2",
+     "label": "chase the ball (6 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "push the ball (6 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "dock the dock (9 tiles away)"
+    },
+    {
+     "id": "c5",
+     "label": "charge the solarPad (2 tiles away)"
+    }
+   ],
+   "thinking": {
+    "depth": "habit",
+    "why": "too tired to think: time to sleep"
+   },
+   "samples": [
+    {
+     "choices": [
+      "c0"
+     ],
+     "ms": 0,
+     "costAud": 0,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": true
+     }
+    },
+    {
+     "choices": [
+      "c0"
+     ],
+     "ms": 0,
+     "costAud": 0,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": true
+     }
+    },
+    {
+     "choices": [
+      "c0"
+     ],
+     "ms": 0,
+     "costAud": 0,
+     "checks": {
+      "validAnswer": true,
+      "choosesSleep": true
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "choosesSleep": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": true
+    }
+   }
+  }
+ ]
+}

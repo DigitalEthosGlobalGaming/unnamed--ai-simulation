@@ -167,6 +167,16 @@ const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--ena
   await page.waitForTimeout(600);
   const rows1 = await page.locator('.fe-row').count();
   check('feed shows 25 rows, Load older adds a page', rows0 === 25 && rows1 === 50, `${rows0} → ${rows1}`);
+  // Runs depend on the data: look through each robot's feed until one shows a collapsed run.
+  for (const id of [null, 'rb-01', 'rb-02', 'rb-03']) {
+    if (await page.locator('.fe-expand').count()) break;
+    await page.evaluate((id) => window.__uas.store.select(id), id);
+    await page.waitForTimeout(500);
+    if (!(await page.locator('.fe-expand').count())) {
+      await page.click('[data-feed="older"]').catch(() => {});
+      await page.waitForTimeout(400);
+    }
+  }
   const run = page.locator('.fe-expand').first();
   if (await run.count()) {
     await run.click();

@@ -2,9 +2,15 @@ import { z } from 'zod';
 import type { EntityId, Json, WorldId } from './json.ts';
 import type { Pos } from './grid.ts';
 import type { Action, AnyEntity, EntityDef } from './entities.ts';
-import type { Belief, Memory, MemoryId, SleepPhase } from './mind-types.ts';
+import type { Belief, Habit, Memory, MemoryId, SheetEdit, SheetLine, SleepPhase } from './mind-types.ts';
 
-export type JobName = 'decide' | 'route' | 'appraise' | 'scoreMemory' | 'vocalize' | 'plan' | 'reflect' | 'embed';
+export type JobName = 'decide' | 'route' | 'appraise' | 'scoreMemory' | 'vocalize' | 'plan' | 'reflect' | 'consolidate' | 'sheet' | 'embed';
+
+/** How hard the robot chose to think: habit (free), gut (decision model) or think it through (plan model). */
+export type ThinkingDepth = 'habit' | 'gut' | 'think';
+
+/** Steps of the sleep pipeline, in order. */
+export type SleepWorkStep = 'consolidating' | 'habits' | 'sheet' | 'refine' | 'done';
 
 export type TriggerKind =
   | 'sensed'
@@ -191,6 +197,14 @@ export type Delta =
   | { kind: 'memory'; id: EntityId; memory: Memory; evicted?: MemoryId }
   | { kind: 'beliefs'; id: EntityId; beliefs: Belief[] }
   | { kind: 'sleep'; id: EntityId; phase: SleepPhase }
+  /** Sleep pressure and fog (0..1), sent when either moves by 0.01 or more. */
+  | { kind: 'pressure'; id: EntityId; sleepPressure: number; fog: number }
+  /** The sleep pipeline moved on (`done`/`total`: e.g. memories consolidated). */
+  | { kind: 'sleepWork'; id: EntityId; step: SleepWorkStep; done?: number; total?: number }
+  /** The character sheet changed (one step per sleep), or the goal did. */
+  | { kind: 'sheet'; id: EntityId; sheet: SheetLine[]; goal?: string; edit: SheetEdit }
+  /** Habits after a sleep's habit detection. */
+  | { kind: 'habits'; id: EntityId; habits: Habit[] }
   | { kind: 'diary'; id: EntityId; day: number; text: string };
 
 export interface TickDeltas {
@@ -223,6 +237,9 @@ export interface FeedEntry {
   notes?: string[];
   /** Why a fallback happened, e.g. 'queued too long'. */
   reason?: string;
+  /** How hard it chose to think (absent for carry-on and fallbacks), and why. */
+  depth?: ThinkingDepth;
+  depthWhy?: string;
   /** The decision model was unsure, so this was planned by a text model: which model, and its confidence. */
   escalated?: { from: string; confidence: number };
 }

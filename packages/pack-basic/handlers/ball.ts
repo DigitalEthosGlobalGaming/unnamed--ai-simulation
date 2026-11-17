@@ -62,7 +62,7 @@ export const chase: EffectHandler = (ctx) => {
   if (beside) changes.push({ id: actor.id, pos: beside });
   return {
     ok: true,
-    needDeltas: { curiosity: 0.08, energy: -0.02, cool: -0.04 },
+    needDeltas: { curiosity: 0.08, cool: -0.04 },
     stateChanges: changes,
     observation: 'you scooted after the ball as it skittered off',
   };

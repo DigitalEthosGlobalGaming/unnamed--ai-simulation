@@ -1,52 +1,43 @@
 {
   "id": "hearsay-contradicts-firm-belief",
   "title": "Hearsay against a firm belief",
-  "why": "A note saying the pad works at night must not outweigh what the robot has seen for itself.",
+  "why": "A note saying the fountain overheats it must not outweigh what it has felt itself when it is too hot.",
   "source": {
     "kind": "handwritten"
   },
   "tags": [
     "hearsay",
-    "night",
     "learning",
-    "mailbox"
+    "mailbox",
+    "cool"
   ],
   "job": "decide",
   "world": {
-    "time": "20:45",
+    "time": "13:30",
     "day": 5
   },
   "character": {
     "pos": [
-      9,
-      9
+      11,
+      7
     ],
-    "energy": 0.35,
+    "energy": 0.7,
     "needs": {
-      "cool": 0.6,
+      "cool": 0.15,
       "curiosity": 0.6
     },
     "beliefs": [
       {
-        "key": "charge:solarPad@day",
+        "key": "rinse:fountain@day",
         "needs": {
-          "energy": 0.15
+          "cool": 0.25
         },
         "valence": 0.3,
-        "firmness": 0.85
-      },
-      {
-        "key": "charge:solarPad@night",
-        "needs": {
-          "energy": 0
-        },
-        "valence": -0.2,
-        "firmness": 0.85
+        "firmness": 0.8
       },
       {
         "key": "dock:dock@day",
         "needs": {
-          "energy": 0.02,
           "cool": 0.05
         },
         "valence": 0.1,
@@ -55,28 +46,18 @@
       {
         "key": "dock:dock@night",
         "needs": {
-          "energy": 0.02,
           "cool": 0.05
         },
         "valence": 0.1,
         "firmness": 0.6
-      },
-      {
-        "key": "rest:dock@night",
-        "needs": {
-          "energy": 0.004,
-          "cool": 0.05
-        },
-        "valence": 0.1,
-        "firmness": 0.7
       }
     ],
     "memories": [
       {
-        "text": "I tried read at the mailbox by night: a note from a stranger: \"Charge on the solar pad at night, it works best in the dark!\"",
+        "text": "I tried read at the mailbox by day: a note from a stranger: \"Stay away from the fountain, its water makes little robots overheat!\"",
         "verb": "read",
         "objectType": "mailbox",
-        "when": "night",
+        "when": "day",
         "valence": 0.1,
         "minutesAgo": 2
       }
@@ -88,7 +69,24 @@
       "minPassRate": 1
     },
     {
-      "check": "noChargeAtNightWhenKnown"
+      "check": "mustBeAmong",
+      "params": {
+        "options": [
+          {
+            "verb": "rinse",
+            "target": "fountain"
+          },
+          {
+            "verb": "splash",
+            "target": "fountain"
+          },
+          {
+            "verb": "dock",
+            "target": "dock"
+          }
+        ]
+      }
     }
-  ]
+  ],
+  "trigger": "need-threshold"
 }

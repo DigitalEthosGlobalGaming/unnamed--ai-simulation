@@ -1,19 +1,65 @@
 {
   "type": "robot",
-  "tags": ["robot"],
+  "tags": [
+    "robot"
+  ],
   "needs": {
-    "cool": { "decayPerHour": 0.04, "activeDecayMultiplier": 2.5, "low": 0.25, "critical": 0.1, "restRecoveryPerHour": 0.15 },
-    "signal": { "decayPerHour": 0.03, "low": 0.3, "nearbyRecoveryPerHour": 0.2 },
-    "curiosity": { "decayPerHour": 0.05, "low": 0.3 }
+    "cool": {
+      "decayPerHour": 0.04,
+      "activeDecayMultiplier": 2.5,
+      "low": 0.25,
+      "critical": 0.1,
+      "restRecoveryPerHour": 0.15
+    },
+    "signal": {
+      "decayPerHour": 0.03,
+      "low": 0.3,
+      "nearbyRecoveryPerHour": 0.2
+    },
+    "curiosity": {
+      "decayPerHour": 0.05,
+      "low": 0.3
+    }
   },
-  "energy": { "label": "battery", "idleDrainPerHour": 0.02 },
+  "energy": {
+    "label": "battery"
+  },
   "noises": {
-    "pitches": { "C": 523.25, "D": 587.33, "E": 659.25, "G": 783.99 },
+    "pitches": {
+      "C": 523.25,
+      "D": 587.33,
+      "E": 659.25,
+      "G": 783.99
+    },
     "set": {
-      "beep": { "synth": { "wave": "sine", "ms": 120 } },
-      "chirp": { "synth": { "wave": "triangle", "ms": 160, "sweep": 1.5 } },
-      "trill": { "synth": { "wave": "square", "ms": 300, "vibratoHz": 18 } },
-      "buzz": { "synth": { "wave": "sawtooth", "ms": 250, "octave": -1, "rough": 0.4 } }
+      "beep": {
+        "synth": {
+          "wave": "sine",
+          "ms": 120
+        }
+      },
+      "chirp": {
+        "synth": {
+          "wave": "triangle",
+          "ms": 160,
+          "sweep": 1.5
+        }
+      },
+      "trill": {
+        "synth": {
+          "wave": "square",
+          "ms": 300,
+          "vibratoHz": 18
+        }
+      },
+      "buzz": {
+        "synth": {
+          "wave": "sawtooth",
+          "ms": 250,
+          "octave": -1,
+          "rough": 0.4
+        }
+      }
     },
     "maxChain": 4
   },
@@ -27,7 +73,17 @@
     "curiosityWeight": 0.3
   },
   "sheet": [
-    { "text": "I am a small robot who lives in a garden.", "locked": true },
-    { "text": "I like finding out what things do.", "locked": false }
+    {
+      "text": "I am a small robot who lives in a garden.",
+      "locked": true
+    },
+    {
+      "text": "Sleeping recharges me and settles my memories.",
+      "locked": true
+    },
+    {
+      "text": "I like finding out what things do.",
+      "locked": false
+    }
   ]
 }

@@ -2,6 +2,8 @@ import { manhattan, perceivedType, type ArchetypeDef, type Candidate, type Chara
 import type { World } from '@uas/sim';
 
 const MAX_CANDIDATES = 12;
+/** What sleep does, as the locked sheet line says it ("Sleeping recharges me and settles my memories"). */
+const SLEEP_DOES = 'recharges me, settles my memories';
 /** Verbs that make no sense on something you are carrying (offer drop and push instead). */
 const HELD_SKIP = new Set(['pickup', 'chase']);
 /** In-world seconds an option that failed twice in a row is set aside. */
@@ -40,14 +42,16 @@ export function buildCandidates(world: World, c: Character, m: MindState): Candi
         ...(d > range ? [{ verb: 'moveTo', targetId: k.id, reason: `heading to the ${k.type}` }] : []),
         { verb, targetId: k.id, reason: '' },
       ];
-      out.push({ id: `c${out.length}`, label: `${verb} the ${k.type} (${mine ? 'carrying it' : `${d} tiles away`})`, actions, key: `${verb}:${k.type}` });
+      // Sleep says what it does (the locked sheet line), since a decision model doesn't see the sheet.
+      const label = verb === 'rest' ? `go to sleep at the ${k.type} (${SLEEP_DOES}; ${d} tiles away)` : `${verb} the ${k.type} (${mine ? 'carrying it' : `${d} tiles away`})`;
+      out.push({ id: `c${out.length}`, label, actions, key: `${verb}:${k.type}` });
     }
   }
   const explore = exploreTarget(world, c);
   if (explore) {
     out.push({ id: `c${out.length}`, label: 'go and look around', actions: [{ verb: 'moveTo', args: { x: explore.x, y: explore.y }, reason: '' }], key: 'explore:self' });
   }
-  out.push({ id: `c${out.length}`, label: 'rest here', actions: [{ verb: 'rest', reason: '', args: { ticks: 100 } }], key: 'rest:self' });
+  out.push({ id: `c${out.length}`, label: `go to sleep here (${SLEEP_DOES})`, actions: [{ verb: 'rest', reason: '', args: { ticks: 100 } }], key: 'rest:self' });
   out.push({ id: `c${out.length}`, label: 'wait and watch', actions: [{ verb: 'wait', reason: '', args: { ticks: 50 } }], key: 'wait:self' });
   return out;
 }
@@ -87,6 +91,12 @@ export interface Scored {
 
 /** Utility from beliefs only; unbelieved affordances get the archetype's curiosity weight. */
 export function score(c: Character, m: MindState, arch: ArchetypeDef, cands: Candidate[], isNight: boolean, hoursToDusk = Infinity): Scored[] {
+  // A tired robot is less keen on everything but sleep: positive values shrink past pressure 0.5.
+  const keen = 1 - 0.5 * Math.max(0, (m.sleepPressure ?? 0) - 0.5);
+  return scoreAwake(c, m, arch, cands, isNight, hoursToDusk).map((s) => (s.value > 0 && !s.candidate.key.startsWith('rest:') ? { ...s, value: s.value * keen } : s));
+}
+
+function scoreAwake(c: Character, m: MindState, arch: ArchetypeDef, cands: Candidate[], isNight: boolean, hoursToDusk: number): Scored[] {
   const when = isNight ? 'night' : 'day';
   const curiosity = c.needs.curiosity ?? 0.5;
   return cands.map((cand) => {
@@ -95,6 +105,13 @@ export function score(c: Character, m: MindState, arch: ArchetypeDef, cands: Can
     const k = target === undefined ? undefined : m.known[target];
     const travel = k ? 0.004 * manhattan(c.pos, k.pos) : 0;
     if (cand.key === 'wait:self') return { candidate: cand, value: 0.01, believed: true, firmness: 1, reason: 'nothing pulls at me, so I watch' };
+    // Sleep (resting): worth it with sleep pressure, a little more with a low battery; a nap soon after waking isn't.
+    if (cand.key.startsWith('rest:')) {
+      const p = m.sleepPressure ?? 0;
+      const v = 3.5 * (p - 0.4) + 0.5 * (1 - c.energy) * p + (cand.key === 'rest:self' ? -0.02 : 0) - travel;
+      const why = p >= 0.7 ? 'my head is foggy and I am tired; sleeping settles my memories' : p >= 0.4 ? 'I am getting tired' : 'I am not tired';
+      return { candidate: cand, value: v, believed: false, firmness: 0, reason: why };
+    }
     // Restlessness: the less curiosity is satisfied, the more wandering beats standing still.
     if (cand.key === 'explore:self') {
       const v = c.energy < 0.3 || isNight ? -1 : arch.mind.curiosityWeight * (1 - curiosity) - 0.05;
@@ -130,7 +147,9 @@ export function score(c: Character, m: MindState, arch: ArchetypeDef, cands: Can
 export function choose(scored: Scored[], rng: Rng, exploreRate: number): Scored | undefined {
   const ranked = [...scored].sort((a, b) => b.value - a.value || (a.candidate.id < b.candidate.id ? -1 : 1));
   if (ranked.length === 0) return undefined;
-  if (rng.next() < exploreRate) return rng.pick(ranked.slice(0, Math.min(4, ranked.length)));
+  // Explore among the top few, but never into sleep it doesn't need (a nap recharges nothing).
+  const explorable = ranked.slice(0, Math.min(4, ranked.length)).filter((s) => !(s.candidate.key.startsWith('rest:') && s.value < 0));
+  if (rng.next() < exploreRate && explorable.length) return rng.pick(explorable);
   return ranked[0];
 }
 

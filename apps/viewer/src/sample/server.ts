@@ -39,7 +39,7 @@ function sampleCatalog(): WorldCatalog {
     secondsPerTick: SECONDS_PER_TICK,
     dailyCapAud: 2,
     energyFloor: 0.2,
-    energyPerAud: 1.6,
+    energyPerAud: 5,
     models: [
       { id: 'jev-1.13', adapter: 'jev', model: 'jev-1.13', provider: 'offline', local: false },
       { id: 'tev1:0.8b', adapter: 'ollama-decision', model: 'tev1:0.8b', provider: 'ollama', local: true },
@@ -82,7 +82,7 @@ export function stateOf(s: SimState): WorldStateView {
       energy: r.energy,
       queue: [],
       ...(r.current && { current: { action: { verb: r.current.verb, ...(r.current.targetId && { targetId: r.current.targetId }), reason: r.current.reason }, startedTick: r.current.startedTick } }),
-      mind: { mood: { valence: r.valence, arousal: r.arousal, word: moodWord(r), bias: 0 }, beliefs: r.beliefs.map(toCoreBelief), sleep: r.asleep ? 'asleep' : 'awake' },
+      mind: { mood: { valence: r.valence, arousal: r.arousal, word: moodWord(r), bias: 0 }, beliefs: r.beliefs.map(toCoreBelief), sleep: r.asleep ? 'asleep' : 'awake', sleepPressure: r.pressure, fog: r.fog, ...(r.work && { sleepWork: { ...r.work } }) },
     } as never;
   }
   return {
@@ -141,6 +141,9 @@ function deltasOf(s: SimState, out: StepOutput, prev: Map<string, { x: number; y
         d.push({ kind: 'needs', id: c.id, values: { energy: c.mind.energy, ...c.mind.needs } });
         d.push({ kind: 'mood', id: c.id, valence: c.mind.valence, arousal: c.mind.arousal, word: c.mind.mood });
         d.push({ kind: 'sleep', id: c.id, phase: c.mind.asleep ? 'asleep' : 'awake' });
+        // Iteration 2: sleep pressure and fog, and what sleep is doing.
+        d.push({ kind: 'pressure', id: c.id, sleepPressure: c.mind.sleepPressure, fog: c.mind.fog });
+        if (c.mind.sleepWork) d.push({ kind: 'sleepWork', id: c.id, ...c.mind.sleepWork });
         break;
       case 'action': {
         const was = lastAction.get(c.id);

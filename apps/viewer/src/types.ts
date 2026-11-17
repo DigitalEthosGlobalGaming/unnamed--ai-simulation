@@ -54,7 +54,23 @@ export interface MindView {
   arousal: number;
   mood: string;
   asleep: boolean;
+  /** Sleep pressure 0..1 (time awake and short-term memory fullness); recharge in sleep scales with it. */
+  sleepPressure?: number;
+  /** Short-term memory fullness as the robot feels it, 0..1. */
+  fog?: number;
+  /** What sleep is doing now, while asleep. */
+  sleepWork?: SleepWork;
 }
+
+export type SleepStep = 'consolidating' | 'habits' | 'sheet' | 'refine' | 'done';
+export interface SleepWork {
+  step: SleepStep;
+  done?: number;
+  total?: number;
+}
+
+/** How hard the robot chose to think for a decision (iteration 2). */
+export type Depth = 'habit' | 'gut' | 'think';
 
 export interface CurrentAction {
   verb: string;

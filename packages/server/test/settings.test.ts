@@ -26,6 +26,7 @@ describe('live world settings', () => {
     rt.start();
     const s = rt.settings();
     expect(s.schema.map((f) => f.key)).toEqual(['ticksPerRealSecond', 'moveSecondsPerTile', 'timeScale', 'paused', 'dailyCapAud', 'energyPerAud', 'hostedModels', 'needDecayMultiplier', 'escalateBelow',
+      'batteryPlanAbove', 'batteryGutAbove', 'batteryHabitAbove', 'batteryTopUp',
       'catalogEnabled', 'airdropMaxActivePerVisitor', 'airdropCooldownSeconds', 'airdropWorldCap', 'airdropDefaultExpiry',
       'mailCapacity', 'mailExpirySeconds', 'mailMaxWaitingPerVisitor', 'mailCooldownSeconds']);
     for (const f of s.schema) expect(f.help.length).toBeGreaterThan(10);

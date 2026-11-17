@@ -34,6 +34,15 @@ const TIER_MEANS: Record<Tier, string> = {
   llm: 'A text model chose or planned this.',
   fallback: 'No model answered in time, so a safe default was used.',
 };
+/** The robot's own choice of how hard to think (iteration 2). */
+type Depth = 'habit' | 'gut' | 'think';
+const DEPTH_SHORT: Record<Depth, string> = { habit: 'Habit', gut: 'Gut', think: 'Think' };
+const DEPTH_MEANS: Record<Depth, string> = {
+  habit: 'Habit: did what it usually does here. Free.',
+  gut: 'Gut: a quick call to the decision model.',
+  think: 'Think it through: asked the plan model for a plan, the dearest choice.',
+};
+const depthOf = (e: FeedEntry) => (e as FeedEntry & { depth?: Depth; depthWhy?: string });
 const VERB_WORDS: Record<string, string> = { pickup: 'pick up', putdown: 'put down', vocalize: 'make noises', moveTo: 'go to' };
 
 function tierBars(tier: Tier): string {
@@ -493,7 +502,7 @@ export class FeedView {
         : `<button type="button" class="rev-btn" data-action="rev" data-key="${k}" data-feed="rev" aria-pressed="${on}" aria-label="Revision ${n}${warn ? ', needs attention' : ''}: show on the plan and timeline">${deltaSvg(warn, on)}<span>${n}</span></button>`;
     return `${rev}
       <span class="fe-time">${opts.time}</span>
-      <button type="button" class="tier-btn tier-${mixed ? 'mixed' : e.tier}" data-feed="tier" data-key="${k}" aria-expanded="false" aria-controls="tier-pop" aria-label="${mixed ? 'Mixed tiers' : TIER_LABEL[e.tier]}${e.modelId && !mixed ? `, ${esc(e.modelId)}` : ''}: model and cost details">${tierBars(e.tier)}<span>${mixed ? 'Mixed' : TIER_SHORT[e.tier]}</span></button>
+      <button type="button" class="tier-btn tier-${mixed ? 'mixed' : e.tier}" data-feed="tier" data-key="${k}" aria-expanded="false" aria-controls="tier-pop" aria-label="${mixed ? 'Mixed tiers' : `${depthOf(e).depth ? `${DEPTH_SHORT[depthOf(e).depth!]}, ` : ''}${TIER_LABEL[e.tier]}`}${e.modelId && !mixed ? `, ${esc(e.modelId)}` : ''}: model and cost details">${tierBars(e.tier)}<span>${mixed ? 'Mixed' : depthOf(e).depth ? DEPTH_SHORT[depthOf(e).depth!] : TIER_SHORT[e.tier]}</span></button>
       <span class="fe-cost">${cost}</span>`;
   }
 
@@ -573,7 +582,8 @@ class TierPopover {
     this.el.addEventListener('mouseleave', () => this.softHide());
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.owner) {
-        const o = this.owner;
+        const key = this.owner.dataset['key'];
+        const o = this.owner.isConnected ? this.owner : (document.querySelector<HTMLElement>(`[data-feed="tier"][data-key="${key}"]`) ?? this.owner);
         this.hide();
         // Returning focus must not reopen it through the focus handler.
         this.quiet = true;
@@ -704,6 +714,9 @@ class TierPopover {
       rows.push(['Run', `${run.length} decisions: ${[...by].map(([t, c]) => `${c} ${TIER_LABEL[t]}`).join(', ')} · ${aud ? `${fmtAud(aud)} in all` : 'all free'}. Details below are the newest.`]);
     }
     rows.push(
+      ...(depthOf(e).depth
+        ? ([['Chose', `<strong>${DEPTH_MEANS[depthOf(e).depth!]}</strong>${depthOf(e).depthWhy ? ` <span class="tp-sub">(${esc(depthOf(e).depthWhy!)})</span>` : ''}`]] as [string, string][])
+        : []),
       ['Tier', `<strong>${TIER_LABEL[e.tier]}</strong>. ${TIER_MEANS[e.tier]}`],
       ['Model', model],
       ...(provider ? ([['Provider', provider]] as [string, string][]) : []),

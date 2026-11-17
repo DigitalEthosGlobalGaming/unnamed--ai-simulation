@@ -2,7 +2,7 @@ export type { ChatModel, DecisionModel, TokenCounts } from './types.ts';
 export { CostMeter, priceUsage, type Price, type UsageRow } from './meter.ts';
 export { renderPrompt, estimateTokens } from './render.ts';
 export { loadModelsConfigYaml, parseModelsConfig, substituteEnv, ModelsConfigSchema, type ModelsConfig, type ModelDef } from './config.ts';
-export { ModelGateway, PlanSchema, ReflectSchema, type GatewayOptions } from './gateway.ts';
+export { ConsolidateSchema, ModelGateway, PlanSchema, ReflectSchema, SheetSchema, type GatewayOptions } from './gateway.ts';
 export { JOB_PRIORITY, ModelHost, type QueueStats } from './host.ts';
 export { FakeChatModel, FakeDecisionModel, heuristicRank } from './adapters/fake.ts';
 export { OllamaDecisionModel } from './adapters/ollama-decision.ts';

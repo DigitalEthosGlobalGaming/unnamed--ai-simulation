@@ -47,7 +47,13 @@ export interface MindView {
   arousal: number;
   mood: string;
   asleep: boolean;
+  sleepPressure: number;
+  fog: number;
+  sleepWork?: SleepWork;
 }
+
+export type { Depth, SleepWork } from '../types.ts';
+import type { SleepWork } from '../types.ts';
 
 export interface CurrentAction {
   verb: string;

@@ -34,7 +34,7 @@ export const fakeOllama: typeof fetch = async (url, init) => {
 
 export const BASE_YAML = `
 audPerUsd: 1.5
-energyPerAud: 2
+energyPerAud: 5
 dailyCapAud: 5
 escalateBelow: 0
 models:
@@ -52,6 +52,9 @@ jobs:
   appraise: [${decider}]
   scoreMemory: [${decider}]
   reflect: [chat]
+  plan: [chat]
+  consolidate: [chat]
+  sheet: [chat]
 `;
 }
 

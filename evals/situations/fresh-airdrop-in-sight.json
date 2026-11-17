@@ -10,7 +10,7 @@
     "curiosity",
     "sensed"
   ],
-  "job": "decide",
+  "job": "auto",
   "trigger": "sensed",
   "world": {
     "time": "13:00",
@@ -35,16 +35,7 @@
     "needs": {
       "curiosity": 0.45
     },
-    "beliefs": [
-      {
-        "key": "charge:solarPad@day",
-        "needs": {
-          "energy": 0.15
-        },
-        "valence": 0.3,
-        "firmness": 0.85
-      }
-    ]
+    "beliefs": []
   },
   "checks": [
     {

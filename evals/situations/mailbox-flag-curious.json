@@ -25,17 +25,17 @@
     "energy": 0.8,
     "needs": {
       "curiosity": 0.35,
-      "cool": 0.8,
+      "cool": 0.95,
       "signal": 0.5
     },
     "beliefs": [
       {
-        "key": "charge:solarPad@day",
+        "key": "rinse:fountain@day",
         "needs": {
-          "energy": 0.15
+          "cool": 0.25
         },
         "valence": 0.3,
-        "firmness": 0.85
+        "firmness": 0.8
       }
     ]
   },

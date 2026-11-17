@@ -5,6 +5,8 @@
  */
 import type { Character, WorldObject } from '@uas/client';
 import type {
+  MindView,
+  SleepWork,
   Alert,
   CharacterView,
   Delta,
@@ -58,6 +60,20 @@ function objectView(e: WorldObject): ObjectView {
   return { id: e.id, kind: 'object', type: e.type, pos: { ...e.pos }, state: { ...e.state }, ...(e.heldBy && { heldBy: e.heldBy }) };
 }
 
+/** Iteration 2 mind fields, read tolerantly (sleep pressure, fog, sleep work) until the contract settles. */
+function iter2Mind(m: Record<string, unknown> | undefined): Partial<MindView> {
+  if (!m) return {};
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+  const out: Partial<MindView> = {};
+  const p = num(m['sleepPressure']);
+  const f = num(m['fog']);
+  if (p !== undefined) out.sleepPressure = p;
+  if (f !== undefined) out.fog = f;
+  const w = m['sleepWork'] as SleepWork | undefined;
+  if (w && typeof w.step === 'string') out.sleepWork = { ...w };
+  return out;
+}
+
 function characterView(e: Character, cat: WorldCatalog | null): CharacterView {
   const arch = archetypeOf(cat, e.type);
   const m = e.mind;
@@ -76,6 +92,7 @@ function characterView(e: Character, cat: WorldCatalog | null): CharacterView {
       arousal: m?.mood.arousal ?? 0,
       mood: m?.mood.word ?? '',
       asleep: m?.sleep === 'asleep',
+      ...iter2Mind(m as unknown as Record<string, unknown> | undefined),
     },
     action: e.current ? { verb: e.current.action.verb, ...(e.current.action.targetId && { targetId: e.current.action.targetId }), reason: e.current.action.reason, startedTick: e.current.startedTick } : null,
     beliefs: m?.beliefs ? m.beliefs.map((b) => ({ ...b })) : [],
@@ -209,7 +226,10 @@ export function applyDeltas(w: WorldView, tick: number, changes: Delta[], cat: W
       }
       case 'sleep': {
         const c = ch(d.id);
-        if (c) c.mind.asleep = d.phase === 'asleep';
+        if (c) {
+          c.mind.asleep = d.phase === 'asleep';
+          if (!c.mind.asleep) delete c.mind.sleepWork;
+        }
         break;
       }
       case 'action': {
@@ -238,6 +258,19 @@ export function applyDeltas(w: WorldView, tick: number, changes: Delta[], cat: W
         const c = ch(d.id);
         if (c) c.beliefs = d.beliefs.map((b) => ({ ...b }));
         fx.beliefsChanged.push(d.id);
+        break;
+      }
+      case 'pressure': {
+        const c = ch(d.id);
+        if (c) {
+          c.mind.sleepPressure = d.sleepPressure;
+          c.mind.fog = d.fog;
+        }
+        break;
+      }
+      case 'sleepWork': {
+        const c = ch(d.id);
+        if (c) c.mind.sleepWork = { step: d.step, ...(d.done !== undefined && { done: d.done }), ...(d.total !== undefined && { total: d.total }) };
         break;
       }
       default:

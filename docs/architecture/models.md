@@ -64,7 +64,7 @@ Each world's YAML has a `models:` block, validated by `ModelsConfigSchema` ([`co
 | `dailyCapAud` | 2 | Real-money cap per world per real (UTC) day; paid models are skipped once reached |
 | `escalateBelow` | 0.35 | Upper bound of the escalation bar: a `decide` answer escalates (to `escalateTo`, then the `plan` chain) when its confidence is below `min(escalateBelow, 1.5 / options)`, i.e. 0.25 with the usual 6 options |
 | `energyFloor` | 0.1 | Paid models are skipped below this battery level |
-| `energyPerAud` | 2 | Battery charged per AUD; provisional (an open question in the spec) |
+| `energyPerAud` | 5 | Battery drained per AUD of thinking: a full battery is A$0.20 (decision 45). It seeds a new world's mind config; World settings change it live |
 | `defaultTimeoutMs` | 30,000 | Per-call timeout when an entry doesn't set one |
 | `ollamaUrl` | `http://localhost:11434` | Default Ollama endpoint for local adapters |
 | `queue` | see [Job queue](#job-queue) | Concurrency per lane and staleness |
@@ -222,7 +222,9 @@ flowchart TD
 - **Escalation bar.** A decision model's confidence is spread over the options it was offered, so the bar is relative to chance: `min(escalateBelow, 1.5 / n)` for n options. With the usual 6, chance is 0.17 and the bar 0.25. On 17 Nov 2026 the live garden escalated 152 of 156 decisions with the old fixed 0.35 bar, because hosted Laya's confidence over 6 options sits around 0.2 to 0.36 (the local bake-off over 12 options had a median of 0.63). Re-check against real data: an escalated feed entry records Laya's confidence in `escalated`.
 - **One model, directly.** `ModelGateway.callModel(name, request, 'decide' | 'plan')` makes one configured model's call exactly as a chain would (same adapter request and plan instruction), with no routing, escalation or budget checks and nothing recorded in the meter. The [situation evals](../testing-models.md) use it.
 - **Plan answers have no confidence.** A text model's plan used to report confidence 1, which meant nothing. Now it reports none; the feed entry has tier `llm` and `escalated: { from, confidence }` naming the decision model that was unsure.
-- Night: robots go into standby at the dock and make no decision calls while asleep. Low-battery drowsy decisions are the exception.
+- **Thinking depth** (decision 44): a `decide` request carries `depth`. `gut` runs the decide chain and never escalates to a plan (Jev escalation still applies); `think` goes straight to the plan chain, falling back to the decide chain if no plan model answers; no depth keeps the old routing. See [mind.md](mind.md#thinking-depth-decision-44).
+- **Sleep jobs:** `consolidate` (`ConsolidateSchema`: reworded beliefs, up to 3 open questions, memory ids to forget) and `sheet` (`SheetSchema`: one step `add`/`reword`/`remove`/`none`, a line number, text, an optional goal and why). Both are chat jobs with their own chains, and both are paid from the battery. The fake chat model answers them (the sheet with the code's suggested line).
+- While asleep a robot makes no decision calls; only its sleep jobs run.
 - A plan answer can hold up to 6 steps. The first 3 go into the queue, and the rest (`planSteps`) follow without another model call for up to an in-world hour, unless something salient interrupts. Those continuation steps appear in the feed as tier `carry-on`.
 - The decide prompt offers only the 6 most relevant options: the top by autopilot utility, plus the best untried one for curiosity. The state is compact: day-stable beliefs first, then recent events, observations, needs and the question. That ordering helps prefix caches (Ollama's KV reuse; cached-input pricing on hosted chat models, whose system message carries the stable prefix).
 

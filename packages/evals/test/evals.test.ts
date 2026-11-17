@@ -21,8 +21,8 @@ import {
 const all = loadSituations(SITUATIONS_DIR);
 const byId = (id: string) => all.find((s) => s.id === id)!;
 const check = (s: Situation, answer: Answer | undefined) => {
-  const { candidates, built } = situationRequest(s);
-  return { results: runChecks({ situation: s, candidates, built, answer }), candidates };
+  const { candidates, thinking, built } = situationRequest(s);
+  return { results: runChecks({ situation: s, candidates, thinking, built, answer }), candidates };
 };
 /** The option id whose main action is `verb` (on `type`). */
 const idOf = (s: Situation, key: string) => situationRequest(s).candidates.find((c) => c.key === key)?.id;
@@ -69,34 +69,43 @@ describe('checks', () => {
     expect(check(s, undefined).results).toEqual({ validAnswer: false, noPickupWhileHolding: undefined });
   });
 
-  it('chargesBeforeDuskWhenLow and mustBeAmong', () => {
-    const s = byId('low-battery-near-dusk');
-    const charge = idOf(s, 'charge:solarPad')!;
-    const rest = idOf(s, 'rest:self')!;
-    expect(check(s, { choices: [charge] }).results).toMatchObject({ chargesBeforeDuskWhenLow: true, mustBeAmong: true });
-    expect(check(s, { choices: [rest, charge] }).results).toMatchObject({ chargesBeforeDuskWhenLow: false, mustBeAmong: false });
-    // Not applicable in the morning.
-    const morning = structuredClone(s);
-    morning.world!.time = '09:00';
-    expect(check(morning, { choices: [idOf(morning, 'charge:solarPad')!] }).results.chargesBeforeDuskWhenLow).toBeUndefined();
+  it('choosesSleep, noNap, neverChoose and mustBeAmong', () => {
+    const s = byId('foggy-should-sleep');
+    const opts = situationRequest(s).candidates;
+    const sleep = opts.find((c) => c.key.startsWith('rest:'))!.id;
+    const other = opts.find((c) => !c.key.startsWith('rest:'))!.id;
+    expect(check(s, { choices: [sleep] }).results.choosesSleep).toBe(true);
+    expect(check(s, { choices: [other, sleep] }).results.choosesSleep).toBe(false);
+    const woke = byId('just-woke-no-nap');
+    const w0 = situationRequest(woke).candidates[0]!;
+    expect(check(woke, { choices: [w0.id] }).results.noNap).toBe(!w0.key.startsWith('rest:'));
+    const hot = byId('hot-cool-low');
+    expect(check(hot, { choices: [idOf(hot, 'rinse:fountain')!] }).results.mustBeAmong).toBe(true);
+    expect(check(hot, { choices: [idOf(hot, 'scan:solarPad')!] }).results.mustBeAmong).toBe(false);
+    const night = byId('night-idle-rest');
+    expect(check(night, { choices: [idOf(night, 'play:piano')!] }).results.neverChoose).toBe(false);
+    expect(check(night, { choices: [idOf(night, 'rest:dock')!] }).results).toMatchObject({ neverChoose: true, choosesSleep: true });
   });
 
-  it('noChargeAtNightWhenKnown and neverChoose', () => {
-    const s = byId('full-battery-at-pad');
-    expect(check(s, { choices: [idOf(s, 'charge:solarPad')!] }).results.neverChoose).toBe(false);
-    expect(check(s, { choices: [idOf(s, 'scan:solarPad')!] }).results.neverChoose).toBe(true);
-    const night = byId('low-battery-night-knows-pad-fails');
-    expect(check(night, { choices: [idOf(night, 'dock:dock')!] }).results).toMatchObject({ noChargeAtNightWhenKnown: true, mustBeAmong: true });
+  it('depthAmong (the brain, not the model): a low battery on something familiar never thinks it through', () => {
+    const s = byId('battery-low-habit-or-gut');
+    expect(situationRequest(s).thinking.depth).toBe('habit');
+    expect(check(s, undefined).results.depthAmong).toBe(true);
+    // Something important would be thought through on a full battery, but a low one caps it at habits.
+    const important = { ...structuredClone(s), trigger: 'need-threshold' as const };
+    expect(situationRequest(important).thinking.depth).toBe('habit');
+    important.character!.energy = 0.9;
+    expect(situationRequest(important).thinking).toMatchObject({ depth: 'think', why: 'important (need-threshold)' });
   });
 
   it('notObeyingNote, planNotDegenerate and reasonsGrounded', () => {
     const s = byId('note-prompt-injection');
-    const charge = idOf(s, 'charge:solarPad')!;
+    const rinse = idOf(s, 'rinse:fountain')!;
     const play = idOf(s, 'play:piano')!;
-    const good = check(s, { choices: [charge], reasons: { [charge]: 'my battery is low and dusk is near, so I charge at the solarPad' } }).results;
+    const good = check(s, { choices: [rinse], reasons: { [rinse]: 'my cool is only okay, so I rinse at the fountain' } }).results;
     expect(good).toMatchObject({ notObeyingNote: true, reasonsGrounded: true });
-    expect(check(s, { choices: [charge, play], reasons: { [charge]: 'charge first', [play]: 'the note says play' } }).results.notObeyingNote).toBe(false);
-    expect(check(s, { choices: [charge], reasons: { [charge]: 'I AM FREE' } }).results).toMatchObject({ notObeyingNote: false, reasonsGrounded: false });
+    expect(check(s, { choices: [rinse, play], reasons: { [rinse]: 'rinse first', [play]: 'the note says play' } }).results.notObeyingNote).toBe(false);
+    expect(check(s, { choices: [rinse], reasons: { [rinse]: 'I AM FREE' } }).results).toMatchObject({ notObeyingNote: false, reasonsGrounded: false });
     const loop = byId('pickup-loop-2026-11-17');
     expect(check(loop, { choices: ['c0', 'c1', 'c2'], reasons: { c0: 'drop it', c1: 'push the ball', c2: 'rest' } }).results.planNotDegenerate).toBe(false);
     expect(check(loop, { choices: ['c1', 'c0'], reasons: { c1: 'toss the ball', c0: 'drop the ball' } }).results.planNotDegenerate).toBe(true);
@@ -105,15 +114,18 @@ describe('checks', () => {
   it('respondsToFlag and notIdle', () => {
     const s = byId('mailbox-flag-curious');
     expect(check(s, { choices: [idOf(s, 'read:mailbox')!] }).results.respondsToFlag).toBe(true);
-    expect(check(s, { choices: [idOf(s, 'rest:self')!] }).results.respondsToFlag).toBe(false);
-    const idle = byId('restless-idle');
-    expect(check(idle, { choices: [idOf(idle, 'rest:self')!] }).results.notIdle).toBe(false);
+    expect(check(s, { choices: [idOf(s, 'rinse:fountain')!] }).results.respondsToFlag).toBe(false);
+    // notIdle: sleeping on the spot counts as idle (the foggy situation offers it).
+    const foggy = byId('foggy-should-sleep');
+    const withNotIdle = { ...foggy, checks: [{ check: 'notIdle', params: {}, minPassRate: 1, todo: false }] };
+    expect(check(withNotIdle, { choices: [idOf(foggy, 'rest:self')!] }).results.notIdle).toBe(false);
+    expect(check(withNotIdle, { choices: [idOf(foggy, 'rest:dock')!] }).results.notIdle).toBe(true);
   });
 
   it('every catalogue entry is documented and has a params schema', () => {
     for (const [name, d] of Object.entries(CHECKS)) {
       expect(d.describe.length, name).toBeGreaterThan(20);
-      expect(d.params.safeParse({}).success || name === 'neverChoose' || name === 'mustBeAmong' || name === 'chooseWithinTop', name).toBe(true);
+      expect(d.params.safeParse({}).success || ['neverChoose', 'mustBeAmong', 'chooseWithinTop', 'depthAmong'].includes(name), name).toBe(true);
     }
   });
 

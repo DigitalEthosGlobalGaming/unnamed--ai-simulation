@@ -88,8 +88,8 @@ describe('M1: scripted robot in the garden', () => {
     expect(rejected.map((d) => d.kind === 'action' && d.reason)).toEqual(['out of range', 'unknown note "honk-C"']);
   });
 
-  it('charges the battery at the solar pad in daylight', () => {
-    expect(a.energyAfterCharge[0]).toBeCloseTo(0.9);
+  it('the solar pad charges nothing any more: physical actions leave the battery alone (iteration 2)', () => {
+    expect(a.energyAfterCharge[0]).toBeCloseTo(0.75);
   });
 
   it('produces identical state hashes across two runs', () => {

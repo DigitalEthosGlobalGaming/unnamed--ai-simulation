@@ -1612,7 +1612,16 @@ export class Scene {
     const compact = L.compact;
     const bw = compact ? 178 : 196;
     const rowH = compact ? 18 : 17;
-    const bh = (compact ? 10 : 14) + rowH * 5 + (compact ? 0 : rowH);
+    // Battery and needs, then (iteration 2) sleep pressure and fog, which read worse as they rise.
+    const gauges: [string, number, number, boolean][] = [
+      ['BAT', c.mind.energy, 0.2, false],
+      ['COOL', c.mind.needs['cool'] ?? 0, 0.25, false],
+      ['SIG', c.mind.needs['signal'] ?? 0, 0.3, false],
+      ['CUR', c.mind.needs['curiosity'] ?? 0, 0.3, false],
+      ...(c.mind.sleepPressure !== undefined ? ([['SLEEP', c.mind.sleepPressure, 0.85, true]] as [string, number, number, boolean][]) : []),
+      ...(c.mind.fog !== undefined ? ([['FOG', c.mind.fog, 0.8, true]] as [string, number, number, boolean][]) : []),
+    ];
+    const bh = (compact ? 10 : 14) + rowH * (gauges.length + 1) + (compact ? 0 : rowH);
     const off = ts * 1.1 + 10;
     const mr = this.mapRect;
     const options = [
@@ -1651,17 +1660,11 @@ export class Scene {
     let y = box.y + (compact ? 6 : 8) + rowH / 2;
     this.label('co-title', `${c.name} · ${c.mind.mood.toUpperCase()}`, box.x + padX, y, { size: 13, weight: '700', anchorX: 0, bg: false, spacing: 0.8, top: true });
     y += rowH;
-    const gauges: [string, number, number][] = [
-      ['BAT', c.mind.energy, 0.2],
-      ['COOL', c.mind.needs.cool, 0.25],
-      ['SIG', c.mind.needs.signal, 0.3],
-      ['CUR', c.mind.needs.curiosity, 0.3],
-    ];
     // Label column, tick strip and value column with clear gutters (COOL and 100% never touch the ticks).
     const gx = box.x + padX + (compact ? 46 : 44);
     const gw = bw - padX * 2 - (compact ? 46 : 44) - (compact ? 44 : 40);
-    for (const [name, v, low] of gauges) {
-      const red = v < low;
+    for (const [name, v, low, high] of gauges) {
+      const red = high ? v >= low : v < low;
       const col = red ? C.red : C.ink;
       this.label(`co-g-${name}`, name, box.x + padX, y, { size: 12, weight: '600', anchorX: 0, bg: false, color: red ? C.red : C.ink2, top: true });
       const n = 10;
@@ -1677,7 +1680,12 @@ export class Scene {
       y += rowH;
     }
     if (!compact) {
-      const a = c.mind.asleep ? 'STANDBY · DOCKED' : c.action ? `${c.action.verb.toUpperCase()}${c.action.targetId ? ` · ${this.store.nameOf(c.action.targetId).toUpperCase()}` : ''}` : 'IDLE';
+      const work = c.mind.sleepWork;
+      const a = c.mind.asleep
+        ? work
+          ? `ASLEEP · ${SLEEP_STEP_TAG[work.step]}${work.step === 'consolidating' && work.total ? ` ${work.done ?? 0}/${work.total}` : ''}`
+          : 'STANDBY · DOCKED'
+        : c.action ? `${c.action.verb.toUpperCase()}${c.action.targetId ? ` · ${this.store.nameOf(c.action.targetId).toUpperCase()}` : ''}` : 'IDLE';
       g.moveTo(box.x, y - rowH * 0.25).lineTo(box.x + bw, y - rowH * 0.25).stroke({ width: 1, color: C.ink2, alpha: 0.6 });
       this.label('co-action', a, box.x + padX, y + 3, { size: 12, weight: '700', anchorX: 0, bg: false, spacing: 0.6, top: true });
     }
@@ -1686,6 +1694,8 @@ export class Scene {
 }
 
 /* ------------------------------------------------------------ helpers */
+
+const SLEEP_STEP_TAG: Record<string, string> = { consolidating: 'MEMORIES', habits: 'HABITS', sheet: 'SHEET', refine: 'REVIEW', done: 'RESTING' };
 
 function colName(i: number) {
   return String.fromCharCode(65 + i);

@@ -62,7 +62,7 @@ describe('visitors in the sim: airdrops and the mailbox', () => {
   });
 
   it('uses item verbs from its blocks; a consumable is used up', () => {
-    expect(done('eat')?.observation).toBe('a tingle of charge');
+    expect(done('eat')?.observation).toBe('a fizzy tingle');
     expect(of('airdrop').find((d) => d.event === 'removed' && d.dropId === 'snack')?.reason).toBe('used up');
     expect(done('squeeze')?.observation).toBe('it squeaked');
     expect(of('airdrop').some((d) => d.event === 'used' && d.dropId === 'toy' && d.verb === 'squeeze')).toBe(true);

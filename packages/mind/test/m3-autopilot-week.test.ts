@@ -41,7 +41,8 @@ function week(seed: number, registry?: ReturnType<typeof buildRegistry>) {
     const { changes } = world.step();
     for (const k of doneKeys(world, changes)) {
       (keysByDay[world.day] ??= []).push(k);
-      if (afterDull.length === 1 && !k.startsWith('moveTo')) {
+      // The next activity after something got dull (not walking, and not sleeping, which is about sleep pressure).
+      if (afterDull.length === 1 && !k.startsWith('moveTo') && !k.startsWith('rest:')) {
         switchedAfterDull.push(k !== afterDull[0]);
         afterDull = [];
       }
@@ -64,7 +65,7 @@ describe('M3: a week on autopilot', () => {
   const run = week(7);
   const control = week(7, noBoredom());
 
-  it('survives the week: the battery never runs flat', () => {
+  it('survives the week: on autopilot it never thinks, so the battery never drops', () => {
     expect(run.minEnergy).toBeGreaterThan(0.2);
     expect(run.tiers).toEqual(new Set(['autopilot']));
   });
@@ -82,7 +83,9 @@ describe('M3: a week on autopilot', () => {
     const keys = control.keysByDay.flat().filter((k) => !k.startsWith('moveTo') && k !== 'rest:dock');
     const repeatControl = keys.slice(1).filter((k, i) => k === keys[i]).length / (keys.length - 1);
     console.log(`dull ${run.dull.length}x; repeated right after dull ${(repeatAfterDull * 100).toFixed(0)}%, control repeat rate ${(repeatControl * 100).toFixed(0)}%`);
-    expect(repeatAfterDull).toBeLessThan(repeatControl * 0.8);
+    // Iteration 2: sleeping (driven by sleep pressure, not boredom) now breaks up the day for both
+    // runs, so the gap is smaller than in iteration 1 (where it was more than 20%).
+    expect(repeatAfterDull).toBeLessThan(repeatControl * 0.9);
   });
 
   it('boredom is what breaks up long streaks (compared with boredom switched off)', () => {
@@ -95,8 +98,10 @@ describe('M3: a week on autopilot', () => {
   it('learns beliefs from experience, by day and by night', () => {
     const robot = run.world.entity('robot') as Character;
     const keys = robot.mind!.beliefs.map((b) => b.key);
-    expect(keys).toContain('charge:solarPad@day');
-    expect(robot.mind!.beliefs.find((b) => b.key === 'charge:solarPad@day')!.expectedNeedDeltas.energy).toBeGreaterThan(0.05);
+    expect(keys.some((k) => k.endsWith('@day'))).toBe(true);
+    // Rinsing cools it down (the solar pad charges nothing since iteration 2); it mostly sleeps at night now.
+    expect(robot.mind!.beliefs.find((b) => b.key === 'rinse:fountain@day')?.expectedNeedDeltas.cool ?? 0).toBeGreaterThan(0.02);
+    expect(robot.mind!.beliefs.every((b) => (b.expectedNeedDeltas.energy ?? 0) === 0)).toBe(true);
   });
 
   it('is deterministic with the mind attached', () => {

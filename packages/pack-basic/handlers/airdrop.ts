@@ -5,7 +5,8 @@ const isRecord = (v: Json | undefined): v is Record<string, Json> => !!v && type
 /** `affectsNeeds` block: the item's own need deltas and observation. */
 export const airdropNeeds: EffectHandler = ({ params }) => {
   const needs: Record<string, number> = {};
-  if (isRecord(params.needs)) for (const [k, v] of Object.entries(params.needs)) if (typeof v === 'number') needs[k] = Math.max(-1, Math.min(1, v));
+  // Items never change the battery (decision 46), even an old item saved before the rule.
+  if (isRecord(params.needs)) for (const [k, v] of Object.entries(params.needs)) if (typeof v === 'number' && k !== 'energy') needs[k] = Math.max(-1, Math.min(1, v));
   return { ok: true, needDeltas: needs, observation: typeof params.observation === 'string' ? params.observation : 'something happened' };
 };
 

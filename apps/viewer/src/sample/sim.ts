@@ -14,8 +14,10 @@ import type {
   Entity,
   FeedAction,
   FeedEntry,
+  Depth,
   MindView,
   NeedKey,
+  SleepWork,
   Tier,
   TriggerKind,
   Usage,
@@ -72,6 +74,14 @@ export interface RobotState {
   valence: number;
   arousal: number;
   asleep: boolean;
+  /** Iteration 2 display: when it last woke or fell asleep, decisions since waking, and the derived values. */
+  wokeAt: number;
+  sleptAt: number;
+  thoughts: number;
+  sleepMem: number;
+  pressure: number;
+  fog: number;
+  work: SleepWork | null;
   drainMul: number;
   chargeMul: number;
   current: ActiveAction | null;
@@ -125,6 +135,13 @@ export function createSim(seed: number, scenario: Scenario): SimState {
     valence: 0.2,
     arousal: 0.4,
     asleep: true,
+    wokeAt: 0,
+    sleptAt: 0,
+    thoughts: 0,
+    sleepMem: 18,
+    pressure: 0.05,
+    fog: 0.1,
+    work: null,
     drainMul,
     chargeMul: drainMul > 2 ? 0.4 : 1,
     current: null,
@@ -268,10 +285,42 @@ function mindOf(r: RobotState): MindView {
     arousal: round3(r.arousal),
     mood: moodWord(r.valence, r.arousal),
     asleep: r.asleep,
+    sleepPressure: r.pressure,
+    fog: r.fog,
+    ...(r.work ? { sleepWork: { ...r.work } } : {}),
   };
 }
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
+
+/** Sample stand-in for iteration 2's sleep pressure, fog and sleep work (display only; the sim's rules are unchanged). */
+function sleepDisplay(s: SimState, r: RobotState, wasAsleep: boolean) {
+  if (wasAsleep && !r.asleep) {
+    r.wokeAt = s.tick;
+    r.thoughts = 0;
+  } else if (!wasAsleep && r.asleep) {
+    r.sleptAt = s.tick;
+    r.sleepMem = Math.max(6, r.thoughts);
+  }
+  const awake = r.asleep ? 0 : (s.tick - r.wokeAt) / (TICKS_PER_DAY * 0.7);
+  r.fog = Math.round(clamp01(r.asleep ? r.fog * 0.9985 : r.thoughts / 140) * 100) / 100;
+  r.pressure = Math.round(clamp01(r.asleep ? r.pressure * 0.9995 : awake * 0.75 + r.fog * 0.25) * 100) / 100;
+  if (!r.asleep) {
+    r.work = null;
+    return;
+  }
+  // The first in-world hour of sleep does the work, in order; then it just rests.
+  const f = (s.tick - r.sleptAt) / TICKS_PER_HOUR;
+  const total = r.sleepMem;
+  r.work =
+    f < 0.5
+      ? { step: 'consolidating', done: Math.min(total, Math.floor((f / 0.5) * total)), total }
+      : f < 0.7
+        ? { step: 'habits' }
+        : f < 0.9
+          ? { step: 'sheet' }
+          : { step: 'done' };
+}
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
 
 function obj(s: SimState, type: string): Entity | undefined {
@@ -517,6 +566,9 @@ function decide(s: SimState, r: RobotState, trigger: TriggerKind, out: StepOutpu
     ...(usage ? { usage, energyCost } : {}),
     ...(plan.some((c) => c.notes) ? { notes: plan.flatMap((c) => c.notes ?? []) } : {}),
   };
+  // How hard it chose to think: habit (free), gut (decision model) or think it through (plan model).
+  (entry as FeedEntry & { depth?: Depth }).depth = tier === 'llm' ? 'think' : tier === 'decision' || tier === 'local' ? 'gut' : 'habit';
+  r.thoughts++;
   out.feed.push(entry);
   r.feedTick = s.tick;
   r.queue = plan.map((c, i) => ({
@@ -871,6 +923,7 @@ export function step(s: SimState): StepOutput {
 
   for (const r of s.robots) {
     const before = JSON.stringify(mindOf(r));
+    const wasAsleep = r.asleep;
     const active = r.current?.phase === 'moving' || (r.current && r.current.verb !== 'rest' && r.current.verb !== 'charge');
 
     // Needs and battery drift (fast-forwarded so change is visible in minutes).
@@ -931,6 +984,7 @@ export function step(s: SimState): StepOutput {
       r.queue = [];
     }
 
+    sleepDisplay(s, r, wasAsleep);
     const after = mindOf(r);
     if (JSON.stringify(after) !== before) out.changes.push({ kind: 'mind', id: r.id, mind: after });
   }

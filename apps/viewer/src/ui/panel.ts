@@ -265,6 +265,7 @@ export class Panel {
   }
 
   private doing(c: CharacterView): string {
+    if (c.mind.asleep && c.mind.sleepWork) return 'Asleep';
     if (c.mind.asleep) return c.action ? `Standby · ${phrase(this.store, c.action.verb, c.action.targetId)}` : 'Standby';
     if (!c.action) return 'Idle';
     return cap(phrase(this.store, c.action.verb, c.action.targetId));
@@ -281,14 +282,19 @@ export class Panel {
     this.robotId = c.id;
     this.lastBeliefKey = null;
     // Gauges and their low marks come from the archetype (needs) and the world's energy floor (battery).
-    const gauges = gaugesFor(this.store.catalog, c.type).map(
-      (g) => `
-      <div class="gauge" role="meter" aria-label="${g.label}" aria-valuemin="0" aria-valuemax="100" data-key="${g.key}">
-        <span class="gauge-label">${g.label}</span>
-        <span class="gauge-ticks" aria-hidden="true">${'<i></i>'.repeat(20)}<b class="gauge-low" style="left:${g.low * 100}%"></b></span>
+    const gauges = this.gaugeList(c)
+      .map((g) => {
+        const bat = g.key === 'energy';
+        // The battery is the thinking budget: its A$ worth shows on hover and keyboard focus.
+        return `
+      <div class="gauge${g.high ? ' is-rising' : ''}" role="meter" aria-label="${g.label}${bat ? ', thinking budget' : ''}" aria-valuemin="0" aria-valuemax="100" data-key="${g.key}"${bat ? ' tabindex="0" aria-describedby="bat-tip"' : ''}>
+        <span class="gauge-label">${g.label}${bat ? '<span class="gauge-sub">thinking</span>' : ''}</span>
+        <span class="gauge-ticks" aria-hidden="true">${'<i></i>'.repeat(20)}<b class="gauge-low" style="left:${(g.high ?? g.low) * 100}%"></b></span>
         <span class="gauge-value"></span>
-      </div>`,
-    ).join('');
+        ${bat ? '<span class="gauge-tip" id="bat-tip" role="tooltip"></span>' : ''}
+      </div>`;
+      })
+      .join('');
     this.root.innerHTML = `
       <section class="pane-section peek robot-head" aria-labelledby="robot-h">
         <div class="robot-title">
@@ -301,6 +307,7 @@ export class Panel {
           <p class="now-action" data-ref="action"></p>
           <p class="now-reason" data-ref="reason"></p>
           <p class="now-meta" data-ref="meta"></p>
+          <ol class="sleep-steps" data-ref="sleep" aria-label="Sleep work" hidden></ol>
         </div>
         <ul class="alerts" data-ref="alerts" aria-live="polite"></ul>
       </section>
@@ -329,13 +336,26 @@ export class Panel {
     const w = s.world!;
     const q = (r: string) => this.root.querySelector<HTMLElement>(`[data-ref="${r}"]`)!;
     q('mood').textContent = `${cap(c.mind.mood)}${c.mind.asleep ? ' · standby' : ''}`;
-    for (const g of gaugesFor(s.catalog, c.type)) {
+    for (const g of this.gaugeList(c)) {
       const el = this.root.querySelector<HTMLElement>(`.gauge[data-key="${g.key}"]`);
-      if (!el) continue;
-      const v = (g.key === 'energy' ? c.mind.energy : c.mind.needs[g.key]) ?? 0;
-      const low = v < g.low;
+      if (!el) {
+        if (g.high !== undefined) this.robotId = null; // a new reading appeared: rebuild the gauges
+        continue;
+      }
+      const v = (g.key === 'energy' ? c.mind.energy : g.key === 'sleepPressure' ? c.mind.sleepPressure : g.key === 'fog' ? c.mind.fog : c.mind.needs[g.key]) ?? 0;
+      const low = g.high !== undefined ? v >= g.high : v < g.low;
       el.setAttribute('aria-valuenow', String(Math.round(v * 100)));
-      el.setAttribute('aria-valuetext', `${pct(v)}${low ? ', low' : ''}`);
+      let extra = low ? (g.high !== undefined ? ', high' : ', low') : '';
+      if (g.key === 'energy') {
+        const per = s.catalog?.energyPerAud;
+        if (per) {
+          const left = v / per;
+          extra += `, about ${fmtAud(left)} of thinking left`;
+          const tip = el.querySelector<HTMLElement>('.gauge-tip');
+          if (tip) tip.textContent = `≈ ${fmtAud(left)} of thinking left · a full battery is ${fmtAud(1 / per)}`;
+        }
+      }
+      el.setAttribute('aria-valuetext', `${pct(v)}${extra}`);
       el.classList.toggle('is-low', low);
       const on = Math.round(v * 20);
       el.querySelectorAll('i').forEach((t, i) => t.classList.toggle('on', i < on));
@@ -343,6 +363,7 @@ export class Panel {
     }
     const last = [...s.feed].reverse().find((e) => e.characterId === c.id && e.actions[0]?.verb !== 'reflect');
     q('action').textContent = this.doing(c);
+    this.updateSleep(c, q('sleep'));
     q('reason').textContent = c.action?.reason ? `“${cap(c.action.reason.replace(/\.$/, ''))}.”` : '';
     if (last) {
       const ck = clockOf(last.tick, w.clock);
@@ -377,6 +398,35 @@ export class Panel {
     q('bcount').textContent = String(c.beliefs.length);
     if (this.tab === 'feed') this.updateFeed(c.id);
     else this.updateBeliefs(c);
+  }
+
+  /** Needs plus, when the world reports them, sleep pressure and fog (they read worse as they rise). */
+  private gaugeList(c: CharacterView): { key: string; label: string; low: number; high?: number }[] {
+    const list: { key: string; label: string; low: number; high?: number }[] = gaugesFor(this.store.catalog, c.type);
+    if (c.mind.sleepPressure !== undefined) list.push({ key: 'sleepPressure', label: 'Sleep', low: 0, high: 0.85 });
+    if (c.mind.fog !== undefined) list.push({ key: 'fog', label: 'Fog', low: 0, high: 0.8 });
+    return list;
+  }
+
+  /** While asleep: the night's work in order (memories, habits, sheet, rest), current step marked. */
+  private updateSleep(c: CharacterView, el: HTMLElement) {
+    const w = c.mind.asleep ? c.mind.sleepWork : undefined;
+    el.hidden = !w;
+    if (!w) return;
+    const steps: { id: string; text: string }[] = [
+      { id: 'consolidating', text: w.step === 'consolidating' && w.total ? `Settling memories ${w.done ?? 0} of ${w.total}` : 'Settling memories' },
+      { id: 'habits', text: 'Finding habits' },
+      { id: 'sheet', text: 'Rewriting its character sheet' },
+      ...(w.step === 'refine' ? [{ id: 'refine', text: 'Reviewing the day' }] : []),
+      { id: 'done', text: 'Resting until rested or full' },
+    ];
+    const at = steps.findIndex((x) => x.id === w.step);
+    const key = `${w.step}:${w.done}:${w.total}`;
+    if (el.dataset['k'] === key) return;
+    el.dataset['k'] = key;
+    el.innerHTML = steps
+      .map((x, i) => `<li class="${i < at ? 'is-done' : i === at ? 'is-now' : 'is-next'}"${i === at ? ' aria-current="step"' : ''}><span class="sr-only">${i < at ? 'Done: ' : i === at ? 'Now: ' : 'Next: '}</span>${x.text}</li>`)
+      .join('');
   }
 
   private updateBeliefs(c: CharacterView) {

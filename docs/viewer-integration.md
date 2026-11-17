@@ -72,7 +72,9 @@ Live messages carry no `sessionId`; replay messages always do.
 - An entity has `{ id, kind: 'character' | 'object', type, pos: { x, y }, tags, state, heldBy? }`.
   Characters also have `needs` (`cool`, `signal`, `curiosity`, each 0..1), `energy` (the battery,
   0..1), `queue`, `current` (`{ action, startedTick, endsTick?, path? }`) and `mind` (`MindState`:
-  mood, beliefs, memories, open items, sleep phase…). A display name, when configured, is `state.name`
+  mood, beliefs, memories, open items, sleep phase, and since iteration 2 `sleepPressure`, `fog`, `sleepWork`,
+  `habits`, `goal`, `sheetHistory`…). The battery (`energy`) is the thinking budget: `energy ÷ energyPerAud` A$ of
+  thinking left (the world catalog has `energyPerAud`). A display name, when configured, is `state.name`
   (the garden robot has `name: 'Robot'`); fall back to the id.
 - Visitors are not entities. A dropped item is an object of `type: 'airdrop'` (id `drop-<dropId>`,
   `tags` from the item) whose `state` has `dropId`, `itemId`, `item` (the catalogue JSON copy, with its
@@ -95,7 +97,11 @@ Live messages carry no `sessionId`; replay messages always do.
 | `vocalize` | `id, pos, notes` | sound arcs and labels, `beep-C · chirp-E` |
 | `memory` | `id, memory, evicted?` | memory admitted (store `stm` or `ltm`) |
 | `beliefs` | `id, beliefs` | sent after each night's consolidation |
-| `sleep` | `id, phase` (`awake`, `drowsy` or `asleep`) | standby indicator |
+| `sleep` | `id, phase` (`awake`, `drowsy` or `asleep`) | sleep indicator (`drowsy`: sleep pressure ≥ 0.7, a label only) |
+| `pressure` | `id, sleepPressure, fog` (0..1) | sleep pressure and fog, sent when either moves by 0.01 |
+| `sleepWork` | `id, step` (`consolidating`, `habits`, `sheet`, `refine`, `done`), `done?, total?` (memories settled) | "consolidating…" while asleep |
+| `sheet` | `id, sheet, goal?, edit` (`SheetEdit`) | the character sheet changed (one step per sleep) |
+| `habits` | `id, habits` | habits after a sleep |
 | `diary` | `id, day, text` | story view |
 | `airdrop` | `event` (`added`, `used` or `removed`), `dropId, entityId, itemId, pos?, verb?, by?, reason?` (`expired`, `used up` or `deleted`) | landing, use and removal; the entity itself comes and goes with `spawned` / `despawned` |
 | `mailbox` | `waiting` | the mailbox count and flag |
@@ -105,9 +111,10 @@ Live messages carry no `sessionId`; replay messages always do.
 
 ### `FeedEntry`
 
-`{ tick, characterId, trigger, tier, modelId?, confidence?, actions: [{ verb, targetId?, reason, status }], usage?, energyCost?, notes?, reason?, escalated? }`
+`{ tick, characterId, trigger, tier, depth?, depthWhy?, modelId?, confidence?, actions: [{ verb, targetId?, reason, status, result? }], usage?, energyCost?, notes?, reason?, escalated? }`
 
 - Each step's `status` starts `queued` and is updated as it resolves: `done` (with `result`, the observation), `failed` (it started but didn't work; `result` is why), `rejected` (invalid when its turn came; `result` is why), or `superseded` (a newer decision replaced it before it ran). Live updates arrive as `feedStep { worldId, sessionId?, characterId, feedTick, step, status, result? }` messages on the feed channel (and `feedStep` deltas in the store): update `actions[step]` of the entry with that `characterId` and `tick === feedTick`. `GET /feed` returns entries already updated.
+- `depth` (`habit`, `gut` or `think`) and `depthWhy` record how hard the robot chose to think (decision 44): habit is free (autopilot or a named habit), gut is the decision model, think is the plan model. Carry-on and fallback entries have none.
 - `escalated: { from, confidence }` marks a decision the decision model (`from`) was unsure about, answered by a stronger model or a text-model plan. Plans (tier `llm`) carry no `confidence`.
 
 - `tier: 'carry-on'` marks the later steps of a model plan that run without a new call.
@@ -163,6 +170,7 @@ A note `chirp-E` means the `chirp` noise played at E. Play the notes of a chain 
 - **Settings.**
   - `client.settings(id)` returns `{ values, schema, derived }`. Render each `schema` entry generically (`kind` number, boolean, or `string[]` for `catalogEnabled`, a list of item ids where `*` means all; with `label`, `unit`, `min`, `max`, `step` and `help`), and show `derived` read-only (battery per decision, decisions per full battery, A$ spent versus the cap).
   - `client.updateSettings(id, patch)` (admin) returns `{ values, derived, effects }`.
+  - Battery: `batteryPlanAbove`, `batteryGutAbove` and `batteryHabitAbove` are the thinking tiers; `batteryTopUp` is a one-shot top-up that always reads back 0 (the `effects` list says what changed).
 
 ## Timeline scrubbing
 

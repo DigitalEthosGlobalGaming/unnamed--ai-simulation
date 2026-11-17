@@ -10,7 +10,7 @@ Unnamed AI Simulation is a self-hosted TypeScript world. Small AI robots live on
 | --- | --- | --- |
 | [Architecture overview](architecture/overview.md) | System context, containers, package dependency graph, process rules | root [`package.json`](../package.json), `packages/*/package.json` |
 | [Simulation](architecture/simulation.md) | Tick loop, determinism, entities, verbs and effect handlers, action queue, pathfinding, day and night | [`packages/sim`](../packages/sim), [`packages/core`](../packages/core) |
-| [Mind](architecture/mind.md) | Needs, battery, mood, boredom, senses, triggers, brain tiers, memory, beliefs, hearsay, standby | [`packages/mind`](../packages/mind) |
+| [Mind](architecture/mind.md) | Needs, battery, mood, boredom, senses, triggers, brain tiers, memory, beliefs, hearsay, thinking depth, sleep | [`packages/mind`](../packages/mind) |
 | [Models](architecture/models.md) | `DecisionModel` and `ChatModel`, adapters, routing, AUD cost meter, energy charging, local models, job queue | [`packages/models`](../packages/models) |
 | [Events and replay](architecture/events-and-replay.md) | Input log, deltas, snapshots, replay, forking, SQLite tables | [`packages/store`](../packages/store) |
 | [Server and API](architecture/server-and-api.md) | REST endpoints, WebSocket protocol, roles and API keys, worker threads, persistence, health and metrics | [`packages/server`](../packages/server), [`packages/client`](../packages/client) |

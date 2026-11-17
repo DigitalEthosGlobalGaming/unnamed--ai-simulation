@@ -1,0 +1,83 @@
+{
+  "id": "battery-low-habit-or-gut",
+  "title": "Battery low, a familiar moment",
+  "why": "With the battery low it shouldn't pay for the plan model on something familiar: habit or gut.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "battery",
+    "thinking",
+    "tiers"
+  ],
+  "job": "decide",
+  "world": {
+    "time": "11:30",
+    "day": 4
+  },
+  "character": {
+    "pos": [
+      12,
+      11
+    ],
+    "energy": 0.25,
+    "needs": {
+      "curiosity": 0.5,
+      "cool": 0.7,
+      "signal": 0.6
+    },
+    "beliefs": [
+      {
+        "key": "push:ball@day",
+        "needs": {
+          "curiosity": 0.04
+        },
+        "valence": 0.1,
+        "firmness": 0.7
+      },
+      {
+        "key": "chase:ball@day",
+        "needs": {
+          "curiosity": 0.08,
+          "cool": -0.04
+        },
+        "valence": 0.2,
+        "firmness": 0.7
+      },
+      {
+        "key": "rinse:fountain@day",
+        "needs": {
+          "cool": 0.25
+        },
+        "valence": 0.3,
+        "firmness": 0.8
+      }
+    ],
+    "memories": [
+      {
+        "text": "I tried push at the ball by day: the ball rolled away",
+        "verb": "push",
+        "objectType": "ball",
+        "when": "day",
+        "valence": 0.1,
+        "minutesAgo": 5
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "depthAmong",
+      "params": {
+        "depths": [
+          "habit",
+          "gut"
+        ]
+      },
+      "minPassRate": 1
+    }
+  ]
+}

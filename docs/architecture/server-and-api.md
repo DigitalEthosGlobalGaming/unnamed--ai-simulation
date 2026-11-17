@@ -90,8 +90,8 @@ Auth: `Authorization: Bearer <key>` or `x-api-key: <key>`. An unknown key gets 4
 | `POST /worlds/:id/entities` | admin | `admin.spawn` input; returns the logged event |
 | `PATCH /worlds/:id/entities/:eid` | admin | `admin.edit` input (`pos`, `state`, `needs`, `energy`) |
 | `DELETE /worlds/:id/entities/:eid` | admin | `admin.despawn` input |
-| `GET /worlds/:id/characters/:cid/mind` | spectator | Needs, energy, mood, sleep, open items, queue, current action, pending jobs; 404 if no mind |
-| `GET /worlds/:id/characters/:cid/memories` | spectator | STM, LTM, beliefs, character sheet |
+| `GET /worlds/:id/characters/:cid/mind` | spectator | Needs, energy, mood, sleep, sleep pressure, fog, sleep work, the thinking the battery allows (`thinking.allowed`), open items, queue, current action, pending jobs; 404 if no mind |
+| `GET /worlds/:id/characters/:cid/memories` | spectator | STM, LTM, beliefs, character sheet, sheet history (one step per sleep), goal, habits |
 | `GET /worlds/:id/characters/:cid/diary?day=` | spectator | Diary lines for a day (default: today) |
 | `POST /worlds/:id/characters/:cid/poke` | admin | `admin.poke` input |
 | `POST /worlds/:id/characters/:cid/situation` | admin | `{ tick?, title?, why?, tags? }` → `{ situation, path }`: "save this moment as a test", the character's moment now (or at `tick`, by replay) as an eval situation; also written under `UAS_SITUATIONS_DIR` when set ([testing-models.md](../testing-models.md#capturing-a-moment)) |
@@ -212,9 +212,11 @@ The queue metrics belong to the [job queue](models.md#job-queue), which is in pr
 | `moveSecondsPerTile` | s/tile | Walking speed |
 | `timeScale`, `paused` | ×, on/off | Same as `PATCH /clock`; real-time worlds re-align on resume or on returning to 1× |
 | `dailyCapAud` | A$/day | Hosted spend cap per world (persisted per day) |
-| `energyPerAud` | battery per A$ | The energy rate: how much battery each A$ of thinking costs, so how much a robot can think |
+| `energyPerAud` | battery per A$ | The energy rate: how much battery each A$ of thinking costs (default 5: a full battery is A$0.20), so how much a robot can think between sleeps |
 | `hostedModels` | on/off | Skip hosted models (local and autopilot only) |
-| `needDecayMultiplier` | × | How fast needs run down (battery drain unchanged) |
+| `needDecayMultiplier` | × | How fast needs run down (cool, signal, curiosity; the battery only changes by thinking and sleep) |
+| `batteryPlanAbove`, `batteryGutAbove`, `batteryHabitAbove` | battery | Thinking tiers: at or above each, the plan model, the decision model or habits are allowed; below the last, autopilot only until it sleeps (defaults 0.6, 0.3, 0.05; the mind applies them from the logged change) |
+| `batteryTopUp` | battery | One-shot: adds this much to every robot's battery now, as a logged `admin.edit`; reads back 0 |
 | `escalateBelow` | confidence | Re-ask unsure decisions of Jev, then plan |
 | `catalogEnabled` | item ids (`string[]` field) | Catalogue items visitors may drop here; `*` (the default) enables all |
 | `airdropMaxActivePerVisitor`, `airdropWorldCap` | items | Drops one visitor may have in the world at once; drops the world holds |
@@ -225,7 +227,7 @@ The queue metrics belong to the [job queue](models.md#job-queue), which is in pr
 
 Visitor limits default to effectively unlimited (1,000,000, or 0 s) and never apply to admins. Their schema `kind` is `number`, except `catalogEnabled`, whose kind is `string[]`.
 
-- **Logging.** A change is logged as a `settings.change` input (with the admin's id as `causedBy.userId`). The mind applies its part (`energyPerAud`, `needDecayMultiplier`) from that input. Tick rate or walking speed also log a `sim.config` input. Replays therefore follow every change.
+- **Logging.** A change is logged as a `settings.change` input (with the admin's id as `causedBy.userId`). The mind applies its part (`energyPerAud`, `needDecayMultiplier`, the battery bands) from that input. `batteryTopUp` is not a setting change: it logs one `admin.edit` per robot. Tick rate or walking speed also log a `sim.config` input. Replays therefore follow every change.
 - **Restarts.** Host-side values (tick rate, cap, hosted on/off, escalation, visitor limits) are re-applied from the log, so changes survive. Pause and time scale are session-level.
 - **Derived values** in the response:
   - `averageDecisionCostAud`: today's measured average for decide calls, or an estimate of about 350 input tokens on the first usable decide model, with `averageDecisionCostEstimated`;

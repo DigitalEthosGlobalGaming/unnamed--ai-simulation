@@ -14,6 +14,10 @@ const SCHEMA: Record<string, SettingField> = {
   dailyCapAud: { label: 'Daily cap', kind: 'number', unit: 'A$', min: 0, max: 50, step: 0.05, help: 'Hard limit on paid model spend per world per day.' },
   energyPerAud: { label: 'Energy rate', kind: 'number', unit: 'battery/A$', min: 0, max: 20, step: 0.1, help: 'How much battery each A$ of thinking costs the robot.' },
   hostedModels: { label: 'Hosted models', kind: 'boolean', help: 'Allow paid cloud models. Off keeps every decision on local models and autopilot.' },
+  batteryPlanAbove: { label: 'Think it through above', kind: 'number', unit: 'battery', min: 0, max: 1, step: 0.05, help: 'With the battery at or above this, the robot may use the plan model (think it through). Thinking tiers step down as the battery falls.' },
+  batteryGutAbove: { label: 'Gut calls above', kind: 'number', unit: 'battery', min: 0, max: 1, step: 0.05, help: 'At or above this (and below the line above), the decision model only (gut calls). Thinking tiers step down as the battery falls.' },
+  batteryHabitAbove: { label: 'Habits above', kind: 'number', unit: 'battery', min: 0, max: 1, step: 0.05, help: 'At or above this, habits and autopilot; below it, autopilot only until the robot sleeps. Thinking tiers step down as the battery falls.' },
+  batteryTopUp: { label: 'Top up battery', kind: 'number', unit: 'battery', min: 0, max: 1, step: 0.05, help: 'One-shot: adds this much battery (1 = a full battery) to every robot now, as a logged admin edit. Only sleep recharges it otherwise. Reads back 0.' },
   catalogEnabled: { label: 'Airdrop items', kind: 'string[]', help: 'Catalogue items visitors may drop in this world.' },
   airdropCooldownSeconds: { label: 'Drop cooldown', kind: 'number', unit: 's', min: 0, max: 86400, step: 1, help: 'Wait between drops per visitor. Admins skip every limit.' },
   airdropMaxActivePerVisitor: { label: 'Drops per visitor', kind: 'number', unit: 'items', min: 0, max: 1000000, step: 1, help: 'Most items one visitor can have in the world at once.' },
@@ -31,7 +35,11 @@ export class SampleAccount implements AccountApi {
     timeScale: 1,
     moveSecondsPerTile: 0.4,
     dailyCapAud: 2,
-    energyPerAud: 1.6,
+    energyPerAud: 5,
+    batteryPlanAbove: 0.6,
+    batteryGutAbove: 0.3,
+    batteryHabitAbove: 0.05,
+    batteryTopUp: 0,
     hostedModels: true,
     catalogEnabled: ['battery-snack', 'squeaky-ball', 'cool-pack', 'parasol'],
     airdropCooldownSeconds: 90,
@@ -110,6 +118,11 @@ export class SampleAccount implements AccountApi {
         if (typeof value !== 'number' || !Number.isFinite(value)) throw new SettingsError(400, `${f.label} must be a number.`, field);
         if (f.min !== undefined && value < f.min) throw new SettingsError(400, `${f.label} must be at least ${f.min} ${f.unit ?? ''}.`.trim(), field);
         if (f.max !== undefined && value > f.max) throw new SettingsError(400, `${f.label} must be at most ${f.max} ${f.unit ?? ''}.`.trim(), field);
+      }
+      if (field === 'batteryTopUp') {
+        // One-shot, like the server: reads back 0 and reports what it did.
+        this.values[field] = 0;
+        return { ...this.snapshot(), effects: [`Topped up every robot by ${Math.round(Number(value) * 100)}% battery`] };
       }
       this.values[field] = value;
     }

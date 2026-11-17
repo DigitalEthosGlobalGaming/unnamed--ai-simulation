@@ -44,7 +44,7 @@ flowchart LR
 | `PackManifestSchema` | `name`, `version` (semver), `licence`, `dependencies` |
 | `ObjectDefSchema` | `type`, `tags`, `portable` (not enforced by the sim yet), `solid` (blocks movement), `verbs`, `state` |
 | `VerbDefSchema` | `range` (Manhattan, 0 = same tile), `durationTicks`, `handler`, `params`, `boredomStep` |
-| `ArchetypeDefSchema` | `type`, `tags`, `needs`, `energy { label, idleDrainPerHour }`, `noises`, `sightRange` (6), `hearingRange` (8), `senses`, `mind` tuning, `sheet` lines (`text`, `locked`) |
+| `ArchetypeDefSchema` | `type`, `tags`, `needs`, `energy { label, idleDrainPerHour? }` (the drain is ignored since iteration 2: only thinking drains the battery), `noises`, `sightRange` (6), `hearingRange` (8), `senses`, `mind` tuning, `sheet` lines (`text`, `locked`) |
 | `NoisesSchema` | `pitches` (note letter to Hz), `set` (noise name to `{ synth }` or `{ sound }`), `maxChain` |
 
 Need fields: `decayPerHour`, `activeDecayMultiplier`, `low`, `critical`, `restRecoveryPerHour`, `nearbyRecoveryPerHour`. Mind tuning defaults are in [mind.md](architecture/mind.md#configuration).
@@ -62,7 +62,7 @@ Need fields: `decayPerHour`, `activeDecayMultiplier`, `low`, `critical`, `restRe
 | `cool` | 0.04, × 2.5 while active | low 0.25, critical 0.1, recovers 0.15/h while resting |
 | `signal` | 0.03 | low 0.3, recovers 0.2/h with another character in sight |
 | `curiosity` | 0.05 | low 0.3; the need boredom works on hardest |
-| energy, labelled `battery` | 0.02 idle drain | also spent on every model call |
+| energy, labelled `battery` | none | the thinking budget: spent only on model calls, recharged only by sleep (decisions 42–43) |
 
 Sight 6 tiles, hearing 8 tiles. Mind tuning overrides: `wakeThreshold` 0.5, `boredomStep` 0.15, `boredomHalfLifeHours` 2, `boredomThreshold` 0.6, `curiosityWeight` 0.3. Sheet: "I am a small robot who lives in a garden." (locked) and "I like finding out what things do."
 
@@ -83,16 +83,16 @@ Effects below are what the handlers do. **The robot is never told any of this**:
 
 | Object | Solid | Verb | Range | Ticks | Handler | Effect |
 | --- | --- | --- | --- | --- | --- | --- |
-| `solarPad` | no | `charge` | 0 | 50 | `basic.charge` | +0.15 battery **only in daylight**; at night "the pad stayed dark and cold" and nothing changes |
+| `solarPad` | no | `charge` | 0 | 50 | `basic.charge` | nothing since iteration 2 ("warm light hummed through the pad" by day, "the pad stayed dark and cold" at night); removed in Stage 2 |
 | | | `scan` | 6 | 20 | `basic.inspect` | +0.03 curiosity; describes tags and state |
-| `dock` | no | `dock` | 0 | 60 | `basic.dock` | +0.02 battery, +0.05 cool |
-| | | `rest` | 0 | 200 | `basic.dock` | +0.004 battery, +0.05 cool; used for standby |
+| `dock` | no | `dock` | 0 | 60 | `basic.dock` | +0.05 cool |
+| | | `rest` | 0 | 200 | `basic.dock` | +0.05 cool; resting is sleeping (the only recharge, by the mind) |
 | `ball` (portable) | no | `pickup` | 1 | 10 | `basic.pickup` | holds it; +0.02 curiosity; fails if held ("you're already holding it" when it's yours) or grippers full |
 | | | `drop` | 0 | 5 | `basic.drop` | puts it down |
 | | | `push` | 1 | 10 | `basic.push` | rolls 1 to 3 tiles away; +0.04 curiosity, −0.01 cool. Pushing the ball you hold tosses it (released, rolls 1 to 3 tiles) |
-| | | `chase` | 3 | 40 | `basic.chase` | ball moves 1 to 2 tiles, robot follows; +0.08 curiosity, −0.02 battery, −0.04 cool |
+| | | `chase` | 3 | 40 | `basic.chase` | ball moves 1 to 2 tiles, robot follows; +0.08 curiosity, −0.04 cool |
 | `fountain` (tags `water`, `loud`) | yes | `rinse` | 1 | 30 | `basic.rinse` | +0.25 cool if flowing |
-| | | `splash` | 1 | 15 | `basic.splash` | +0.12 curiosity, +0.05 cool, −0.03 battery; boredom step 0.35 |
+| | | `splash` | 1 | 15 | `basic.splash` | +0.12 curiosity, +0.05 cool; boredom step 0.35 |
 | | | `scan` | 6 | 20 | `basic.inspect` | as above |
 | `piano` (tags `music`, `loud`) | yes | `play` | 1 | 40 | `basic.play` | +0.1 curiosity, +0.02 signal |
 | | | `press` | 1 | 5 | `basic.press` | +0.02 curiosity; a random key (C, D, E or G) from the `effects` stream |
@@ -107,10 +107,10 @@ Using a verb on an object tagged `loud` makes a sound other characters can hear.
 
 ### The hidden twists
 
-Two rules exist to prove the robot learns:
+Rules that exist to prove the robot learns:
 
-1. **The solar pad only charges in daylight** (06:00 to 18:00). Beliefs are keyed by day and night (`charge:solarPad@day`, `charge:solarPad@night`), so the robot can learn both, and autopilot values charging before dusk once it believes the night version does nothing. The M5 test checks this after 3 in-world days ([`m5-beliefs.test.ts`](../packages/models/test/m5-beliefs.test.ts)).
-2. **Splashing is fun but gets dull fast and costs battery.** Its boredom step is 0.35 against the default 0.15, and each splash costs 0.03 battery.
+1. ~~**The solar pad only charges in daylight.**~~ Retired in iteration 2: the battery is the thinking budget and only sleep recharges it (decisions 42–43), so the pad charges nothing; it goes in Stage 2.
+2. **Splashing is fun but gets dull fast.** Its boredom step is 0.35 against the default 0.15.
 
 ### Senses
 

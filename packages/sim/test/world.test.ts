@@ -66,7 +66,7 @@ describe('world', () => {
     const ds = t.run(20);
     expect(t.world.entity('bot')!.pos).toEqual({ x: 3, y: 0 });
     expect(t.statuses(ds)).toEqual(['moveTo:queued', 'kick:queued', 'moveTo:started', 'moveTo:done', 'kick:started', 'kick:done']);
-    expect(ds).toContainEqual({ kind: 'needs', id: 'bot', values: { energy: 0.65, fun: 1 } });
+    expect(ds).toContainEqual({ kind: 'needs', id: 'bot', values: { fun: 1 } }); // the effect's energy is ignored: actions never change the battery
   });
 
   it('rejects out-of-range verbs, unknown verbs, bad notes and a 4th queued action', () => {
