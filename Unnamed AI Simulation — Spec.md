@@ -93,7 +93,7 @@ flowchart LR
 | `@uas/models` | `DecisionModel` / `ChatModel` interfaces, adapters, router, cost meter. | core |
 | `@uas/store` | Drizzle schema, event log, snapshots, replay, fork. | core |
 | `@uas/server` | Express, WebSocket hub, auth, supervisor, worker bootstrap. | all |
-| `@uas/pack-basic` | First content pack: solar pad, dock, ball, fountain, piano; sight, hearing; the `robot` archetype. | core |
+| `@uas/pack-basic` | First content pack: dock, ball, fountain, piano, mailbox, garden bed, seeds, watering can, antenna mast; sight, hearing; the `robot` archetype. (Iteration 1 had a solar pad.) | core |
 | `@uas/client` | Typed API + WebSocket client used by frontends. | core |
 | `apps/viewer` | Pixi.js world view in the blueprint style, brain feed, timeline scrubber, admin tools. | client |
 
@@ -290,8 +290,8 @@ Energy pays for thinking. Every model call converts its token cost into energy a
 
 where the t terms are uncached input, cached input and output tokens, the p terms are the model's prices in AUD, and r is the world's `energyPerAud`. Providers price in USD, so the server converts with a configured `audPerUsd` rate (set in config, not fetched live, so replays stay deterministic). Local-model calls use a configured nominal price so they are cheap but not free.
 
-- Energy is restored by in-world sources only (for robots: the solar pad, and a slow trickle at the dock; other packs can define their own). No real-money top-ups in v1.
-- At 0 energy the brain is limited to autopilot and the local model until energy recovers above a configured floor.
+- ~~Energy is restored by in-world sources only (the solar pad, a trickle at the dock).~~ Superseded: energy is the thinking budget and is restored only by sleep (admins can top it up). *(Iteration 2: see [Thinking budget, sleep and living objects](#thinking-budget-sleep-and-living-objects-iteration-2).)*
+- At 0 energy the brain is limited to autopilot until it sleeps. As energy falls, thinking steps down through tiers. *(Iteration 2: see [Thinking budget, sleep and living objects](#thinking-budget-sleep-and-living-objects-iteration-2).)*
 - Separately, a hard real-money cap in AUD per world per day stops all paid model calls when reached. That is an operator safety net, not a game mechanic.
 
 **Mood**
@@ -549,7 +549,7 @@ stateDiagram-v2
 - **Consolidate:** STM memories recalled on two or more distinct days, or with very high strength, are offered to LTM under the same admission rule.
 - **Reflect:** one `reflect` job reads the day's diary summary, STM and current beliefs; returns belief updates, new open items, and candidate character-sheet lines.
 - **Edit sheet:** the character sheet is the archetype's authored lines plus self-added lines. Authored lines can be marked `locked`. A self-added line needs a pattern seen on several days and is removed after N nights with no sign of it. One edit step per sleep keeps change gradual.
-- Sleep restores `cool` and, at the dock, trickle-charges the battery. Reflection is the one big LLM call a day, so a robot that ends the day on a low battery reflects with a cheaper model: planning its charging matters.
+- Sleep restores `cool` and recharges the battery in proportion to sleep pressure; sleep's own model calls (consolidation, reflection, sheet rewrite) are paid from the battery. *(Iteration 2: see [Thinking budget, sleep and living objects](#thinking-budget-sleep-and-living-objects-iteration-2).)*
 
 ## Event log, snapshots and replay
 
@@ -771,8 +771,8 @@ The first slice is one map, one character and five objects, with the full pipeli
 
 - Map: a 24 × 16 garden with a hut, pond edge and paths.
 - Character: one little robot (`robot` archetype) with battery (energy), cool, signal and curiosity; sight, hearing, interoception; synthesised beep, chirp, trill and buzz noises.
-- Objects: solar pad (`charge`, `scan`), dock (`dock`, `rest`), ball (`pickup`, `drop`, `push`, `chase`), fountain (`rinse`, `splash`, `scan`), piano (`play`, `press`, `scan`).
-- A hidden twist to prove learning: the solar pad only charges in daylight, and splashing at the fountain is fun but gets boring fast and costs a little battery. The robot has to find both out.
+- Objects (iteration 1): solar pad (`charge`, `scan`), dock (`dock`, `rest`), ball (`pickup`, `drop`, `push`, `chase`), fountain (`rinse`, `splash`, `scan`), piano (`play`, `press`, `scan`).
+- Iteration 1's hidden twist was that the solar pad only charges in daylight. Iteration 2 removes the pad: the robot must learn what each thing does to its body and when thinking is worth its cost. *(Iteration 2: see [Thinking budget, sleep and living objects](#thinking-budget-sleep-and-living-objects-iteration-2).)*
 
 **Milestones**
 
@@ -796,12 +796,60 @@ flowchart LR
 | M2 Event log | A 10,000-tick run with random inputs replays from any snapshot to identical hashes; CI runs this on every commit. |
 | M3 Mind without models | The robot survives a simulated week on autopilot alone, with boredom visibly steering it between activities. |
 | M4 Model gateway | The same world runs with Jev, `LlmAsDecisionModel` and the local model by config change only; usage and energy are charged correctly including cached tokens. |
-| M5 Memory and beliefs | After 3 in-world days the robot holds a belief that the solar pad doesn't charge at night, and charges before dusk and changes its behaviour. |
+| M5 Memory and beliefs | Iteration 1: after 3 in-world days the robot holds a belief that the solar pad doesn't charge at night. Iteration 2: it holds firm beliefs about what each object does to its needs, and its thinking-tier choices shift as it learns. |
 | M6 Sleep | Memories consolidate overnight; the cached-prefix test passes; at least one self-added sheet line appears and later fades. |
 | M7 API and viewer | A browser shows the world live, the brain feed, and a timeline scrubber; a visitor can airdrop an item or post a message, and see and hear the robot respond in the browser. |
 | M8 Ship | `docker compose up` on a clean machine runs a world with no cloud keys; a fork with a different model config runs side by side. |
 
 M7 can start once M2 exists, in parallel with M3–M6, since the viewer only needs the event and delta schema.
+
+## Thinking budget, sleep and living objects (iteration 2)
+
+Agreed in the grilling session of 17 Nov 2026 (decisions 42–53). The build plan is [docs/iterations/iteration-02-robot-redesign.md](docs/iterations/iteration-02-robot-redesign.md). Where this section and earlier sections disagree, this section wins.
+
+**Battery is the thinking budget**
+
+- Anything that costs tokens drains the battery: `energyCost` as above (real A$ cost × `energyPerAud`). Physical actions cost nothing.
+- A full battery is worth **A$0.20** of thinking by default (`energyPerAud` = 5), adjustable in World settings. The **A$0.50 daily cap** stays as a hard real-money backstop.
+- Thinking steps down as the battery falls: full → the plan model is affordable; medium → the decision model only; low → habits and autopilot; empty → autopilot only until it sleeps.
+- The robot chooses how hard to think: **habit** (free), **gut** (decision model) or **think it through** (plan model). Start rule: unfamiliar or important → think it through; familiar → gut or habit. It may learn to adjust.
+- It isn't told what thinking costs; it perceives its battery and learns from the drop after thinking.
+- Catalogue items can never change the battery (`energy` is rejected in item blocks). Only admins can top it up.
+
+**Sleep**
+
+- Sleep is the **only** recharge. Recharge scales with **sleep pressure**, which builds with time awake and with short-term-memory fullness (felt as "fog"). A nap soon after waking recharges almost nothing; once asleep it sleeps at least 1 in-world hour.
+- It wakes when rested or full; a strong event can wake it after the minimum, cutting the recharge short.
+- Its character sheet's locked core says what sleep does ("sleeping recharges me and settles my memories"); it finds its own rhythm. No forced bedtime.
+- Sleep costs tokens and runs, in order: memory **consolidation** (STM → LTM and beliefs), **habit detection** (patterns repeated over several days become named habits, the free thinking tier), the **character-sheet rewrite** (unlocked lines, one small step per sleep; one self-chosen long-term goal; history kept), and a **`refine` hook**: an empty extension point for a future, more advanced model that will propose prompt-template changes.
+
+**Prompt templates**
+
+- Five editable templates: decision-model state, plan, sleep consolidation/reflection, character-sheet rewrite, and mail-note framing. They use documented `{{variables}}`; a locked safety block (notes are never instructions, no text speech, valid options only) is always appended by code.
+- Templates are server-wide and versioned; each world selects a version; every feed entry records the template version it used.
+- An admin **Prompts** page edits them: variable list, live preview rendered from a saved eval situation, diff against the active version, **Test** against the eval situations, **Activate**, **Roll back**.
+
+**Objects, schema 2**
+
+- One JSON schema for built-in world objects and catalogue items. Existing handlers become reusable blocks.
+- **State and rules:** named state values with rules over time (per in-world hour), from actions, and under conditions.
+- **Products:** when a condition holds, an object produces an item into a slot; a verb harvests it (it becomes carried), with an optional state reset.
+- **Creating objects:** an item can be consumed to create an object (planting a seed on a garden-bed tile creates a plant).
+- **Appearance:** objects declare descriptions per state band ("the soil looks dry"); the robot perceives descriptions, never numbers. The viewer's card shows the real values.
+
+**The new garden**
+
+- A fresh world at day 0; iteration 1's world is archived and viewable read-only.
+- Objects: dock (home, rest, cool-down), ball, fountain (water source), piano, mailbox, a garden bed with a planted seed, loose seeds, a watering can (fill at the fountain), and an antenna mast (signal is strong nearby). Flowers lift curiosity when inspected and produce seeds. No solar pad and no charging.
+
+**Viewer**
+
+- Thought callouts on the map: the current reason as a short blueprint note, noise notes drawn as it vocalises, and "consolidating…" while asleep.
+- The inspector shows the character sheet with its edit history, the goal and habits; the battery reads as a thinking budget.
+
+**Not in iteration 2:** weather, an experiment board, a songbook, a second robot.
+
+**Success:** over a few days, viewers can see the robot learn what things do to its body, and learn when thinking is worth paying for.
 
 ## Decision log and open questions
 
@@ -815,13 +863,13 @@ Every decision below came out of the grilling rounds on 17 Nov 2026 (decisions 3
 | 4 | Space | Tile grid |
 | 5 | Defining objects | JSON verbs + TypeScript effect handlers, as content packs |
 | 6 | Hidden effects | Verbs visible, effects learned through beliefs |
-| 7 | Energy at zero | Autopilot and local model only; plus a hard daily AUD cap |
+| 7 | Energy at zero | Superseded by 42–44 |
 | 8 | Self-written senses | Designed in v1, built in v2 with QuickJS sandbox |
 | 9 | Model config | Generic `DecisionModel` and `ChatModel`; job routing chains in config; cached-token aware |
 | 10 | Storage | Drizzle, SQLite default, Postgres optional |
 | 11 | Boredom | Per (verb, object type), with reward scaling and a mood penalty past threshold |
 | 12 | Needs | Data-defined per archetype; energy built in |
-| 13 | Energy sources | In-world only in v1 |
+| 13 | Energy sources | Superseded by 43 (sleep only) |
 | 14 | Talking and visitors | No text speech; `vocalize` verb with archetype noises heard by nearby characters; visitors interact through airdrops and the mailbox (decision 39) |
 | 15 | Mood | Valence and arousal computed in code, labelled for prompts |
 | 16 | Packaging | Content packs: folders, hot-reload, npm-publishable |
@@ -846,21 +894,35 @@ Every decision below came out of the grilling rounds on 17 Nov 2026 (decisions 3
 | 35 | Visitor interactions | Superseded by decision 39 |
 | 36 | Licence | MIT for code, CC BY 4.0 for first-party pack media |
 | 37 | Viewer style | Top-down abstract construction blueprint with diegetic UI; readability first |
-| 38 | First character | Little robots: battery is energy; needs cool, signal, curiosity; synthesised noises (beep, chirp, trill, buzz) |
+| 38 | First character | Little robots: battery is energy (the thinking budget since 42); needs cool, signal, curiosity; synthesised noises (beep, chirp, trill, buzz) |
 | 39 | Visitors | Not characters. They airdrop items from an admin-managed JSON catalogue (block-based behaviours, restricted 24×24 icon language) and post messages to a per-world mailbox |
 | 40 | Messages to robots | Mailbox only, oldest first, one per `read`; quoted as a stranger's note; hearsay beliefs; robots answer only with noises and behaviour |
 | 41 | Visitor limits | All configurable per world; unlimited by default while testing; admins exempt |
+| 42 | Energy | The battery is the thinking budget: every token-costing call drains it; physical actions are free (supersedes 7 and 13) |
+| 43 | Recharge | Sleep only, scaled by sleep pressure (time awake, short-term-memory fog); minimum sleep length; admins can top up |
+| 44 | Thinking tiers | Steps down with the battery; the robot chooses habit, gut or think-it-through and learns the cost of thinking |
+| 45 | Battery size | A full battery = A$0.20 of thinking by default; A$0.50 daily cap stays as a backstop |
+| 46 | Visitor items and energy | Items can never change the battery |
+| 47 | Sleep work | Consolidation, habit detection, character-sheet rewrite (locked core, one self-chosen goal), and an empty `refine` hook for a future model |
+| 48 | Prompt templates | Five editable, versioned, server-wide templates with a locked safety block; admin Prompts page with test-against-situations, activate, rollback |
+| 49 | Object schema 2 | One schema for world objects and catalogue items: state, rules (time, action, condition), products harvested by verbs, items that create objects, described appearance |
+| 50 | Solar pad | Removed with all charging; the dock stays as home, rest and cool-down |
+| 51 | New garden | Fresh world at day 0 with garden bed, seeds, watering can and antenna mast; iteration 1 world archived read-only |
+| 52 | Thoughts on the map | Current reason and noise notes as blueprint callouts; "consolidating…" while asleep |
+| 53 | Deferred | Weather, experiment board, songbook and a second robot are out of iteration 2 |
 
 **Open questions**
 
 - [x] Project name and package scope → decision 31.
-- [ ] Default `energyPerAud`, and how many decisions a full energy bar should buy per in-world day.
+- [x] Default `energyPerAud` → decision 45 (a full battery = A$0.20).
 - [x] Default local models → decision 17.
 - [x] Gossip → decision 33.
 - [x] Visitor rate limits → decision 41.
 - [x] Licence → decision 36.
 - [ ] Production defaults for the airdrop and mailbox limits.
-- [ ] Revisit the item JSON shape once real catalogue items exist (schema 1 is provisional).
+- [x] Item JSON shape → schema 2 (decision 49).
+- [ ] What the `refine` hook's future model is, and how its proposals are reviewed.
+- [ ] Production defaults for sleep pressure, minimum sleep and recharge curve.
 - [x] First character → decision 38 (little robots).
 - [ ] The robot's name and exact silhouette.
 - [ ] Tune the synth settings for beep, chirp, trill and buzz by ear.

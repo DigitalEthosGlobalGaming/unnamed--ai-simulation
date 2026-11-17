@@ -20,6 +20,8 @@ Unnamed AI Simulation is a self-hosted TypeScript world. Small AI robots live on
 | [Decisions and deviations](decisions.md) | Decision log, and every known difference between the spec and the code | the spec's decision table |
 | [Glossary](glossary.md) | Terms used across the code and these pages | |
 | [Testing models](testing-models.md) | Saved situations, the check catalogue, golden prompts, `npm run eval`, capturing moments, finding them in a world's history | [`packages/evals`](../packages/evals) |
+| [Getting started: AI-assisted development](getting-started-agents.md) | Machine setup (WSL RHEL 10.2, Podman, Node 26), `.env`, Claude Code skills, how we work with agents and their rules | |
+| [Iterations](iterations/README.md) | Planned slices of work, stages and progress: [iteration 2](iterations/iteration-02-robot-redesign.md) is next | |
 | [Benchmarks](benchmarks/README.md) | Model bake-offs (decide, plan, reflect, tags) and how to rerun them | [`bakeoff.ts`](../packages/models/scripts/bakeoff.ts) |
 
 Related documents kept outside this folder:

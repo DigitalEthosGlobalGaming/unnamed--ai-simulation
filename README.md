@@ -18,6 +18,8 @@ A self-hosted world where little AI robots live in a 2D tile world. They learn w
 
 Packages ship TypeScript source, and Node 26 runs it directly through type stripping, so there is no build step.
 
+New to the repo, or setting up a machine for agent work? Start with [docs/getting-started-agents.md](docs/getting-started-agents.md). The current plan is [iteration 2](docs/iterations/iteration-02-robot-redesign.md).
+
 ## Run it
 
 ```sh

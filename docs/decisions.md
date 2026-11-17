@@ -2,7 +2,7 @@
 
 ## Decision log
 
-The design decisions (1 to 41) and open questions are recorded in the spec: [Decision log and open questions](../Unnamed%20AI%20Simulation%20—%20Spec.md#decision-log-and-open-questions). This table records how far each one is built. "Partly" links to the deviation that explains the gap.
+The design decisions (1 to 53) and open questions are recorded in the spec: [Decision log and open questions](../Unnamed%20AI%20Simulation%20—%20Spec.md#decision-log-and-open-questions). This table records how far each one is built. "Partly" links to the deviation that explains the gap.
 
 | # | Decision | Built? |
 | --- | --- | --- |
@@ -12,13 +12,13 @@ The design decisions (1 to 41) and open questions are recorded in the spec: [Dec
 | 4 | Tile grid | Yes |
 | 5 | JSON verbs + TypeScript handlers as content packs | Yes |
 | 6 | Verbs visible, effects learned through beliefs | Yes |
-| 7 | At zero energy: autopilot and local model only; hard daily AUD cap | Partly: autopilot only ([D9](#deviations-from-the-spec)); cap is per world and persisted ([D17](#deviations-from-the-spec)) |
+| 7 | At zero energy: autopilot and local model only; hard daily AUD cap | Built for iteration 1; superseded by 42–44 (**iteration 2, not started**) |
 | 8 | Self-written senses in v2 | Not started (by design); `Sense` and `features` are in place |
 | 9 | Generic `DecisionModel` / `ChatModel`, routing chains in config, cached-token aware | Yes |
 | 10 | Drizzle, SQLite default, Postgres optional | Partly: SQLite only ([D20](#deviations-from-the-spec)) |
 | 11 | Boredom per (verb, object type) with reward scaling and mood penalty | Yes |
 | 12 | Needs data-defined per archetype; energy built in | Yes |
-| 13 | Energy sources in-world only | Yes |
+| 13 | Energy sources in-world only | Built for iteration 1; superseded by 43 (**iteration 2, not started**) |
 | 14 | No text speech; `vocalize`; humans join as visitor characters | Speech and noises yes; visitor characters removed by decision 39 |
 | 15 | Mood as valence and arousal in code | Yes |
 | 16 | Content packs: folders, hot reload, npm-publishable | Partly: folders only ([D21](#deviations-from-the-spec)) |
@@ -47,6 +47,18 @@ The design decisions (1 to 41) and open questions are recorded in the spec: [Dec
 | 39 | Visitors are not characters: they airdrop catalogue items (blocks, 24×24 icon language) and post to a per-world mailbox | Yes, backend ([visitors.md](architecture/visitors.md)) |
 | 40 | Mailbox only, oldest first, one per `read`; a quoted stranger's note; hearsay beliefs | Yes ([mind.md](architecture/mind.md#beliefs)) |
 | 41 | Visitor limits per world, unlimited by default, admins exempt | Yes ([server-and-api.md](architecture/server-and-api.md#live-world-settings)) |
+| 42 | Battery is the thinking budget; physical actions are free | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
+| 43 | Sleep is the only recharge, scaled by sleep pressure | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
+| 44 | Thinking tiers step down with the battery; habit, gut or think it through | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
+| 45 | Full battery = A$0.20 of thinking; A$0.50 daily cap as backstop | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
+| 46 | Items can never change the battery | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
+| 47 | Sleep: consolidation, habits, sheet rewrite, empty `refine` hook | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
+| 48 | Editable, versioned prompt templates with a Prompts admin page | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
+| 49 | Object schema 2: state, rules, products, items that create objects, described appearance | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
+| 50 | Solar pad and charging removed; dock is home, rest and cool-down | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
+| 51 | Fresh garden at day 0; iteration 1 world archived read-only | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
+| 52 | Thought callouts on the map | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
+| 53 | Weather, experiment board, songbook and a second robot deferred | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
 
 ### Decisions made while building
 
