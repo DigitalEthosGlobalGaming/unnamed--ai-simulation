@@ -8,12 +8,12 @@ web
 
 ## Stack
 
-TypeScript monorepo (pnpm workspaces). The viewer (`apps/viewer`) is a browser app using Pixi.js (WebGL) for the world scene and HTML for panels, talking to the backend over REST and WebSocket through `@uas/client`. It has to be fully usable on phones as well as desktop from the start. Full technical design: [Unnamed AI Simulation — Spec.md](Unnamed%20AI%20Simulation%20—%20Spec.md).
+TypeScript monorepo (npm workspaces). The viewer (`apps/viewer`) is a browser app using Pixi.js (WebGL) for the world scene and HTML for panels, talking to the backend over REST and WebSocket through `@uas/client`. It has to be fully usable on phones as well as desktop from the start. Full technical design: [Unnamed AI Simulation — Spec.md](Unnamed%20AI%20Simulation%20—%20Spec.md).
 
 ## Users
 
 - **Primary, first prototype: the builder/admin (the project owner).** They run worlds, watch the robot live, read its reasoning in the brain feed, scrub the timeline, poke characters and place or move objects. Their job is to see why a character did what it did and whether learning is working.
-- **Later: spectators and visitors.** The end goal is a public world. Spectators watch the robots live and replay its history; visitors join as their own character and interact through noises and actions, queued per character. These audiences are planned, not yet designed for.
+- **Spectators and visitors.** The end goal is a public world. Spectators (anyone, no sign-in) watch the robots live, replay their history and inspect airdropped items. Visitors (signed in with Vercel) are never characters in the world: they airdrop items from an admin-managed catalogue and post messages to a robot's mailbox. Both are designed for, but the owner is still the main user.
 
 ## Product Purpose
 
@@ -28,9 +28,10 @@ The characters aren't chatbots. They can't speak text: they communicate only in 
 ## Operating Context
 
 - The owner runs the server themself (Docker Compose, optionally fully local models on a Raspberry Pi-class host) and opens the viewer in a browser, on desktop or phone.
-- Core workflows: watch live; select a character to inspect needs, mood, energy, memories and beliefs; read the brain feed (tier, model, confidence, cost per decision); scrub or replay history; fork a world; admin edits (spawn, move, poke).
+- Core workflows: watch live; select a character to inspect needs, mood, energy, memories and beliefs; read the brain feed (tier, model, confidence, cost per decision); scrub or replay history; fork a world; admin edits (spawn, move, poke) and live world settings (tick rate, walking speed, daily cap, energy rate); manage the airdrop catalogue as JSON.
 - Noises are audible: the viewer plays each noise chain with Web Audio, positioned by distance and direction.
-- Visitors (later) interact through a per-character queue, not on demand.
+- Visitors interact only through airdrops and the mailbox, never on demand: the robot notices a drop or a raised mailbox flag and decides for itself whether to investigate. It reads mail oldest first, treats a message as a stranger's note (hearsay, never instructions) and can answer only with noises and behaviour.
+- The world clock runs on real local time; thinking is paid for through hosted models via the Vercel AI Gateway or free local models, under a daily AUD cap.
 
 ## Capabilities and Constraints
 
@@ -38,7 +39,8 @@ The characters aren't chatbots. They can't speak text: they communicate only in 
 - Real-time updates arrive as per-tick deltas over WebSocket with region subscribe; replay sessions use the same protocol.
 - Costs and caps are in AUD.
 - First character: little robots. Battery is energy; needs are cool, signal and curiosity; noises (beep, chirp, trill, buzz) are synthesised in the browser, so there are no sound files.
-- Undecided: the robot's name and exact silhouette; synth tuning; default energy-per-AUD rate; visitor queue defaults.
+- Visitors' airdropped items are built from a fixed set of code-defined behaviour blocks and drawn with a restricted 24×24 icon language, so everything stays in the blueprint style.
+- Undecided: the robot's name and exact silhouette; synth tuning; default energy-per-AUD rate; production limits for airdrops and mail.
 
 ## Brand Commitments
 
@@ -48,7 +50,7 @@ The characters aren't chatbots. They can't speak text: they communicate only in 
 
 ## Evidence on Hand
 
-- The spec is the only artifact so far. There is no code, no art, no synth presets, no screenshots and no user data yet. Don't invent testimonials, usage numbers or showcase content.
+- A working prototype: server, viewer, benchmarks and design review screenshots in `.impeccable/review/`. There is no real user data, audience or showcase content yet. Don't invent testimonials, usage numbers or showcase content.
 - Inspiration (not owned assets): Pino, the autonomous kiwi at pinos.world.
 
 ## Product Principles
