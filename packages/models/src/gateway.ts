@@ -62,6 +62,8 @@ export class ModelGateway {
   private readonly latency = new Map<string, number>();
   /** Calls that hit their timeout (counted from when the call started). */
   timeouts = 0;
+  /** Live setting: when false, hosted (paid) models are skipped. */
+  hostedEnabled = true;
   private readonly log: (msg: string) => void;
 
   constructor(config: ModelsConfig, opts: GatewayOptions = {}) {
@@ -131,6 +133,32 @@ export class ModelGateway {
     }
   }
 
+  /** Hosted models that could be used now (configured, keyed, not denied). */
+  hostedAvailable(): string[] {
+    return [...this.models.values()].filter((m) => m.paid && !m.unavailable).map((m) => m.name);
+  }
+
+  /** Estimated A$ of one decision with the first usable model in the decide chain (≈350 input tokens). */
+  estimateDecisionCostAud(tokens = 350): number {
+    const req = { job: 'decide', energy: 1, isNight: false } as JobRequest;
+    for (const raw of this.config.jobs.decide ?? []) {
+      const entry: ChainEntry = typeof raw === 'string' ? { use: raw } : raw;
+      const m = this.models.get(entry.use)!;
+      if (this.skipReason(entry, m, req)) continue;
+      const local = m.def.adapter === 'local' || m.def.adapter === 'ollama-decision';
+      const price = m.def.price ?? (local ? LOCAL_PRICE : FREE);
+      return ((tokens * price.inputPerMTok) / 1e6) * this.config.audPerUsd;
+    }
+    return 0;
+  }
+
+  /** Average A$ of one decision today (decide calls), or undefined if none yet. */
+  averageDecisionCostAud(): number | undefined {
+    const rows = this.meter.report(this.meter.currentDay()).filter((r) => r.job === 'decide');
+    const calls = rows.reduce((a, r) => a + r.calls, 0);
+    return calls ? rows.reduce((a, r) => a + r.costAud, 0) / calls : undefined;
+  }
+
   /** Run a job. Returns undefined if every entry was skipped or failed (the mind then falls back). */
   async run(req: JobRequest): Promise<ModelAnswerPayload | undefined> {
     const first = await this.runChain(req.job, req, (m, signal) => this.call(m, req, signal));
@@ -187,7 +215,7 @@ export class ModelGateway {
       const model = this.models.get(entry.use)!;
       const skip = this.skipReason(entry, model, req);
       if (skip) {
-        if (!model.unavailable) this.log(`${job}: skip ${entry.use} (${skip})`);
+        if (!model.unavailable && !(model.paid && !this.hostedEnabled)) this.log(`${job}: skip ${entry.use} (${skip})`);
         continue;
       }
       // Timeouts count from here, when the call starts, and abort the request so a local
@@ -232,6 +260,7 @@ export class ModelGateway {
 
   private skipReason(e: ChainEntry, m: Built, req: JobRequest): string | undefined {
     if (m.unavailable) return m.unavailable;
+    if (m.paid && !this.hostedEnabled) return 'hosted models are turned off';
     if (m.paid && this.meter.spentTodayAud() >= this.config.dailyCapAud) return 'daily AUD cap reached';
     if (m.paid && req.energy < this.config.energyFloor) return 'below energy floor';
     if (e.minEnergy !== undefined && req.energy < e.minEnergy) return `energy ${req.energy} < ${e.minEnergy}`;
@@ -273,7 +302,9 @@ export class ModelGateway {
       maxOutputTokens: 300,
       signal,
     });
-    const valid = r.object.choices.filter((c) => ids.has(c.id));
+    // Small models sometimes repeat their list ("c5, c1, c0, c5, c1, c0"); keep each option once.
+    const seen = new Set<string>();
+    const valid = r.object.choices.filter((c) => ids.has(c.id) && !seen.has(c.id) && seen.add(c.id));
     if (valid.length === 0) throw new Error('plan referenced no valid options');
     return {
       answer: { choices: valid.map((c) => ({ id: c.id, p: 1 })), confidence: 1, reasons: Object.fromEntries(valid.map((c) => [c.id, c.reason])) },

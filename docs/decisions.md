@@ -25,7 +25,7 @@ The design decisions (1 to 38) and open questions are recorded in the spec: [Dec
 | 17 | `tev1:0.8b` for decisions, `llama3.2:1b` for text, via Ollama | Changed: decisions use Laya (`laya:421m-typed-decisions-bf16` as `uas-laya`) at the owner's request, with Tev1 kept as an option; text stays `llama3.2:1b` after a bake-off ([D29](#deviations-from-the-spec)) |
 | 18 | Stable cached prefix; tested | Yes |
 | 19 | REST + WebSocket deltas with region subscribe | Yes |
-| 20 | Admin, visitor, spectator; API keys | Yes |
+| 20 | Admin, visitor, spectator; API keys | Yes, plus Sign in with Vercel ([D33](#deviations-from-the-spec)) |
 | 21 | One `worker_thread` per world | Yes |
 | 22 | Docker Compose with Ollama | Yes |
 | 23 | Brain feed of every decision with tier, model, cost | Yes (carry-on is not written to the feed) |
@@ -102,6 +102,8 @@ Where the code does something different from [the spec](../Unnamed%20AI%20Simula
 | D30 | Model routing | Decision model, then LLM for low confidence; cloud via AI SDK providers | Obvious choices go to autopilot with no call; then hosted Laya; unsure decisions are re-asked of Jev, then the plan chain; local Laya when there's no key, budget or network; autopilot last. Hosted models go through Vercel AI Gateway with one key; Jev uses the gateway's TypeSafe-compatible API, not a direct TypeSafe key | [models.md](architecture/models.md#hosted-models-vercel-ai-gateway) |
 | D31 | Plans | 1–3 queued actions per call | A plan answer may hold up to 6 steps; steps beyond the 3-action queue run later without another call, for up to an in-world hour | [`system.ts`](../packages/mind/src/system.ts) |
 | D32 | Candidates | Visible affordances plus built-ins (up to ~12) | Decision models are offered only the 6 most relevant (top by utility, plus one untried) | [`system.ts`](../packages/mind/src/system.ts) |
+| D33 | Auth | API keys in v1, OIDC later | API keys plus Sign in with Vercel (OIDC + PKCE). Admins come from `UAS_ADMIN_VERCEL_USERS`, other signed-in users are visitors; sessions are in SQLite behind a signed httpOnly cookie, with an Origin check for cookie-authenticated mutations | [server-and-api.md](architecture/server-and-api.md#sign-in-with-vercel) |
+| D34 | Live settings | Clock changes via `PATCH /clock`; config otherwise static | `PATCH /worlds/:id/settings` changes tick rate, walking speed, cap, energy rate, hosted on/off, need decay and escalation live, logged as `settings.change` (+ `sim.config`) | [server-and-api.md](architecture/server-and-api.md#live-world-settings) |
 
 Open questions from the spec that are still open, with the provisional values in use:
 

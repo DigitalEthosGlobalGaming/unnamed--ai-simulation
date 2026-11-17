@@ -43,6 +43,12 @@ export interface WorldConfig {
   startSecond: number;
   /** Ticks to cross one tile. */
   moveTicksPerTile: number;
+  /**
+   * Multiplier on action durations given in ticks (pack `durationTicks`, built-in `ticks` args):
+   * they are written for 1 in-world second per tick, so a world at 0.25 s per tick uses 4.
+   * Default 1.
+   */
+  durationScale?: number;
 }
 
 export const DEFAULT_CONFIG = {
@@ -84,7 +90,7 @@ export interface WorldState {
    * wall-clock seconds since the epoch for a real-time world (or from `startSecond` for a scaled
    * one). Moved only by logged `clock.*` inputs. `dayZero` makes `day` count from 0.
    */
-  clock?: { baseSeconds: number; baseTick: number; dayZero: number; timezone: string };
+  clock?: { baseSeconds: number; baseTick: number; dayZero: number; timezone: string; anchored?: boolean };
 }
 
 /** Need and energy level a new character starts at (until the mind package owns this). */
@@ -165,6 +171,11 @@ export class World implements WorldView {
 
   get tick(): number {
     return this.state.tick;
+  }
+
+  /** A duration written in reference ticks, in this world's ticks (see `durationScale`). */
+  scaled(ticks: number): number {
+    return Math.max(1, Math.round(ticks * (this.state.config.durationScale ?? 1)));
   }
 
   /** In-world seconds (local wall-clock seconds since the epoch in a real-time world). */
@@ -306,7 +317,24 @@ export class World implements WorldView {
       case 'admin.poke':
         return reject('no mind runtime to poke');
       case 'models.load':
-        return; // only meaningful to a mind runtime
+      case 'settings.change':
+        return; // only meaningful to a mind runtime (and the host)
+      case 'sim.config': {
+        const p = e.payload;
+        const spt = p.secondsPerTick;
+        const mtt = p.moveTicksPerTile;
+        const ds = p.durationScale;
+        if ((spt !== undefined && !(spt > 0)) || (mtt !== undefined && !(Number.isInteger(mtt) && mtt > 0)) || (ds !== undefined && !(ds > 0))) {
+          return reject('bad sim.config payload');
+        }
+        // Re-base the clock first so in-world time is continuous across the rate change.
+        const now = this.seconds;
+        this.state.clock = { ...this.state.clock!, baseSeconds: now, baseTick: this.state.tick };
+        if (spt !== undefined) this.state.config.secondsPerTick = spt;
+        if (mtt !== undefined) this.state.config.moveTicksPerTile = mtt;
+        if (ds !== undefined) this.state.config.durationScale = ds;
+        return this.emit({ kind: 'clock', seconds: now, previous: now, reason: 'rate', timezone: this.state.clock.timezone });
+      }
       case 'clock.anchor':
       case 'clock.jump': {
         const p = e.payload;
@@ -314,9 +342,13 @@ export class World implements WorldView {
         const previous = this.seconds;
         const seconds = Math.round(p.epochMs / 1000) + p.tzOffsetMinutes * 60;
         const clock = this.state.clock!;
-        // Anchoring a fresh world starts day 0 on the local date; later jumps keep counting days.
-        const dayZero = e.type === 'clock.anchor' ? Math.floor(seconds / this.state.config.dayLengthSeconds) : clock.dayZero;
-        this.state.clock = { baseSeconds: seconds, baseTick: this.state.tick, dayZero, timezone: p.timezone };
+        const len = this.state.config.dayLengthSeconds;
+        // Anchoring keeps the world's own day count (0 for a new world; for a world that ran before
+        // it had a real-time clock, the days it had lived, counted from its ticks), so `day` never
+        // becomes days-since-1970. Later jumps keep counting from there.
+        const priorDay = clock.anchored ? this.day : Math.floor((this.state.config.startSecond + this.state.tick * this.state.config.secondsPerTick) / len);
+        const dayZero = e.type === 'clock.anchor' ? Math.floor(seconds / len) - priorDay : clock.dayZero;
+        this.state.clock = { baseSeconds: seconds, baseTick: this.state.tick, dayZero, timezone: p.timezone, anchored: clock.anchored || e.type === 'clock.anchor' };
         return this.emit({ kind: 'clock', seconds, previous, reason: e.type === 'clock.anchor' ? 'anchor' : (p.reason ?? 'realign'), timezone: p.timezone });
       }
       case 'visitor.command': {
@@ -368,7 +400,7 @@ export class World implements WorldView {
     const verbDef = target?.kind === 'object' ? this.registry.objects.get(target.type)?.verbs[action.verb] : undefined;
     if (target && verbDef) {
       if (this.reach(c, target) > verbDef.range) return 'out of range';
-      c.current = { action, startedTick: tick, endsTick: tick + verbDef.durationTicks };
+      c.current = { action, startedTick: tick, endsTick: tick + this.scaled(verbDef.durationTicks) };
       return;
     }
     if (!BUILT_INS.has(action.verb)) return target ? `${target.type} has no verb ${action.verb}` : `unknown verb ${action.verb}`;
@@ -385,7 +417,7 @@ export class World implements WorldView {
         c.current = {
           action,
           startedTick: tick,
-          endsTick: tick + intArg(action.args?.ticks, 100, 1, 3000),
+          endsTick: tick + this.scaled(intArg(action.args?.ticks, 100, 1, 3000)),
           nextStepTick: tick + this.state.config.moveTicksPerTile,
         };
         return;
@@ -394,16 +426,16 @@ export class World implements WorldView {
         const err = this.checkNotes(c, notes);
         if (err) return err;
         const list = notes as string[];
-        c.current = { action, startedTick: tick, endsTick: tick + TICKS_PER_NOTE * list.length };
+        c.current = { action, startedTick: tick, endsTick: tick + this.scaled(TICKS_PER_NOTE * list.length) };
         this.emit({ kind: 'vocalize', id: c.id, pos: { ...c.pos }, notes: [...list] });
         this.tickSounds.push({ sourceId: c.id, pos: { ...c.pos }, notes: [...list], loudness: 1 });
         return;
       }
       case 'wait':
-        c.current = { action, startedTick: tick, endsTick: tick + intArg(action.args?.ticks, 10, 1, 3000) };
+        c.current = { action, startedTick: tick, endsTick: tick + this.scaled(intArg(action.args?.ticks, 10, 1, 3000)) };
         return;
       case 'rest':
-        c.current = { action, startedTick: tick, endsTick: tick + intArg(action.args?.ticks, 100, 1, 3000) };
+        c.current = { action, startedTick: tick, endsTick: tick + this.scaled(intArg(action.args?.ticks, 100, 1, 3000)) };
         return;
     }
     return `unknown verb ${action.verb}`;

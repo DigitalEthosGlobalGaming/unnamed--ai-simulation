@@ -19,6 +19,8 @@ export function band(level: number, low = 0.25, critical = 0.1): 'ok' | 'low' | 
 
 export interface DecayContext {
   hours: number;
+  /** Multiplier on need decay (not on battery drain). Default 1. */
+  decayMultiplier?: number;
   active: boolean;
   resting: boolean;
   nearby: boolean;
@@ -28,7 +30,7 @@ export interface DecayContext {
 export function updateNeeds(needs: Record<string, number>, energy: number, arch: ArchetypeDef, ctx: DecayContext): number {
   for (const [name, def] of Object.entries(arch.needs)) {
     let v = needs[name] ?? 1;
-    v -= def.decayPerHour * ctx.hours * (ctx.active ? (def.activeDecayMultiplier ?? 1) : 1);
+    v -= def.decayPerHour * ctx.hours * (ctx.decayMultiplier ?? 1) * (ctx.active ? (def.activeDecayMultiplier ?? 1) : 1);
     if (ctx.resting) v += (def.restRecoveryPerHour ?? 0) * ctx.hours;
     if (ctx.nearby) v += (def.nearbyRecoveryPerHour ?? 0) * ctx.hours;
     needs[name] = clamp(v);

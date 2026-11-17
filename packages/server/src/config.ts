@@ -27,7 +27,7 @@ const RawWorldFileSchema = z.strictObject({
       /** IANA name; default: the server's system timezone. */
       timezone: z.string().nullish(),
       /** Re-align when the world drifts from the wall clock by more than this (real-time mode). */
-      maxDriftSeconds: z.number().positive().default(5),
+      maxDriftSeconds: z.number().positive().default(30),
     })
     .prefault({}),
   /** Sim ticks per real second at timeScale 1 while a viewer is subscribed. Real-time default: 1 / secondsPerTick. */
@@ -47,6 +47,10 @@ const RawWorldFileSchema = z.strictObject({
       dayLengthSeconds: z.number().positive(),
       startSecond: z.number().min(0),
       moveTicksPerTile: z.int().positive(),
+      /** Walking speed in in-world seconds per tile (preferred over moveTicksPerTile). */
+      moveSecondsPerTile: z.number().positive(),
+      /** Derived (accepted so a resolved config can be parsed again, e.g. for forks). */
+      durationScale: z.number().positive(),
     })
     .partial()
     .default({}),
@@ -63,7 +67,7 @@ export type WorldFile = Omit<z.infer<typeof RawWorldFileSchema>, 'ticksPerRealSe
   ticksPerRealSecond: number;
   idleTicksPerRealSecond: number;
   snapshotEveryTicks: number;
-  sim: { secondsPerTick: number } & z.infer<typeof RawWorldFileSchema>['sim'];
+  sim: { secondsPerTick: number; durationScale: number } & z.infer<typeof RawWorldFileSchema>['sim'];
 };
 export const WorldFileSchema = RawWorldFileSchema;
 
@@ -74,8 +78,18 @@ export const WorldFileSchema = RawWorldFileSchema;
  */
 function resolve(raw: z.infer<typeof RawWorldFileSchema>): WorldFile {
   const realtime = raw.clock.mode === 'realtime';
-  const spt = raw.sim.secondsPerTick ?? (realtime ? 1 : 2);
+  // Real time: 4 ticks per real second at 0.25 in-world seconds per tick by default (smooth,
+  // still light: models are called per decision, not per tick). Either value implies the other.
+  const spt = raw.sim.secondsPerTick ?? (realtime ? 1 / (raw.ticksPerRealSecond ?? 4) : 2);
   const tps = raw.ticksPerRealSecond ?? (realtime ? 1 / spt : 5);
+  if (realtime) {
+    // Real time means one in-world second per real second, watched or not.
+    for (const [name, rate] of [['ticksPerRealSecond', tps], ['idleTicksPerRealSecond', raw.idleTicksPerRealSecond ?? tps]] as const) {
+      if (Math.abs(spt * rate - 1) > 1e-9) {
+        throw new Error(`world ${raw.id}: clock.mode realtime needs sim.secondsPerTick × ${name} = 1 (got ${spt} × ${rate}); use clock.mode: scaled for a faster world`);
+      }
+    }
+  }
   const ticks = (seconds: number) => Math.max(1, Math.round(seconds / spt));
   const mind = { ...raw.mind } as Record<string, unknown>;
   if (typeof mind.jobTimeoutSeconds === 'number') mind.jobTimeoutTicks = ticks(mind.jobTimeoutSeconds);
@@ -101,7 +115,13 @@ function resolve(raw: z.infer<typeof RawWorldFileSchema>): WorldFile {
     ticksPerRealSecond: tps,
     idleTicksPerRealSecond: raw.idleTicksPerRealSecond ?? (realtime ? tps : 0.75),
     snapshotEveryTicks: raw.snapshotEveryTicks ?? (raw.snapshotEverySeconds ? ticks(raw.snapshotEverySeconds) : 1000),
-    sim: { ...raw.sim, secondsPerTick: spt, ...(raw.sim.moveTicksPerTile === undefined && realtime && { moveTicksPerTile: 2 }) },
+    sim: {
+      ...raw.sim,
+      secondsPerTick: spt,
+      ...(raw.sim.moveTicksPerTile === undefined && (raw.sim.moveSecondsPerTile !== undefined || realtime) && { moveTicksPerTile: ticks(raw.sim.moveSecondsPerTile ?? 0.75) }),
+      // Pack durations are written for 1 s per tick; real-time worlds keep them in seconds.
+      durationScale: realtime ? 1 / spt : 1,
+    },
     mind,
     models,
   };

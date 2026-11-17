@@ -151,6 +151,66 @@ export interface UsageRow {
   energy: number;
 }
 
+export interface AuthMe {
+  user: { id: string; name: string | null; email: string | null; avatarUrl: string | null; username: string | null } | null;
+  role: 'admin' | 'visitor' | 'spectator';
+  /** False when the server has no VERCEL_OAUTH_CLIENT_ID: hide the sign-in button. */
+  loginAvailable: boolean;
+}
+
+export interface SettingsValues {
+  ticksPerRealSecond: number;
+  moveSecondsPerTile: number;
+  timeScale: number;
+  paused: boolean;
+  dailyCapAud: number;
+  energyPerAud: number;
+  hostedModels: boolean;
+  needDecayMultiplier: number;
+  escalateBelow: number;
+}
+
+/** How to render one setting: a generic number or boolean control. */
+export interface SettingField {
+  key: keyof SettingsValues;
+  label: string;
+  kind: 'number' | 'boolean';
+  unit?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  help: string;
+}
+
+export interface SettingsDerived {
+  averageDecisionCostAud: number;
+  /** True until a decision has been made today (then it's measured). */
+  averageDecisionCostEstimated: boolean;
+  /** Battery (0..1 = a full battery) one average decision costs: averageDecisionCostAud × energyPerAud. */
+  batteryPerDecision: number;
+  decisionsPerFullBattery: number | null;
+  spentTodayAud: number;
+  dailyCapAud: number;
+  capRemainingAud: number;
+  hostedModelsAvailable: string[];
+  secondsPerTick: number;
+  moveTicksPerTile: number;
+  inWorldSecondsPerRealSecond: number;
+}
+
+export interface WorldSettings {
+  values: SettingsValues;
+  schema: SettingField[];
+  derived: SettingsDerived;
+}
+
+export interface SettingsUpdate {
+  values: SettingsValues;
+  derived: SettingsDerived;
+  /** Human-readable summary of what changed, e.g. "dailyCapAud: 0.5 → 0.2". */
+  effects: string[];
+}
+
 export class ApiError extends Error {
   readonly status: number;
   constructor(status: number, message: string) {
@@ -214,6 +274,16 @@ export class UasClient {
   packs = () => this.req<{ name: string; version: string; licence: string; contentHash: string }[]>('GET', '/packs');
   usage = (worldId?: string, day?: string) =>
     this.req<Record<string, { rows: UsageRow[]; queue: QueueStats }>>('GET', `/usage?${worldId ? `worldId=${worldId}&` : ''}${day ? `day=${day}` : ''}`);
+
+  // ---- Sign in with Vercel (cookie session; works through the same-origin /api proxy)
+  me = () => this.req<AuthMe>('GET', '/auth/me');
+  /** Navigate the browser here to sign in; it comes back to `returnTo` (a same-site path). */
+  loginUrl = (returnTo = '/') => `${this.baseUrl}/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
+  logout = () => this.req<{ ok: true }>('POST', '/auth/logout');
+
+  // ---- Live world settings
+  settings = (id: string) => this.req<WorldSettings>('GET', `/worlds/${id}/settings`);
+  updateSettings = (id: string, patch: Partial<SettingsValues>) => this.req<SettingsUpdate>('PATCH', `/worlds/${id}/settings`, patch);
 
   /** Open the WebSocket stream. */
   connect(): WorldStream {

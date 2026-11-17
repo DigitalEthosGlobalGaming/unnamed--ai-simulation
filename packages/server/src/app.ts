@@ -8,12 +8,17 @@ import { KeyRing, allows, type Principal, type Role } from './auth.ts';
 import { listPacks, loadPacks } from './catalog.ts';
 import { parseWorldFile, type WorldFile } from './config.ts';
 import { Hub } from './hub.ts';
+import { VercelAuth, type AuthEnv } from './session.ts';
 import type { WorldStatus } from './runtime.ts';
 import { Supervisor, type WorldHandle } from './supervisor.ts';
 
 export interface AppOptions {
   dbPath: string;
   keys: KeyRing;
+  /** Sign in with Vercel settings (client id/secret, session secret, public URL, admin users). */
+  authEnv?: AuthEnv;
+  /** For tests: the fetch used to talk to Vercel's OAuth endpoints. */
+  authFetch?: typeof fetch;
   log?: (m: string) => void;
 }
 
@@ -41,7 +46,8 @@ export function createApp(opts: AppOptions): App {
   const inputLog = new SqliteInputLog(db);
   const snaps = new SqliteSnapshotStore<WorldState>(db);
   const reads = new SqliteReadModels(db);
-  const hub = new Hub(supervisor, inputLog, snaps, opts.keys);
+  const auth = new VercelAuth(db, opts.authEnv ?? {}, opts.authFetch);
+  const hub = new Hub(supervisor, inputLog, snaps, opts.keys, (cookie) => auth.principalFor(cookie));
   /** visitor key → visitor entity, per world: one visitor per key per world. */
   const visitors = new Map<string, string>();
 
@@ -51,9 +57,22 @@ export function createApp(opts: AppOptions): App {
     const header = req.get('authorization')?.replace(/^Bearer\s+/i, '') ?? req.get('x-api-key');
     const p = opts.keys.identify(header);
     if (p === null) return next(new HttpError(401, 'unknown API key'));
-    (req as Request & { principal?: Principal }).principal = p;
+    // No API key: a Sign in with Vercel session cookie, if any.
+    const session = p ? undefined : auth.principalFor(req.get('cookie'));
+    // CSRF: cookie-authenticated mutations must come from our own origin (SameSite=Lax as well).
+    if (session && !['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !auth.sameOrigin(req)) {
+      return next(new HttpError(403, 'cross-site request refused'));
+    }
+    (req as Request & { principal?: Principal }).principal = p ?? session;
     next();
   });
+  // An API key answers /auth/me too (no user, the key's role), so a key-authenticated viewer knows what it may do.
+  app.get('/auth/me', (req, res, next) => {
+    const p = (req as Request & { principal?: Principal & { viaCookie?: true } }).principal;
+    if (p && !p.viaCookie) return void res.json({ user: null, role: p.role, loginAvailable: auth.loginAvailable });
+    next();
+  });
+  auth.routes(app);
 
   const principal = (req: Request) => (req as Request & { principal?: Principal }).principal;
   const world = (req: Request): WorldHandle => {
@@ -118,6 +137,8 @@ export function createApp(opts: AppOptions): App {
   app.get('/worlds', need('spectator'), route(() => [...supervisor.worlds.values()].map(summary)));
   app.post('/worlds', need('admin'), route(async (req) => summary(await startWorld(parseWorldFile(req.body)))));
   app.get('/worlds/:id', need('spectator'), route((req) => summary(world(req))));
+  app.get('/worlds/:id/settings', need('spectator'), route((req) => world(req).call({ method: 'settings' })));
+  app.patch('/worlds/:id/settings', need('admin'), route((req) => world(req).call({ method: 'setSettings', patch: req.body, ...(principal(req)?.keyId && { userId: principal(req)!.keyId }) })));
   app.patch('/worlds/:id/clock', need('admin'), route((req) => world(req).call({ method: 'clock', ...(req.body as { paused?: boolean; timeScale?: number; realign?: boolean }) })));
 
   // ---- entities (admin edits are logged input events)

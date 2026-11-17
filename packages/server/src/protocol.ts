@@ -19,6 +19,8 @@ export type WorkerMethod =
   | { method: 'mind'; characterId: string }
   | { method: 'memories'; characterId: string }
   | { method: 'usage'; day?: string }
+  | { method: 'settings' }
+  | { method: 'setSettings'; patch: unknown; userId?: string }
   | { method: 'shutdown' };
 
 export type ToWorker = { type: 'call'; id: number } & WorkerMethod;

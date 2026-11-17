@@ -187,14 +187,21 @@ The runtime takes a snapshot at every in-world day boundary ([events-and-replay.
 
 **Real-time worlds** (`clock.mode: realtime`, the default; [`worlds/garden.yaml`](../../worlds/garden.yaml)):
 
-- **Speed.** One in-world second per real second: 1 tick per real second at 1 s per tick, and 2 ticks per tile, so a robot walks a tile in 2 s. The viewer interpolates between ticks.
+- **Speed.** One in-world second per real second. The default is 4 ticks per real second at 0.25 s per tick (`ticksPerRealSecond`; `secondsPerTick` = 1 / rate), and walking is `sim.moveSecondsPerTile` 0.75 (3 ticks per tile). The viewer interpolates between ticks. Models are called per decision, not per tick, so the tick rate barely affects CPU.
+- **Durations.** Pack `durationTicks` and built-in `ticks` arguments are written for 1 s per tick. `WorldConfig.durationScale` (1 / `secondsPerTick` in real time; 1 in scaled worlds) converts them, so charging still takes 50 in-world seconds at any tick rate.
 - **Time of day.** It is the real local time in `clock.timezone`: an IANA name, defaulting to the server's system timezone. It's night in the garden when it's night for the owner.
 - **Anchor.** When a world is created, the server logs `clock.anchor { epochMs, tzOffsetMinutes, timezone }` at tick 0. `baseSeconds` becomes local wall-clock seconds since the epoch, and day 0 is that local date.
 - **Restarts.** On restart, the world fast-forwards through its log and then logs `clock.jump { reason: 'restart' }` to now. The missed time is not simulated.
 - **Pauses.** Resuming from a pause logs `clock.jump { reason: 'resume' }`.
 - **Speed-ups.** `PATCH /clock { timeScale }` still speeds a world up for development. Setting `timeScale` back to 1 logs `clock.jump { reason: 'realign' }`, which can move time backwards. `PATCH /clock { realign: true }` forces a realign.
-- **Drift.** Every 30 s the worker compares the world with the wall clock and logs `clock.jump { reason: 'sync' }` past `clock.maxDriftSeconds` (default 5). This happens on slow hosts and with timer jitter.
+- **Drift.** Every 60 s the worker compares the world with the wall clock and logs `clock.jump { reason: 'sync' }` past `clock.maxDriftSeconds` (default 30). This happens on slow hosts and with timer jitter.
 - **DST** changes are picked up by the next jump.
+- **Migrating an older world** to real time happens on its first real-time start, with two logged inputs:
+  - `sim.config { secondsPerTick, moveTicksPerTile }` switches it to the configured timing. The clock is re-based, so time stays continuous.
+  - `clock.anchor` follows, rather than a downtime jump. The anchor keeps the world's own day count, from its ticks at the old rate, so `day` never becomes days-since-1970, and nothing is remembered as "switched off".
+  - `WorldState.clock.anchored` records that a world has been anchored.
+- **Config check.** A real-time config whose `secondsPerTick × ticksPerRealSecond` (or the idle rate) isn't 1 is refused at load time.
+- **Drift syncs.** The drift check runs every 60 s with `clock.maxDriftSeconds` 30, so sync jumps are rare.
 - **Robots and jumps.** A forward jump of 5 minutes or more is felt as having been switched off ([mind.md](mind.md)):
   - Needs and battery don't drain over the gap, because no ticks ran.
   - Plans and pending decisions are dropped.

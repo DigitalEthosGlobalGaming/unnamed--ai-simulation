@@ -1,5 +1,6 @@
 import type { Character, Delta, InputEvent, JobName, Json, TickDeltas } from '@uas/core';
-import { MindSystem } from '@uas/mind';
+import { MindSystem, mindConfigOf } from '@uas/mind';
+import { PERSISTED, SETTINGS_SCHEMA, SettingsPatchSchema, type SettingsPatch, type SettingsValues } from './settings.ts';
 import { ModelGateway, ModelHost, parseModelsConfig, type GatewayOptions, type QueueStats, type UsageRow } from '@uas/models';
 import { and, eq } from 'drizzle-orm';
 import { World, type WorldState } from '@uas/sim';
@@ -118,7 +119,7 @@ export class WorldRuntime {
         this.world = World.fromSnapshot(state, registry, this.minds);
       } else {
         this.world = World.create(
-          { worldId: id, seed: this.config.seed, grid: loadMap(this.config.map), ...this.config.sim },
+          { worldId: id, seed: this.config.seed, grid: loadMap(this.config.map), ...simConfig(this.config) },
           registry,
           this.config.entities.map((e) => ({ type: e.type, pos: e.pos, ...(e.id && { id: e.id }), ...(e.state && { state: e.state as Record<string, Json> }) })),
           this.minds,
@@ -140,11 +141,22 @@ export class WorldRuntime {
       snapshotEveryTicks: this.config.snapshotEveryTicks,
     });
     this.lastDay = this.world.day;
+    this.restoreSettings();
     if (this.config.clock.mode === 'realtime') {
-      // A new world is anchored to the wall clock; a resumed one jumps over the downtime.
-      // Both are logged inputs, so replays reproduce them without reading a clock.
-      if (latest) this.submitClock('clock.jump', 'restart');
-      else this.submitClock('clock.anchor');
+      // A world switching to real time (e.g. from an older scaled config) gets the configured
+      // timing first, so secondsPerTick × ticksPerRealSecond = 1. Logged, so replays follow.
+      const sc = this.world.state.config;
+      const want = this.config.sim;
+      const change = {
+        ...(sc.secondsPerTick !== want.secondsPerTick && { secondsPerTick: want.secondsPerTick }),
+        ...(want.moveTicksPerTile !== undefined && sc.moveTicksPerTile !== want.moveTicksPerTile && { moveTicksPerTile: want.moveTicksPerTile }),
+        ...((sc.durationScale ?? 1) !== want.durationScale && { durationScale: want.durationScale }),
+      };
+      if (Object.keys(change).length) this.recorder.submit('sim.config', change);
+      // A world never anchored (new, or created before the real-time clock) is anchored to the
+      // wall clock; an anchored one jumps over the downtime. Both are logged inputs.
+      if (!this.world.state.clock?.anchored) this.submitClock('clock.anchor');
+      else if (latest) this.submitClock('clock.jump', 'restart');
     }
   }
 
@@ -225,6 +237,146 @@ export class WorldRuntime {
     };
   }
 
+  // ------------------------------------------------------------------ live settings
+
+  /** Pause, speed and realign. Real-time worlds catch up with the wall clock after a pause or a speed-up (logged jumps). */
+  setClock(c: { paused?: boolean; timeScale?: number; watched?: boolean; realign?: boolean }): void {
+    const wasPaused = this.paused;
+    const wasScale = this.timeScale;
+    if (c.paused !== undefined) this.paused = c.paused;
+    if (c.timeScale !== undefined) this.timeScale = c.timeScale;
+    if (c.watched !== undefined) this.watched = c.watched;
+    if (c.realign) this.realign('realign');
+    else if (wasPaused && !this.paused) this.realign('resume');
+    else if (wasScale !== 1 && this.timeScale === 1) this.realign('realign');
+  }
+
+  /**
+   * Current settings. `pending` overlays a change that was just logged but is applied by the sim
+   * and mind on the next tick, so a PATCH response already shows the new values.
+   */
+  settingsValues(pending: Pending = {}): SettingsValues {
+    const mind = { ...mindConfigOf(this.world.state.ext), ...pending.mind };
+    const sc = { ...this.world.state.config, ...pending.timing };
+    return {
+      ticksPerRealSecond: this.config.ticksPerRealSecond,
+      moveSecondsPerTile: Math.round(sc.moveTicksPerTile * sc.secondsPerTick * 1000) / 1000,
+      timeScale: this.timeScale,
+      paused: this.paused,
+      dailyCapAud: this.gateway.config.dailyCapAud,
+      energyPerAud: mind.energyPerAud,
+      hostedModels: this.gateway.hostedEnabled,
+      needDecayMultiplier: mind.needDecayMultiplier,
+      escalateBelow: this.gateway.config.escalateBelow,
+    };
+  }
+
+  /** Read-only values derived from the settings and today's usage. */
+  settingsDerived(pending: Pending = {}) {
+    const values = this.settingsValues(pending);
+    const measured = this.gateway.averageDecisionCostAud();
+    const avg = measured ?? this.gateway.estimateDecisionCostAud();
+    const battery = avg * values.energyPerAud;
+    const spent = this.gateway.meter.spentTodayAud();
+    const sc = { ...this.world.state.config, ...pending.timing };
+    return {
+      averageDecisionCostAud: avg,
+      averageDecisionCostEstimated: measured === undefined,
+      batteryPerDecision: battery,
+      decisionsPerFullBattery: battery > 0 ? Math.floor(1 / battery) : null,
+      spentTodayAud: spent,
+      dailyCapAud: values.dailyCapAud,
+      capRemainingAud: Math.max(0, values.dailyCapAud - spent),
+      hostedModelsAvailable: this.gateway.hostedAvailable(),
+      secondsPerTick: sc.secondsPerTick,
+      moveTicksPerTile: sc.moveTicksPerTile,
+      inWorldSecondsPerRealSecond: sc.secondsPerTick * this.ticksPerRealSecond() * this.timeScale,
+    };
+  }
+
+  settings() {
+    return { values: this.settingsValues(), schema: SETTINGS_SCHEMA, derived: this.settingsDerived() };
+  }
+
+  /**
+   * Validate and apply a settings change live. It is logged as a `settings.change` input (the
+   * mind applies energy rate and need decay from it, so replays follow), plus a `sim.config`
+   * input when tick rate or walking speed change the sim's timing.
+   */
+  applySettings(raw: unknown, userId?: string) {
+    const r = SettingsPatchSchema.safeParse(raw);
+    if (!r.success) throw new Error(`settings: ${r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`);
+    const before = this.settingsValues();
+    const patch = Object.fromEntries(Object.entries(r.data).filter(([k, v]) => before[k as keyof SettingsValues] !== v)) as SettingsPatch;
+    const effects: string[] = [];
+    if (Object.keys(patch).length === 0) return { values: before, derived: this.settingsDerived(), effects: ['no change'] };
+    this.recorder.submit('settings.change', { changes: patch }, userId ? { userId } : undefined);
+    const timing = this.applyRuntimeSettings(patch);
+    if (timing) {
+      this.recorder.submit('sim.config', timing);
+      effects.push(`sim timing: ${Object.entries(timing).map(([k, v]) => `${k} ${v}`).join(', ')}`);
+    }
+    if (patch.paused !== undefined || patch.timeScale !== undefined) {
+      this.setClock({ ...(patch.paused !== undefined && { paused: patch.paused }), ...(patch.timeScale !== undefined && { timeScale: patch.timeScale }) });
+      effects.push(`clock: ${this.paused ? 'paused' : 'running'} at ${this.timeScale}×`);
+    }
+    for (const k of Object.keys(patch) as (keyof SettingsPatch)[]) {
+      if (k === 'paused' || k === 'timeScale') continue;
+      effects.push(`${k}: ${before[k]} → ${patch[k]}`);
+    }
+    const pending: Pending = {
+      ...(timing && { timing }),
+      mind: {
+        ...(patch.energyPerAud !== undefined && { energyPerAud: patch.energyPerAud }),
+        ...(patch.needDecayMultiplier !== undefined && { needDecayMultiplier: patch.needDecayMultiplier }),
+      },
+    };
+    return { values: this.settingsValues(pending), derived: this.settingsDerived(pending), effects };
+  }
+
+  /**
+   * Apply the host-side part of a settings patch (tick rate, gateway). Returns the sim timing
+   * change it implies, if any (real time keeps one in-world second per real second).
+   */
+  private applyRuntimeSettings(patch: SettingsPatch): { secondsPerTick?: number; moveTicksPerTile?: number; durationScale?: number } | undefined {
+    if (patch.dailyCapAud !== undefined) this.gateway.config.dailyCapAud = patch.dailyCapAud;
+    if (patch.escalateBelow !== undefined) this.gateway.config.escalateBelow = patch.escalateBelow;
+    if (patch.energyPerAud !== undefined) this.gateway.config.energyPerAud = patch.energyPerAud;
+    if (patch.hostedModels !== undefined) this.gateway.hostedEnabled = patch.hostedModels;
+    if (patch.ticksPerRealSecond === undefined && patch.moveSecondsPerTile === undefined) return undefined;
+    const sc = this.world.state.config;
+    const realtime = this.config.clock.mode === 'realtime';
+    const moveSeconds = patch.moveSecondsPerTile ?? sc.moveTicksPerTile * sc.secondsPerTick;
+    let spt = sc.secondsPerTick;
+    if (patch.ticksPerRealSecond !== undefined) {
+      this.config.ticksPerRealSecond = patch.ticksPerRealSecond;
+      if (realtime) {
+        this.config.idleTicksPerRealSecond = patch.ticksPerRealSecond;
+        spt = 1 / patch.ticksPerRealSecond;
+      }
+    }
+    const change = {
+      ...(spt !== sc.secondsPerTick && { secondsPerTick: spt }),
+      ...(realtime && 1 / spt !== (sc.durationScale ?? 1) && { durationScale: 1 / spt }),
+    } as { secondsPerTick?: number; moveTicksPerTile?: number; durationScale?: number };
+    const moveTicks = Math.max(1, Math.round(moveSeconds / spt));
+    if (moveTicks !== sc.moveTicksPerTile) change.moveTicksPerTile = moveTicks;
+    this.config.sim = { ...this.config.sim, secondsPerTick: spt, moveTicksPerTile: moveTicks, durationScale: realtime ? 1 / spt : 1 };
+    return Object.keys(change).length ? change : undefined;
+  }
+
+  /** Re-apply persisted settings from the log after a restart (the sim/mind parts are already in the state). */
+  private restoreSettings(): void {
+    const merged: SettingsPatch = {};
+    for (const e of this.log.read(this.config.id)) {
+      if (e.type !== 'settings.change') continue;
+      const changes = (e.payload as { changes?: SettingsPatch }).changes ?? {};
+      for (const k of PERSISTED) if (changes[k] !== undefined) (merged as Record<string, unknown>)[k] = changes[k];
+    }
+    if (Object.keys(merged).length === 0) return;
+    this.applyRuntimeSettings(merged);
+  }
+
   /** Ticks per real second at timeScale 1: full speed while watched, slow when nobody is. */
   ticksPerRealSecond(): number {
     return this.watched ? this.config.ticksPerRealSecond : this.config.idleTicksPerRealSecond;
@@ -278,3 +430,15 @@ export class WorldRuntime {
 }
 
 export type { Delta };
+
+/** The sim's part of a world config (seconds-based keys are already resolved to ticks). */
+function simConfig(c: WorldFile) {
+  const { moveSecondsPerTile: _seconds, ...sim } = c.sim;
+  return sim;
+}
+
+/** A just-logged settings change the sim and mind will apply on the next tick. */
+interface Pending {
+  timing?: { secondsPerTick?: number; moveTicksPerTile?: number; durationScale?: number };
+  mind?: { energyPerAud?: number; needDecayMultiplier?: number };
+}

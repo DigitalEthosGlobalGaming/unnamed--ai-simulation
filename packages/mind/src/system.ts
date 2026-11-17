@@ -106,6 +106,15 @@ export class MindSystem implements SimPlugin {
       this.queueVisitorRequests(world, e.payload as { visitorId: string; actions: Action[] });
       return false; // the sim still runs the visitor's own actions
     }
+    if (e.type === 'settings.change') {
+      // The mind's part of a live settings change: how much battery thinking costs, and need decay.
+      const ch = (e.payload as { changes?: Record<string, unknown> }).changes ?? {};
+      const mind = { ...((world.state.ext.mind as Record<string, Json> | undefined) ?? {}) };
+      if (typeof ch.energyPerAud === 'number') mind.energyPerAud = ch.energyPerAud;
+      if (typeof ch.needDecayMultiplier === 'number') mind.needDecayMultiplier = ch.needDecayMultiplier;
+      world.state.ext.mind = mind;
+      return true;
+    }
     if (e.type === 'models.load') {
       world.state.ext.modelsBusy = (e.payload as { busy: boolean }).busy === true;
       return true;
@@ -242,7 +251,7 @@ export class MindSystem implements SimPlugin {
     const active = verb !== undefined && !resting && verb !== 'wait';
     const obs = this.perceive(world, c, arch);
     const nearby = obs.some((o) => o.kind === 'seen' && world.entity(o.subjectId!)?.kind === 'character');
-    c.energy = updateNeeds(c.needs, c.energy, arch, { hours, active, resting, nearby });
+    c.energy = updateNeeds(c.needs, c.energy, arch, { hours, active, resting, nearby, decayMultiplier: cfg.needDecayMultiplier });
     if (c.energy <= 0) m.energyFloorLatched = true;
     else if (m.energyFloorLatched && c.energy > cfg.energyFloor) m.energyFloorLatched = false;
 
@@ -256,7 +265,7 @@ export class MindSystem implements SimPlugin {
 
     this.sleepCycle(world, c, arch, cfg, isNight);
     if (!c.current && c.queue.length === 0) {
-      if (world.tick - m.idleSince >= arch.mind.idleTimeoutTicks) {
+      if (world.tick - m.idleSince >= world.scaled(arch.mind.idleTimeoutTicks)) {
         m.triggers.push({ kind: 'idle-timeout', tick: world.tick, salience: 0.3 });
         m.idleSince = world.tick;
       }
@@ -688,7 +697,10 @@ export class MindSystem implements SimPlugin {
     const reasons = isRecord(answer.reasons) ? answer.reasons : {};
     const actions: Action[] = [];
     const rejected: FeedEntry['actions'] = [];
+    const used = new Set<string>();
     for (const ch of choices) {
+      if (used.has(String(ch.id))) continue; // a repeated choice is not a second step
+      used.add(String(ch.id));
       const cand = cands.find((x) => x.id === ch.id);
       if (!cand) {
         rejected.push({ verb: String(ch.id), reason: 'not one of the options', status: 'rejected' });

@@ -93,6 +93,19 @@ export const usageDaily = sqliteTable(
   (t) => [primaryKey({ columns: [t.worldId, t.day, t.modelId, t.job] })],
 );
 
+/** Signed-in users (Sign in with Vercel). The cookie carries only the signed session id. */
+export const sessions = sqliteTable('sessions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  username: text('username'),
+  name: text('name'),
+  email: text('email'),
+  avatarUrl: text('avatar_url'),
+  role: text('role').notNull(),
+  createdAt: text('created_at').notNull(),
+  expiresAt: text('expires_at').notNull(),
+});
+
 /** Bootstrap DDL, kept next to the Drizzle schema it mirrors. */
 export const DDL = `
 CREATE TABLE IF NOT EXISTS worlds (id TEXT PRIMARY KEY, config TEXT NOT NULL, parent_world_id TEXT, fork_tick INTEGER, created_at TEXT NOT NULL);
@@ -105,6 +118,7 @@ CREATE INDEX IF NOT EXISTS feed_world ON feed (world_id, character_id, tick);
 CREATE TABLE IF NOT EXISTS diary (id INTEGER PRIMARY KEY AUTOINCREMENT, world_id TEXT NOT NULL, character_id TEXT NOT NULL, day INTEGER NOT NULL, tick INTEGER NOT NULL, text TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS diary_world ON diary (world_id, character_id, day);
 CREATE TABLE IF NOT EXISTS packs (name TEXT NOT NULL, version TEXT NOT NULL, content_hash TEXT PRIMARY KEY, licence TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, username TEXT, name TEXT, email TEXT, avatar_url TEXT, role TEXT NOT NULL, created_at TEXT NOT NULL, expires_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS api_keys (key_hash TEXT PRIMARY KEY, role TEXT NOT NULL, world_id TEXT);
 CREATE TABLE IF NOT EXISTS usage_daily (world_id TEXT NOT NULL, day TEXT NOT NULL, model_id TEXT NOT NULL, job TEXT NOT NULL, calls INTEGER NOT NULL, input_tokens INTEGER NOT NULL, cached_input_tokens INTEGER NOT NULL, output_tokens INTEGER NOT NULL, cost_aud REAL NOT NULL, energy REAL NOT NULL, PRIMARY KEY (world_id, day, model_id, job));
 `;

@@ -45,6 +45,33 @@ sequenceDiagram
 - The hub tells each worker whether any WebSocket subscriber is watching (`clock { watched }`). The worker then runs at `ticksPerRealSecond`, or at `idleTicksPerRealSecond` when nobody is.
 - `ticksPerRealSecond` replaced `ticksPerSecond` in world configs. The status reports `ticksPerRealSecond`, `secondsPerTick` and `inWorldSecondsPerRealSecond`. The catalog still returns `ticksPerSecond` as a deprecated alias.
 
+## Sign in with Vercel
+
+OAuth 2.0 / OIDC with an authorization code and PKCE (S256), plus state and nonce ([`session.ts`](../../packages/server/src/session.ts)). It is only available when `VERCEL_OAUTH_CLIENT_ID` is set.
+
+| Route | What it does |
+| --- | --- |
+| `GET /auth/login?returnTo=/path` | Puts a signed 10-minute cookie (state, nonce, verifier, returnTo) on the browser and redirects to `https://vercel.com/oauth/authorize` with scopes `openid email profile` |
+| `GET /auth/callback` | Checks the state, exchanges the code (`POST https://api.vercel.com/login/oauth/token`, with client id/secret, `code_verifier` and the same `redirect_uri`), checks the id_token's nonce, reads `GET /login/oauth/userinfo`, then revokes Vercel's token (we keep our own session). Stores the session in SQLite (`sessions`) and sets `uas_session` (signed id, httpOnly, SameSite=Lax, `Secure` on https, 30 days). Redirects to `UAS_PUBLIC_URL + returnTo`, or to `/?authError=...` on failure |
+| `POST /auth/logout` | Deletes the session and clears the cookie |
+| `GET /auth/me` | `{ user: { id, name, email, avatarUrl, username } \| null, role, loginAvailable }`; with an API key (and no session) it returns `user: null` and the key's role |
+
+- **Callback URL.** `redirect_uri` is `UAS_PUBLIC_URL + '/api/auth/callback'`. In dev that's `http://localhost:5173/api/auth/callback`: the browser hits Vite, the `/api` proxy strips the prefix, and the server's `/auth/callback` handles it. Register exactly that URL in the Vercel app; loopback http is allowed.
+- **Roles.**
+  - `UAS_ADMIN_VERCEL_USERS` lists Vercel user ids (`sub`, preferred) or usernames (`preferred_username`). Those users are admins.
+  - Every other signed-in user is a visitor, and no session means spectator.
+  - API keys keep working alongside, and a key takes precedence over a cookie. A visitor's character is bound to their user.
+- **CSRF.** Cookie-authenticated mutations (anything but GET/HEAD/OPTIONS) must carry an `Origin` (or `Referer`) equal to `UAS_PUBLIC_URL`'s origin or the server's own, on top of SameSite=Lax. Otherwise the response is 403. API-key requests are exempt.
+- **WebSocket.** `/ws` accepts the session cookie as well as `?key=`.
+- **Setting up the app.**
+  - The Vercel CLI (65.16.0) has no command for OAuth apps, and there's no public API for creating them. Create the app in the dashboard: team **Settings → Apps → Create** (name and slug).
+  - On the app's **Manage** page:
+    - add the authorization callback URL;
+    - generate a client secret (client authentication `client_secret_post`);
+    - enable the permissions `openid`, `email` and `profile`;
+    - optionally restrict **Sign-In Access** to team members.
+  - Vercel's guide lists a deployed project as a prerequisite, but local callback URLs (`http://localhost:...`) can be registered directly.
+
 ## REST endpoints
 
 Auth: `Authorization: Bearer <key>` or `x-api-key: <key>`. An unknown key gets 401 on every route. A missing key counts as an anonymous spectator, allowed only where the world has `publicRead: true`. Too low a role gets 403 (401 if anonymous). Errors are `{ error }` with status 400 unless stated.
@@ -56,6 +83,8 @@ Auth: `Authorization: Bearer <key>` or `x-api-key: <key>`. An unknown key gets 4
 | `GET /worlds` | spectator | Every running world's summary with live status |
 | `POST /worlds` | admin | Start a world from a world-config body (not saved to `worlds/`) |
 | `GET /worlds/:id` | spectator | One world's summary and status |
+| `GET /worlds/:id/settings` | spectator | `{ values, schema, derived }`: live world settings, each with a label, unit, range, step and help text for a generic UI, plus derived costs ([below](#live-world-settings)) |
+| `PATCH /worlds/:id/settings` | admin | Validate and apply a partial `values` live; returns `{ values, derived, effects }` |
 | `PATCH /worlds/:id/clock` | admin | `{ paused?, timeScale? }`; returns the status |
 | `GET /worlds/:id/catalog` | spectator | Display data from the world's packs: objects (tags, solid, portable, verb names), archetypes (needs, energy label, noises, sight and hearing range), `ticksPerRealSecond`, `secondsPerTick`, daily cap, energy floor, energy per AUD |
 | `POST /worlds/:id/entities` | admin | `admin.spawn` input; returns the logged event |
@@ -154,3 +183,28 @@ The queue metrics belong to the [job queue](models.md#job-queue), which is in pr
 ## `@uas/client`
 
 [`packages/client/src/index.ts`](../../packages/client/src/index.ts) re-exports every `@uas/core` type and adds `UasClient` (one method per REST endpoint, plus `noiseAt`) and `WorldStream` (typed `on(type, handler)`, `next(type)`, `subscribe`, and replay controls). It works in browsers and in Node. The M7 test drives the server through it ([`m7-server.test.ts`](../../packages/server/test/m7-server.test.ts)). Usage examples are in [viewer-integration.md](../viewer-integration.md).
+
+## Live world settings
+
+`GET /worlds/:id/settings` and `PATCH /worlds/:id/settings` cover the following fields ([`settings.ts`](../../packages/server/src/settings.ts), `WorldRuntime.applySettings`):
+
+| Field | Unit | Effect |
+| --- | --- | --- |
+| `ticksPerRealSecond` | ticks/s | Sim steps per real second. In a real-time world, `secondsPerTick` becomes 1 / rate, so time stays at 1× (smoother, not faster); `moveTicksPerTile` and `durationScale` follow |
+| `moveSecondsPerTile` | s/tile | Walking speed |
+| `timeScale`, `paused` | ×, on/off | Same as `PATCH /clock`; real-time worlds re-align on resume or on returning to 1× |
+| `dailyCapAud` | A$/day | Hosted spend cap per world (persisted per day) |
+| `energyPerAud` | battery per A$ | The energy rate: how much battery each A$ of thinking costs, so how much a robot can think |
+| `hostedModels` | on/off | Skip hosted models (local and autopilot only) |
+| `needDecayMultiplier` | × | How fast needs run down (battery drain unchanged) |
+| `escalateBelow` | confidence | Re-ask unsure decisions of Jev, then plan |
+
+- **Logging.** A change is logged as a `settings.change` input (with the admin's id as `causedBy.userId`). The mind applies its part (`energyPerAud`, `needDecayMultiplier`) from that input. Tick rate or walking speed also log a `sim.config` input. Replays therefore follow every change.
+- **Restarts.** Host-side values (tick rate, cap, hosted on/off, escalation) are re-applied from the log, so changes survive. Pause and time scale are session-level.
+- **Derived values** in the response:
+  - `averageDecisionCostAud`: today's measured average for decide calls, or an estimate of about 350 input tokens on the first usable decide model, with `averageDecisionCostEstimated`;
+  - `batteryPerDecision`, which is that cost × `energyPerAud` (1 = a full battery);
+  - `decisionsPerFullBattery`;
+  - `spentTodayAud`, `dailyCapAud` and `capRemainingAud`;
+  - `hostedModelsAvailable`;
+  - `secondsPerTick`, `moveTicksPerTile` and `inWorldSecondsPerRealSecond`.

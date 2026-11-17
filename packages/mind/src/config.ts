@@ -12,6 +12,8 @@ export interface MindConfig {
   jobTimeoutTicks: number;
   /** Ask models to appraise and score each outcome (two cheap jobs per outcome). */
   appraiseOutcomes: boolean;
+  /** Multiplier on need decay (not battery drain); a live world setting. */
+  needDecayMultiplier: number;
   /** Visitor queue tuning (open question in the spec; provisional defaults). */
   visitorQueue: { maxLength: number; ttlTicks: number; cooldownTicks: number };
 }
@@ -22,6 +24,7 @@ export const DEFAULT_MIND_CONFIG: MindConfig = {
   energyFloor: 0.1,
   jobTimeoutTicks: 100,
   appraiseOutcomes: true,
+  needDecayMultiplier: 1,
   visitorQueue: { maxLength: 5, ttlTicks: 1200, cooldownTicks: 150 },
 };
 

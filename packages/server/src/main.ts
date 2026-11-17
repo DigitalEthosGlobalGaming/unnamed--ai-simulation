@@ -1,4 +1,5 @@
-import { mkdirSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { appendFileSync, chmodSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { KeyRing } from './auth.ts';
 import { createApp } from './app.ts';
@@ -11,7 +12,9 @@ const port = Number(env.PORT ?? 8080);
 
 mkdirSync(dirname(dbPath), { recursive: true });
 const keys = KeyRing.fromEnv(env);
-const app = createApp({ dbPath, keys });
+ensureSessionSecret();
+const app = createApp({ dbPath, keys, authEnv: env });
+console.log(env.VERCEL_OAUTH_CLIENT_ID ? `Sign in with Vercel: on (callback ${(env.UAS_PUBLIC_URL || 'http://localhost:5173').replace(/\/$/, '')}/api/auth/callback)` : 'Sign in with Vercel: off (no VERCEL_OAUTH_CLIENT_ID)');
 
 for (const config of loadWorldsDir(worldsDir, env)) {
   await app.startWorld(config);
@@ -29,3 +32,19 @@ async function shutdown(signal: string) {
 }
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT', () => void shutdown('SIGINT'));
+
+/** Generate UAS_SESSION_SECRET into .env on first run so sessions survive restarts. Never printed. */
+function ensureSessionSecret(): void {
+  if (env.UAS_SESSION_SECRET) return;
+  const secret = randomBytes(32).toString('hex');
+  env.UAS_SESSION_SECRET = secret;
+  try {
+    const file = resolve('.env');
+    const fresh = !existsSync(file);
+    appendFileSync(file, `${fresh ? '' : '\n'}UAS_SESSION_SECRET=${secret}\n`, { mode: 0o600 });
+    if (fresh) chmodSync(file, 0o600);
+    console.log('generated UAS_SESSION_SECRET in .env');
+  } catch {
+    console.warn('UAS_SESSION_SECRET is not set and .env is not writable: sessions will end when the server restarts');
+  }
+}

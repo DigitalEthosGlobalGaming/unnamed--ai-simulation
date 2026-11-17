@@ -82,6 +82,18 @@ export interface ClockPayload {
   reason?: 'restart' | 'resume' | 'realign' | 'sync';
 }
 
+/** Change sim timing on an existing world (e.g. when it switches to real time), logged so replays follow. */
+export interface SimConfigPayload {
+  secondsPerTick?: number;
+  moveTicksPerTile?: number;
+  durationScale?: number;
+}
+
+/** A live settings change from an admin; the mind applies its part (energy rate, need decay). */
+export interface SettingsChangePayload {
+  changes: Record<string, number | boolean>;
+}
+
 /** Host-reported model load (outside the sim), recorded so replays see the same signal. */
 export interface ModelsLoadPayload {
   busy: boolean;
@@ -101,6 +113,8 @@ export interface InputPayloads {
   'models.load': ModelsLoadPayload;
   'clock.anchor': ClockPayload;
   'clock.jump': ClockPayload;
+  'sim.config': SimConfigPayload;
+  'settings.change': SettingsChangePayload;
 }
 export type InputType = keyof InputPayloads;
 

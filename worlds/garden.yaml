@@ -9,7 +9,7 @@ map: basic:garden
 # real local time in `timezone` (default: the server's timezone), so it's night in the garden
 # when it's night for you. The server anchors the world to the wall clock when it's created and
 # jumps it forward after downtime or a pause (logged inputs, so replays are exact); robots treat
-# a jump as having been switched off. Ticks are slow: 1 per real second.
+# a jump as having been switched off.
 # For a fast test world (e.g. to watch day/night learning in hours, not days), see
 # examples/worlds/garden-fast.yaml (clock: scaled).
 clock:
@@ -19,10 +19,13 @@ timeScale: 1             # PATCH /worlds/garden/clock { timeScale } speeds up fo
 snapshotEverySeconds: 3600
 publicRead: true
 visitorArchetype: robot
+# 4 ticks per real second at 0.25 in-world seconds per tick (still 1 in-world second per real
+# second). Models are called per decision, not per tick, so this stays light. Adjustable live:
+# PATCH /worlds/garden/settings { ticksPerRealSecond, moveSecondsPerTile }.
+ticksPerRealSecond: 4
 sim:
-  secondsPerTick: 1        # in-world seconds per tick (and 1 tick per real second in real-time mode)
   dayLengthSeconds: 86400
-  moveTicksPerTile: 2      # 2 s per tile; the viewer interpolates between ticks
+  moveSecondsPerTile: 0.75 # walking speed; the viewer interpolates between ticks
 mind:
   brain: ${UAS_BRAIN:-models}   # 'autopilot' never calls a model
   # Safety net only: the model queue answers or drops every job itself (stale after

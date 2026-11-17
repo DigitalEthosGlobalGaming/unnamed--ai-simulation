@@ -17,6 +17,8 @@ beforeAll(async () => {
   // The shipped garden world, run fast, with offline fake models (no network).
   const yaml = readFileSync(join(import.meta.dirname, '../../../worlds/garden.yaml'), 'utf8');
   const config = loadWorldYaml(yaml, { UAS_BRAIN: 'models', UAS_DECIDER: 'fake', UAS_SCORER: 'fake', UAS_PLANNER: 'fakeChat', UAS_REFLECTOR: 'fakeChat' });
+  // A fast scaled copy of the shipped garden (real time would make the test take real minutes).
+  config.clock.mode = 'scaled';
   config.ticksPerRealSecond = 100;
   config.idleTicksPerRealSecond = 100;
   config.sim.secondsPerTick = 6;

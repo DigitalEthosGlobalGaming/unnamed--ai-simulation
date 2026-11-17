@@ -59,6 +59,17 @@ npm run bakeoff -- --job decide --models uas-laya,uas-tev1   # compare models; r
   - Both are reached through `/v1/systemone`, which ignores request options. Thread count (and Tev1's context) are baked into the derived models.
 - `llama3.2:1b` always gets a JSON-schema `format`.
 
+## Sign in with Vercel (optional)
+
+Create an app in the Vercel dashboard (team **Settings → Apps → Create**) with the callback `http://localhost:5173/api/auth/callback` and scopes `openid email profile`. Then set the following in `.env`:
+
+- `VERCEL_OAUTH_CLIENT_ID` and `VERCEL_OAUTH_CLIENT_SECRET`;
+- `UAS_ADMIN_VERCEL_USERS`, with your user id or username.
+
+Other signed-in users are visitors, and API keys keep working. See [docs/operations.md](docs/operations.md#sign-in-with-vercel).
+
+World settings, such as tick rate, walking speed, the A$ cap, the energy rate and hosted models on or off, can be changed live with `PATCH /worlds/:id/settings`.
+
 ## Hosted models (Vercel AI Gateway)
 
 ```sh

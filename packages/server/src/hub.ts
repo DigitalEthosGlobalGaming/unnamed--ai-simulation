@@ -3,7 +3,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import type { Channel, ClientMessage, Region, ServerMessage } from '@uas/core';
 import type { WorldState } from '@uas/sim';
 import type { SqliteInputLog, SqliteSnapshotStore } from '@uas/store';
-import { allows, type KeyRing } from './auth.ts';
+import { allows, type KeyRing, type Principal } from './auth.ts';
 import { filterRegion, splitChannels } from './region.ts';
 import { ReplaySession } from './replay-session.ts';
 import type { Supervisor } from './supervisor.ts';
@@ -25,7 +25,16 @@ export class Hub {
   private readonly snaps: SqliteSnapshotStore<WorldState>;
   private readonly keys: KeyRing;
 
-  constructor(sup: Supervisor, log: SqliteInputLog, snaps: SqliteSnapshotStore<WorldState>, keys: KeyRing) {
+  private readonly cookiePrincipal: (cookie: string | undefined) => Principal | undefined;
+
+  constructor(
+    sup: Supervisor,
+    log: SqliteInputLog,
+    snaps: SqliteSnapshotStore<WorldState>,
+    keys: KeyRing,
+    cookiePrincipal: (cookie: string | undefined) => Principal | undefined = () => undefined,
+  ) {
+    this.cookiePrincipal = cookiePrincipal;
     this.sup = sup;
     this.log = log;
     this.snaps = snaps;
@@ -55,8 +64,8 @@ export class Hub {
 
   private connect(ws: WebSocket, req: IncomingMessage) {
     const key = new URL(req.url ?? '/', 'http://x').searchParams.get('key') ?? undefined;
-    const principal = this.keys.identify(key);
-    if (principal === null) {
+    const principal = this.keys.identify(key) ?? (key ? undefined : this.cookiePrincipal(req.headers.cookie));
+    if (principal === null || (key && principal === undefined)) {
       ws.close(4401, 'unknown key');
       return;
     }

@@ -145,4 +145,19 @@ describe('hosted models through AI Gateway (mocked fetch)', () => {
     gw.meter.seed([{ day: '2026-11-17', modelId: 'jev', job: 'decide', calls: 3, inputTokens: 900, cachedInputTokens: 0, outputTokens: 0, costAud: 0.6, energy: 1.2 }]);
     expect(gw.meter.spentTodayAud()).toBeCloseTo(0.6);
   });
+
+  it('a plan that repeats its list is deduplicated (each option once, in first-seen order)', async () => {
+    const { fn } = gatewayFetch({
+      confidence: { 'convaiinnovations/laya': 0.1 },
+      chat: () => ({
+        choices: [{ message: { content: JSON.stringify({ choices: ['c1', 'c0', 'c1', 'c0'].map((id) => ({ id, reason: `go ${id}` })) }) } }],
+        usage: { prompt_tokens: 10, completion_tokens: 5 },
+      }),
+    });
+    const gw = new ModelGateway(loadModelsConfigYaml(yaml(KEY).replace('escalateTo: [jev]', 'escalateTo: []'), {}), { fetch: fn, today: () => 'd' });
+    const a = await gw.run(job());
+    expect(a?.modelId).toBe('hostedText');
+    expect((a!.answer as { choices: { id: string }[] }).choices.map((c) => c.id)).toEqual(['c1', 'c0']);
+  });
 });
+

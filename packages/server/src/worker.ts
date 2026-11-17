@@ -42,7 +42,7 @@ setInterval(() => send({ type: 'status', status: rt.status(lag) }), 1000).unref(
 setInterval(() => {
   if (rt.paused || rt.timeScale !== 1) return;
   if (Math.abs(rt.drift()) > rt.config.clock.maxDriftSeconds) rt.realign('sync');
-}, 30_000).unref();
+}, 60_000).unref();
 
 port.on('message', (msg: ToWorker) => {
   try {
@@ -51,19 +51,10 @@ port.on('message', (msg: ToWorker) => {
       case 'submit':
         value = rt.submit(msg.type, msg.payload, msg.causedBy);
         break;
-      case 'clock': {
-        const wasPaused = rt.paused;
-        const wasScale = rt.timeScale;
-        if (msg.paused !== undefined) rt.paused = msg.paused;
-        if (msg.timeScale !== undefined) rt.timeScale = msg.timeScale;
-        if (msg.watched !== undefined) rt.watched = msg.watched;
-        // Real-time worlds catch up with the wall clock after a pause or a speed-up, as logged jumps.
-        if (msg.realign) rt.realign('realign');
-        else if (wasPaused && !rt.paused) rt.realign('resume');
-        else if (wasScale !== 1 && rt.timeScale === 1) rt.realign('realign');
+      case 'clock':
+        rt.setClock(msg);
         value = rt.status(lag);
         break;
-      }
       case 'status':
         value = rt.status(lag);
         break;
@@ -75,6 +66,12 @@ port.on('message', (msg: ToWorker) => {
         break;
       case 'memories':
         value = rt.memoriesView(msg.characterId) ?? null;
+        break;
+      case 'settings':
+        value = rt.settings();
+        break;
+      case 'setSettings':
+        value = rt.applySettings(msg.patch, msg.userId);
         break;
       case 'usage':
         value = { rows: rt.gateway.meter.report(msg.day), queue: rt.host.stats() };

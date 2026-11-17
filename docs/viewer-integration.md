@@ -95,7 +95,7 @@ Live messages carry no `sessionId`; replay messages always do.
 | `visitorPick` | `id, request` | highlight the picked row |
 | `visitorDropped` | `id, request, reason` (`expired` or `queue full`) | tell the visitor |
 | `inputRejected` | `seq, type, reason` | admin-tool error |
-| `clock` | `seconds, previous, reason, timezone` | the world clock was anchored or jumped (`anchor`, `restart`, `resume`, `realign`, `sync`) |
+| `clock` | `seconds, previous, reason, timezone` | the world clock was anchored or jumped (`anchor`, `restart`, `resume`, `realign`, `sync`), or its rate changed (`rate`, after a logged `sim.config`) |
 
 ### `FeedEntry`
 
@@ -141,6 +141,16 @@ A note `chirp-E` means the `chirp` noise played at E. Play the notes of a chain 
 | `POST /worlds/:id/fork` | admin | body `{ tick, id?, config? }`; starts the fork |
 | `GET /usage?worldId=&day=` | admin | `{ [worldId]: { rows: UsageRow[], queue: QueueStats } }`: tokens, AUD and energy by model and job, plus model queue depth and wait/run times |
 | `GET /healthz`, `GET /metrics` | anyone | health, and Prometheus text |
+
+## Login and settings
+
+- **Login.** Call `client.me()` (`GET /auth/me`), which returns `{ user | null, role, loginAvailable }`.
+  - To sign in, navigate to `client.loginUrl(returnTo)` (`/api/auth/login?returnTo=/path`). Failures come back as `/?authError=...`.
+  - Sign out with `client.logout()`.
+  - The session is a cookie, so same-origin requests through the Vite `/api` proxy are authenticated automatically. Mutations need the browser's own `Origin`, which browsers send.
+- **Settings.**
+  - `client.settings(id)` returns `{ values, schema, derived }`. Render each `schema` entry generically (`kind` number or boolean, with `label`, `unit`, `min`, `max`, `step` and `help`), and show `derived` read-only (battery per decision, decisions per full battery, A$ spent versus the cap).
+  - `client.updateSettings(id, patch)` (admin) returns `{ values, derived, effects }`.
 
 ## Timeline scrubbing
 

@@ -23,13 +23,25 @@ Stopping the server with Ctrl-C snapshots every world; the next start resumes fr
 
 ## World clock
 
-The garden runs in real time: one in-world second per real second, with its time of day equal to your local time (`UAS_TIMEZONE`, default the server's timezone).
+The garden runs in real time: one in-world second per real second, with its time of day equal to your local time (`UAS_TIMEZONE`, default the server's timezone). It ticks 4 times per real second (0.25 in-world s per tick), and robots walk a tile in 0.75 s. Both can be changed live: `PATCH /worlds/garden/settings { ticksPerRealSecond, moveSecondsPerTile }`.
 
 - When the server was off, the world jumps to now on start. The jump is logged, and the robot treats it as having been switched off.
 - To watch learning faster, run the scaled copy alongside: `cp examples/worlds/garden-fast.yaml worlds/`. It runs at 10× watched and 1.5× idle.
 - For a quick look, speed a world up with `PATCH /worlds/:id/clock { timeScale }`. Setting it back to 1, or sending `{ realign: true }`, snaps it back to the wall clock.
 
 See [simulation.md](architecture/simulation.md#clock-and-pacing).
+
+## Sign in with Vercel
+
+1. In the Vercel dashboard, create the app: team **Settings → Apps → Create**. There is no CLI command for this.
+2. On the app's **Manage** page:
+   - register the callback `http://localhost:5173/api/auth/callback` (that's `UAS_PUBLIC_URL` + `/api/auth/callback`);
+   - enable `openid`, `email` and `profile`;
+   - generate a client secret.
+3. Put `VERCEL_OAUTH_CLIENT_ID` and `VERCEL_OAUTH_CLIENT_SECRET` in `.env`. Add yourself to `UAS_ADMIN_VERCEL_USERS` (user id or username).
+4. Restart the server. It logs whether Sign in with Vercel is on and the callback it uses.
+
+`UAS_SESSION_SECRET` is generated into `.env` on first run if it's missing. Details are in [server-and-api.md](architecture/server-and-api.md#sign-in-with-vercel).
 
 ## Secrets and `.env`
 
@@ -122,6 +134,10 @@ Under podman-compose 1.5, `depends_on: condition: service_completed_successfully
 | `UAS_STALE_SECONDS` | 60 | garden.yaml | Drop a queued job whose trigger is older than this many in-world seconds ([job queue](architecture/models.md#job-queue)) |
 | `UAS_TIMEZONE` | the server's zone | garden.yaml, compose | IANA timezone the real-time garden follows (set it for Docker, whose containers default to UTC) |
 | `UAS_ESCALATE_BELOW` | 0.35 (`npm run dev`: 0.15) | garden.yaml | Decisions below this confidence escalate to the `plan` chain |
+| `VERCEL_OAUTH_CLIENT_ID`, `VERCEL_OAUTH_CLIENT_SECRET` | empty | server | Sign in with Vercel app credentials; empty client id = login unavailable |
+| `UAS_ADMIN_VERCEL_USERS` | empty | server | Comma-separated Vercel user ids or usernames that are admins |
+| `UAS_PUBLIC_URL` | `http://localhost:5173` | server | Browser-facing origin; the OAuth callback is this + `/api/auth/callback`, and the CSRF Origin check uses it |
+| `UAS_SESSION_SECRET` | generated | server | Signs session cookies (generated into `.env` on first run, never logged) |
 | `AI_GATEWAY_API_KEY` | empty | garden.yaml, smoke:gateway, bake-off | Vercel AI Gateway key for every hosted model; empty means local only |
 | `UAS_DAILY_CAP_AUD` | 0.5 | garden.yaml | Daily hosted spend cap per world (persisted) |
 | `UAS_HOSTED_TEXT_MODEL` | `meta/llama-3.1-8b` | garden.yaml, smoke:gateway | Gateway id for `hostedText` (plans, reflection, appraisal) |
