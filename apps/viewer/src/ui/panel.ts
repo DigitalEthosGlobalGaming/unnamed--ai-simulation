@@ -7,6 +7,7 @@ import type { ViewerStore } from '../client/store.ts';
 import { clockOf, esc, fmtAud, fmtPct, pct, TIER_LABEL, TRIGGER_LABEL } from './format.ts';
 import { icons } from './icons.ts';
 import { gaugesFor } from '../client/view.ts';
+import type { SettingsView } from './settings.ts';
 
 
 const TIER_RANK: Record<Tier, number> = { 'carry-on': 0, autopilot: 0, local: 1, decision: 2, llm: 3, fallback: 0 };
@@ -23,10 +24,12 @@ function tierBars(tier: Tier): string {
   return `<svg class="tier-bars" viewBox="0 0 16 15" width="16" height="15" aria-hidden="true">${bars}</svg>`;
 }
 
+type Tab = 'feed' | 'beliefs' | 'settings';
+
 export class Panel {
   private mode: 'overview' | 'robot' | null = null;
   private robotId: string | null = null;
-  private tab: 'feed' | 'beliefs' = 'feed';
+  private tab: Tab = 'feed';
   private lastFeedKey: string | null = null;
   private lastBeliefKey: string | null = null;
   private lastRobotsKey: string | null = null;
@@ -35,6 +38,7 @@ export class Panel {
   constructor(
     private root: HTMLElement,
     private store: ViewerStore,
+    private settings?: SettingsView,
   ) {
     root.addEventListener('click', (e) => {
       const t = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
@@ -42,7 +46,7 @@ export class Panel {
       const a = t.dataset['action'];
       if (a === 'select') store.select(t.dataset['id'] ?? null);
       if (a === 'back') store.select(null);
-      if (a === 'tab') this.setTab(t.dataset['tab'] as 'feed' | 'beliefs');
+      if (a === 'tab') this.setTab(t.dataset['tab'] as Tab);
       if (a === 'rev') {
         const k = t.dataset['key'] ?? null;
         store.setHighlight(store.highlight === k ? null : k);
@@ -53,14 +57,22 @@ export class Panel {
       if (t.getAttribute('role') !== 'tab') return;
       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
         e.preventDefault();
-        this.setTab(this.tab === 'feed' ? 'beliefs' : 'feed');
+        const tabs = [...root.querySelectorAll<HTMLElement>('[role="tab"]')].map((b) => b.dataset['tab'] as Tab);
+        const i = tabs.indexOf(this.tab) + (e.key === 'ArrowRight' ? 1 : -1);
+        this.setTab(tabs[(i + tabs.length) % tabs.length]!);
         root.querySelector<HTMLElement>(`[role="tab"][data-tab="${this.tab}"]`)?.focus();
       }
     });
   }
 
-  private setTab(tab: 'feed' | 'beliefs') {
+  private setTab(tab: Tab) {
     this.tab = tab;
+    if (tab === 'settings') void this.settings?.show();
+    else this.settings?.hide();
+    if (this.mode === 'overview') {
+      const meta = this.root.querySelector<HTMLElement>('.tab-meta');
+      if (meta) meta.textContent = tab === 'settings' ? '' : 'All robots · newest first';
+    }
     for (const b of this.root.querySelectorAll<HTMLElement>('[role="tab"]')) {
       const on = b.dataset['tab'] === tab;
       b.setAttribute('aria-selected', String(on));
@@ -93,6 +105,7 @@ export class Panel {
   /* ------------------------------------------------------- overview */
 
   private buildOverview() {
+    if (this.tab === 'beliefs') this.tab = 'feed';
     this.mode = 'overview';
     this.robotId = null;
     this.lastFeedKey = null;
@@ -110,13 +123,25 @@ export class Panel {
         </table>
         <p class="hint" data-ref="hint">Tap a robot on the plan, or its mark here, to read its mind.</p>
       </section>
-      <section class="pane-section" aria-labelledby="feed-h">
-        <div class="section-head">
-          <h2 id="feed-h" class="draft-h">Brain feed</h2>
-          <p class="section-meta">All robots · newest first</p>
+      <section class="pane-section tabs-section">
+        <div class="tabs" role="tablist" aria-label="World">
+          ${this.tabButton('feed', 'Brain feed')}
+          ${this.tabButton('settings', 'World settings')}
+          <p class="section-meta tab-meta">${this.tab === 'settings' ? '' : 'All robots · newest first'}</p>
         </div>
-        <div class="table-wrap">${this.feedTableShell(true)}</div>
+        <div role="tabpanel" id="tp-feed" aria-labelledby="tab-feed" data-tab="feed" ${this.tab === 'feed' ? '' : 'hidden'}>
+          <div class="table-wrap">${this.feedTableShell(true)}</div>
+        </div>
+        <div role="tabpanel" id="tp-settings" aria-labelledby="tab-settings" data-tab="settings" data-ref="settings-slot" ${this.tab === 'settings' ? '' : 'hidden'}></div>
       </section>`;
+    const slot = this.root.querySelector<HTMLElement>('[data-ref="settings-slot"]');
+    if (slot && this.settings) slot.append(this.settings.el);
+    if (this.tab === 'settings') void this.settings?.show();
+  }
+
+  private tabButton(tab: Tab, label: string): string {
+    const on = this.tab === tab;
+    return `<button type="button" role="tab" class="tab" id="tab-${tab}" data-action="tab" data-tab="${tab}" aria-controls="tp-${tab}" aria-selected="${on}" tabindex="${on ? 0 : -1}">${label}</button>`;
   }
 
   private updateOverview() {
@@ -172,6 +197,10 @@ export class Panel {
   /* ---------------------------------------------------------- robot */
 
   private buildRobot(c: CharacterView) {
+    if (this.tab === 'settings') {
+      this.tab = 'feed';
+      this.settings?.hide();
+    }
     this.mode = 'robot';
     this.robotId = c.id;
     this.lastFeedKey = null;

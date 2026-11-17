@@ -22,5 +22,7 @@ export const icons = {
   zoomOut: () => wrap('<path d="M5 12h14"/>'),
   fit: () => wrap('<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><rect x="8.5" y="8.5" width="7" height="7"/>'),
   follow: () => wrap('<circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>'),
+  /** Sign-in provider mark (Vercel's triangle), drawn as a plain filled triangle. */
+  vercel: () => wrap('<path d="M12 4.5 20.5 19.5H3.5Z" fill="currentColor" stroke="none"/>'),
   robot: () => wrap('<rect x="5" y="6.5" width="14" height="11" rx="3.5"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/>'),
 };

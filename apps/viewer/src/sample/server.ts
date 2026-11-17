@@ -6,7 +6,8 @@
  * `GET /worlds/:id/catalog`.
  */
 import type { Delta, FeedEntry, WorldCatalog, WorldStateView } from '@uas/client';
-import type { BeliefMark, ConnectionStatus, ViewerMessage, WorldConnection } from '../types.ts';
+import type { AccountApi, BeliefMark, ConnectionStatus, ViewerMessage, WorldConnection } from '../types.ts';
+import { SampleAccount } from './account.ts';
 import { cloneState, createSim, dayOf, step, SECONDS_PER_TICK, TICKS_PER_SECOND, type RobotState, type Scenario, type SimState, type StepOutput } from './sim.ts';
 import { OBJECT_VERBS } from './map.ts';
 import type { Change } from './types.ts';
@@ -184,9 +185,11 @@ export class SampleServer implements WorldConnection {
   private replayPrev = new Map<string, { x: number; y: number }>();
   private replayAction = new Map<string, Change & { kind: 'action' }>();
   private opts: SampleOptions;
+  readonly account: AccountApi;
 
   constructor(opts: SampleOptions) {
     this.opts = opts;
+    this.account = new SampleAccount(new URLSearchParams(location.search), () => (this.live.spendDay === dayOf(this.live.tick) ? this.live.spendTodayAud : 0));
     this.live = createSim(opts.seed, opts.scenario);
     this.snapshots.push(cloneState(this.live));
     while (this.live.tick < opts.startTick) this.advanceLive(false);

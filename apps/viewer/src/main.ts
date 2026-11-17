@@ -18,6 +18,8 @@ import { NoisePlayer } from './ui/audio.ts';
 import { icons } from './ui/icons.ts';
 import { clockOf, esc, fmtAud, fmtTick } from './ui/format.ts';
 import { legendHtml } from './ui/legend.ts';
+import { SettingsView } from './ui/settings.ts';
+import type { AuthState } from './types.ts';
 
 /* Data source: the real server by default (via `@uas/client`; `?world=<id>`, `?key=<api key>`),
    or the offline sample with `?source=sample`.
@@ -44,6 +46,7 @@ app.innerHTML = `
       <div class="top-actions">
         <span class="status" role="status" data-ref="status"></span>
         ${sample ? '<span class="sim-note" title="Offline sample: this world is generated in the browser">Simulated data</span>' : ''}
+        <div class="account" data-ref="account"></div>
         <button type="button" class="btn ghost" data-ref="legend-btn" aria-pressed="false" aria-controls="legend">${icons.legend()}<span class="btn-text">Legend</span></button>
         <button type="button" class="btn ghost" data-ref="sound-btn" aria-pressed="false">${icons.soundOff()}<span class="btn-text">Sound off</span></button>
       </div>
@@ -97,7 +100,8 @@ const server: WorldConnection = sample
       ...(params.get('world') && { worldId: params.get('world')! }),
     });
 const store = new ViewerStore(server);
-const panel = new Panel($('panel-body'), store);
+const settingsView = new SettingsView(server.account);
+const panel = new Panel($('panel-body'), store, settingsView);
 const timeline = new Timeline(store);
 const audio = new NoisePlayer();
 const phoneMq = window.matchMedia('(max-width: 719px)');
@@ -260,6 +264,55 @@ phoneMq.addEventListener('change', placeTimeline);
 window.addEventListener('resize', layoutInsets);
 placeTimeline();
 setDrawer(drawer);
+
+/* -------------------------------------------------------- account */
+
+// Sign in with Vercel (when the server offers it), who is signed in and their role; `?key=` still works.
+let auth: AuthState | null = null;
+const accountEl = $('account');
+function renderAccount() {
+  if (!auth) {
+    accountEl.innerHTML = '';
+    return;
+  }
+  const u = auth.user;
+  const authError = params.get('authError');
+  const failed = authError && !u ? `<span class="auth-error" role="alert">Sign-in failed: ${esc(authError)}</span>` : '';
+  if (!u) {
+    // Signed in by API key (?key=): no user, but say which role the key carries.
+    const keyRole = auth.role !== 'spectator' ? `<span class="role-chip" title="Access by API key">${esc(auth.role)} · key</span>` : '';
+    accountEl.innerHTML = failed + keyRole + (auth.loginAvailable
+      ? `<button type="button" class="btn" data-acct="login" aria-label="Sign in with Vercel">${icons.vercel()}<span class="btn-text">Sign in with Vercel</span></button>`
+      : '');
+    return;
+  }
+  const initials = u.name.split(/\s+/).map((w) => w[0] ?? '').join('').slice(0, 2).toUpperCase();
+  const face = u.avatarUrl ? `<img class="acct-avatar" src="${esc(u.avatarUrl)}" alt="" width="28" height="28" referrerpolicy="no-referrer">` : `<span class="acct-avatar acct-initials" aria-hidden="true">${esc(initials)}</span>`;
+  accountEl.innerHTML = `<span class="acct-who" title="${esc(u.email)}">${face}<span class="acct-name">${esc(u.name)}</span><span class="role-chip">${esc(auth.role)}</span></span>
+    <button type="button" class="btn ghost acct-out" data-acct="logout">Sign out</button>`;
+}
+async function loadAuth() {
+  if (!server.account) return;
+  try {
+    auth = await server.account.me();
+  } catch {
+    auth = null;
+  }
+  renderAccount();
+  settingsView.setAuth(auth);
+}
+async function signOut() {
+  await server.account?.logout().catch(() => {});
+  await loadAuth();
+}
+settingsView.onSignOut = () => void signOut();
+accountEl.addEventListener('click', (e) => {
+  const t = (e.target as HTMLElement).closest<HTMLElement>('[data-acct]');
+  if (!t) return;
+  if (t.dataset['acct'] === 'login') server.account?.login(location.href);
+  if (t.dataset['acct'] === 'logout') void signOut();
+});
+void loadAuth();
 
 /* ------------------------------------------------------ top actions */
 

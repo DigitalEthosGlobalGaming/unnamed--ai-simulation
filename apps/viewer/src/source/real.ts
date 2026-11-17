@@ -3,7 +3,8 @@
  * replay through a server replay session (replay.open / seek / play / pause / replay.close).
  */
 import { UasClient, type WorldStream } from '@uas/client';
-import type { Belief, BeliefMark, ConnectionStatus, FeedEntry, ViewerMessage, WorldCatalog, WorldConnection } from '../types.ts';
+import type { AccountApi, Belief, BeliefMark, ConnectionStatus, FeedEntry, ViewerMessage, WorldCatalog, WorldConnection } from '../types.ts';
+import { RestAccount } from './account.ts';
 
 const FEED_HISTORY = 500;
 const STATUS_POLL_MS = 5_000;
@@ -36,10 +37,25 @@ export class RealConnection implements WorldConnection {
   private pace = { live: { tick: 0, at: 0 }, replay: { tick: 0, at: 0 }, timeScale: 1, paused: false, effective: null as number | null };
   private paceTimer: number | undefined;
 
+  readonly account: AccountApi;
+
   constructor(opts: RealOptions) {
     const base = opts.baseUrl.startsWith('http') ? opts.baseUrl : `${location.origin}${opts.baseUrl}`;
     this.api = new UasClient(base, opts.apiKey);
     this.worldId = opts.worldId;
+    const rest = new RestAccount(base, () => this.worldId, opts.apiKey);
+    // A settings change can alter pacing and the cap: re-read the world's status right after.
+    this.account = {
+      me: () => rest.me(),
+      login: (r) => rest.login(r),
+      logout: () => rest.logout(),
+      settings: () => rest.settings(),
+      updateSettings: async (patch) => {
+        const out = await rest.updateSettings(patch);
+        void this.pollStatus();
+        return out;
+      },
+    };
   }
 
   catalog(): WorldCatalog | null {

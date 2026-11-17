@@ -40,6 +40,7 @@ const realShots = [
   { name: 'mobile-drawer-full', vp: [390, 844], q: 'select=robot&drawer=full', mobile: true },
   { name: 'mobile-replay', vp: [390, 844], q: async () => `drawer=closed&at=${Math.floor((await live()).status.tick * 0.55)}`, mobile: true },
   { name: 'mobile-noise', vp: [390, 844], q: 'drawer=closed', mobile: true, noise: true },
+  { name: 'desktop-settings', vp: [1440, 900], q: '', click: '#tab-settings' },
 ];
 
 const sampleShots = [
@@ -72,6 +73,11 @@ const sampleShots = [
     },
   },
   { name: 'mobile-noise', vp: [390, 844], q: 'at=52138&drawer=closed', mobile: true, noise: true },
+  // Accounts and world settings (sample mocks the contract; ?as= picks the role).
+  { name: 'desktop-settings-admin', vp: [1440, 900], q: 'as=admin', click: '#tab-settings' },
+  { name: 'desktop-settings-error', vp: [1440, 900], q: 'as=admin', click: '#tab-settings', type: { sel: '#set-ticksPerRealSecond', value: '99' } },
+  { name: 'desktop-settings-signedout', vp: [1440, 900], q: '', click: '#tab-settings' },
+  { name: 'mobile-settings-admin', vp: [390, 844], q: 'as=admin&drawer=full', mobile: true, click: '#tab-settings' },
 ].map((s) => ({ ...s, name: `sample-${s.name}`, sample: true, q: `source=sample${s.q ? `&${s.q}` : ''}` }));
 
 const shots = process.env.SET === 'sample' ? sampleShots : realShots;
@@ -120,7 +126,12 @@ for (const s of shots) {
   }
   if (s.click) {
     await page.click(s.click);
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(800);
+  }
+  if (s.type) {
+    await page.fill(s.type.sel, s.type.value);
+    await page.press(s.type.sel, 'Enter');
+    await page.waitForTimeout(900);
   }
   await page.screenshot({ path: `${out}/${s.name}.png` });
   console.log('saved', s.name);

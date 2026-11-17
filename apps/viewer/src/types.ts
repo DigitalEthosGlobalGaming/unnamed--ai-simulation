@@ -136,4 +136,70 @@ export interface WorldConnection {
   pause(): void;
   goLive(): void;
   reconnect(): void;
+  /** Sign-in and world settings, when the source supports them. */
+  account?: AccountApi;
+}
+
+/* ------------------------------------------------- accounts and world settings
+   Contract: GET /auth/me, GET /auth/login?returnTo=, POST /auth/logout,
+   GET/PATCH /worlds/:id/settings (built by the backend in parallel; the sample mocks it). */
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string | null;
+}
+
+export interface AuthState {
+  user: AuthUser | null;
+  role: 'admin' | 'visitor' | 'spectator';
+  /** Whether "Sign in with Vercel" is configured on this server. */
+  loginAvailable: boolean;
+}
+
+export interface SettingField {
+  label: string;
+  kind: 'number' | 'boolean';
+  unit?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  help?: string;
+}
+
+export interface WorldSettings {
+  values: Record<string, number | boolean>;
+  schema: Record<string, SettingField>;
+  derived: {
+    /** True while the average decision cost is an estimate (no decision made today yet). */
+    averageDecisionCostEstimated?: boolean;
+    batteryPerDecision: number | null;
+    decisionsPerFullBattery: number | null;
+    spentTodayAud: number;
+    dailyCapAud: number | null;
+  };
+  /** What the last change did, in the server's words (e.g. "dailyCapAud: 0.5 → 0.2"). */
+  effects?: string[];
+}
+
+/** A rejected settings change: the server's `{ error, field? }` with its HTTP status. */
+export class SettingsError extends Error {
+  readonly status: number;
+  readonly field: string | undefined;
+  constructor(status: number, message: string, field?: string) {
+    super(message);
+    this.status = status;
+    this.field = field;
+  }
+}
+
+/** Accounts and settings: optional on a connection (absent means the source has none). */
+export interface AccountApi {
+  me(): Promise<AuthState>;
+  /** Full-page redirect to the sign-in provider, coming back to `returnTo`. */
+  login(returnTo: string): void;
+  logout(): Promise<void>;
+  settings(): Promise<WorldSettings>;
+  updateSettings(patch: Record<string, number | boolean>): Promise<WorldSettings>;
 }
