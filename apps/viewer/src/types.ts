@@ -87,7 +87,6 @@ export interface CharacterView {
   step?: { from: Vec2; to: Vec2; at: number };
   sightRange: number;
   hearingRange: number;
-  visitor: boolean;
 }
 
 export interface WorldView {
@@ -138,6 +137,8 @@ export interface WorldConnection {
   reconnect(): void;
   /** Sign-in and world settings, when the source supports them. */
   account?: AccountApi;
+  /** Catalogue, airdrops and the mailbox, when the source supports them. */
+  visitors?: VisitorApi;
 }
 
 /* ------------------------------------------------- accounts and world settings
@@ -160,7 +161,8 @@ export interface AuthState {
 
 export interface SettingField {
   label: string;
-  kind: 'number' | 'boolean';
+  /** `items`: a list of catalogue item ids (e.g. `catalogEnabled`), shown as a checklist. */
+  kind: 'number' | 'boolean' | 'string[]';
   unit?: string;
   min?: number;
   max?: number;
@@ -168,8 +170,10 @@ export interface SettingField {
   help?: string;
 }
 
+export type SettingValue = number | boolean | string[];
+
 export interface WorldSettings {
-  values: Record<string, number | boolean>;
+  values: Record<string, SettingValue>;
   schema: Record<string, SettingField>;
   derived: {
     /** True while the average decision cost is an estimate (no decision made today yet). */
@@ -201,5 +205,101 @@ export interface AccountApi {
   login(returnTo: string): void;
   logout(): Promise<void>;
   settings(): Promise<WorldSettings>;
-  updateSettings(patch: Record<string, number | boolean>): Promise<WorldSettings>;
+  updateSettings(patch: Record<string, SettingValue>): Promise<WorldSettings>;
+}
+
+/* ------------------------------------------------- visitors: catalogue, airdrops, mailbox
+   Contract: docs/architecture/visitors.md (built by the backend in parallel; the sample mocks it). */
+
+export interface CatalogBlock {
+  block: string;
+  [k: string]: unknown;
+}
+
+export interface CatalogItem {
+  schema: number;
+  id: string;
+  name: string;
+  description: string;
+  /** Restricted icon language (see icons/iconlang.ts). */
+  icon: string;
+  tags: string[];
+  portable?: boolean;
+  /** Duration string: `30m`, `24h`, `7d`. */
+  expiresAfter?: string;
+  behaviours: CatalogBlock[];
+  /** Admin listing only. */
+  disabled?: boolean;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface Airdrop {
+  id: string;
+  entityId: string;
+  itemId: string;
+  /** A copy of the item at drop time. */
+  item: CatalogItem;
+  pos: Vec2;
+  droppedBy: { username: string; admin: boolean };
+  droppedTick: number;
+  expiresTick?: number;
+  usesLeft?: number;
+}
+
+export interface AirdropDetail extends Airdrop {
+  beliefs: { characterId: string; text: string; firmness: number }[];
+}
+
+export interface MailStatus {
+  id: string;
+  status: 'waiting' | 'read' | 'expired' | 'deleted';
+  /** 1 = next to be read. */
+  position?: number;
+  text?: string;
+  from: { username: string; admin: boolean };
+  postedTick: number;
+  readTick?: number;
+  reaction?: { feedTick: number; summary: string; notes?: string[] };
+}
+
+export interface MailView {
+  waiting: number;
+  mine?: MailStatus[];
+  all?: MailStatus[];
+}
+
+export interface ValidationIssue {
+  path: string;
+  message: string;
+}
+
+export type ValidateResult = { ok: true; item: CatalogItem } | { ok: false; errors: ValidationIssue[] };
+
+/** A refused visitor or catalogue request: `{ error }` or `{ errors[] }`, with its status and any Retry-After. */
+export class VisitorError extends Error {
+  readonly status: number;
+  readonly errors: ValidationIssue[];
+  readonly retryAfterSeconds: number | undefined;
+  constructor(status: number, message: string, errors: ValidationIssue[] = [], retryAfterSeconds?: number) {
+    super(message);
+    this.status = status;
+    this.errors = errors;
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+export interface VisitorApi {
+  catalog(): Promise<CatalogItem[]>;
+  templates(): Promise<{ name: string; item: CatalogItem }[]>;
+  validate(item: unknown): Promise<ValidateResult>;
+  saveItem(item: CatalogItem, disabled?: boolean): Promise<CatalogItem>;
+  deleteItem(itemId: string): Promise<void>;
+  airdrops(): Promise<Airdrop[]>;
+  airdrop(dropId: string): Promise<AirdropDetail>;
+  drop(itemId: string, pos: Vec2): Promise<Airdrop>;
+  removeDrop(dropId: string): Promise<void>;
+  mail(): Promise<MailView>;
+  postMail(text: string): Promise<MailStatus>;
+  deleteMail(mailId: string): Promise<void>;
 }

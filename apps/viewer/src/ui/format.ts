@@ -81,3 +81,15 @@ export const TRIGGER_LABEL: Record<string, string> = {
 export function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
+
+/** A span of in-world seconds as "3 h 20 min", "45 min" or "2 d 4 h". */
+export function durationText(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (d) return `${d} d${h ? ` ${h} h` : ''}`;
+  if (h) return `${h} h${m ? ` ${m} min` : ''}`;
+  if (m) return `${m} min`;
+  return `${s} s`;
+}

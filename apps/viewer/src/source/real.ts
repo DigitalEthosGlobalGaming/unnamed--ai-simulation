@@ -3,8 +3,9 @@
  * replay through a server replay session (replay.open / seek / play / pause / replay.close).
  */
 import { UasClient, type WorldStream } from '@uas/client';
-import type { AccountApi, Belief, BeliefMark, ConnectionStatus, FeedEntry, ViewerMessage, WorldCatalog, WorldConnection } from '../types.ts';
+import type { VisitorApi, AccountApi, Belief, BeliefMark, ConnectionStatus, FeedEntry, ViewerMessage, WorldCatalog, WorldConnection } from '../types.ts';
 import { RestAccount } from './account.ts';
+import { RestVisitors } from './visitors.ts';
 
 const FEED_HISTORY = 500;
 const STATUS_POLL_MS = 5_000;
@@ -38,12 +39,14 @@ export class RealConnection implements WorldConnection {
   private paceTimer: number | undefined;
 
   readonly account: AccountApi;
+  readonly visitors: VisitorApi;
 
   constructor(opts: RealOptions) {
     const base = opts.baseUrl.startsWith('http') ? opts.baseUrl : `${location.origin}${opts.baseUrl}`;
     this.api = new UasClient(base, opts.apiKey);
     this.worldId = opts.worldId;
     const rest = new RestAccount(base, () => this.worldId, opts.apiKey);
+    this.visitors = new RestVisitors(base, () => this.worldId, opts.apiKey);
     // A settings change can alter pacing and the cap: re-read the world's status right after.
     this.account = {
       me: () => rest.me(),

@@ -24,5 +24,10 @@ export const icons = {
   follow: () => wrap('<circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>'),
   /** Sign-in provider mark (Vercel's triangle), drawn as a plain filled triangle. */
   vercel: () => wrap('<path d="M12 4.5 20.5 19.5H3.5Z" fill="currentColor" stroke="none"/>'),
+  /** Airdrop: a crate under a parachute canopy. */
+  airdrop: () => wrap('<path d="M4 9.5a8 6 0 0 1 16 0"/><path d="M4 9.5 10 15.5M20 9.5l-6 6M12 3.5v12"/><rect x="9" y="15.5" width="6" height="5" rx="1"/>'),
+  mail: () => wrap('<rect x="3.5" y="6" width="17" height="12.5" rx="1.5"/><path d="m4 7 8 6.5L20 7"/>'),
+  /** Catalogue: a parts register (a list with item marks). */
+  catalogue: () => wrap('<rect x="4" y="3.5" width="16" height="17" rx="1.5"/><path d="M7.5 8h2M7.5 12h2M7.5 16h2M12 8h4.5M12 12h4.5M12 16h4.5"/>'),
   robot: () => wrap('<rect x="5" y="6.5" width="14" height="11" rx="3.5"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/>'),
 };

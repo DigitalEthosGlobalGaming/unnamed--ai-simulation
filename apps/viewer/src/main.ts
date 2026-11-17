@@ -19,12 +19,16 @@ import { icons } from './ui/icons.ts';
 import { clockOf, esc, fmtAud, fmtTick } from './ui/format.ts';
 import { legendHtml } from './ui/legend.ts';
 import { SettingsView } from './ui/settings.ts';
-import type { AuthState } from './types.ts';
+import type { AuthState, Vec2 } from './types.ts';
+import { VisitorStore } from './client/visitors.ts';
+import { airdropFlow, itemCard, mailView, type VisitorUiHost } from './ui/visitors.ts';
+import { CataloguePage, withParam } from './ui/catalogue.ts';
 
 /* Data source: the real server by default (via `@uas/client`; `?world=<id>`, `?key=<api key>`),
    or the offline sample with `?source=sample`.
    Sample-only switches: ?scenario=empty|lowbattery &state=disconnected.
-   Viewer switches: ?select=<id> &drawer=closed|peek|full &at=<tick> &view=x,y,zoom &tab=beliefs &legend=0|1 */
+   Viewer switches: ?select=<id> &drawer=closed|peek|full &at=<tick> &view=x,y,zoom &tab=beliefs &legend=0|1
+   Visitor views: ?open=airdrop|mail|drop:<dropId> ; the admin catalogue: ?page=catalogue[&item=<id>] */
 const params = new URLSearchParams(location.search);
 const sample = params.get('source') === 'sample';
 const scenario = (['empty', 'lowbattery'].includes(params.get('scenario') ?? '') ? params.get('scenario') : 'default') as Scenario;
@@ -46,6 +50,9 @@ app.innerHTML = `
       <div class="top-actions">
         <span class="status" role="status" data-ref="status"></span>
         ${sample ? '<span class="sim-note" title="Offline sample: this world is generated in the browser">Simulated data</span>' : ''}
+        <button type="button" class="btn ghost" data-ref="drop-btn">${icons.airdrop()}<span class="btn-text">Airdrop</span></button>
+        <button type="button" class="btn ghost" data-ref="mail-btn" aria-label="Mailbox">${icons.mail()}<span class="btn-text">Mail</span><span class="btn-count" data-ref="mail-count" hidden></span></button>
+        <a class="btn ghost" data-ref="cat-btn" hidden>${icons.catalogue()}<span class="btn-text">Catalogue</span></a>
         <div class="account" data-ref="account"></div>
         <button type="button" class="btn ghost" data-ref="legend-btn" aria-pressed="false" aria-controls="legend">${icons.legend()}<span class="btn-text">Legend</span></button>
         <button type="button" class="btn ghost" data-ref="sound-btn" aria-pressed="false">${icons.soundOff()}<span class="btn-text">Sound off</span></button>
@@ -81,6 +88,9 @@ app.innerHTML = `
         <div class="panel-body" id="panel-body" data-ref="panel-body"></div>
       </aside>
     </main>
+    <main class="catalogue-page" data-ref="catalogue-page" aria-labelledby="cat-h" hidden>
+      <a class="btn ghost back-link" data-ref="cat-back">${icons.back()}<span>Back to the plan</span></a>
+    </main>
   </div>`;
 
 const $ = <T extends HTMLElement = HTMLElement>(r: string) => app.querySelector<T>(`[data-ref="${r}"]`)!;
@@ -102,6 +112,9 @@ const server: WorldConnection = sample
 const store = new ViewerStore(server);
 const settingsView = new SettingsView(server.account);
 const panel = new Panel($('panel-body'), store, settingsView);
+const visitorStore = new VisitorStore(server.visitors);
+settingsView.catalogue = () => visitorStore.catalogue;
+panel.visitors = visitorStore;
 const timeline = new Timeline(store);
 const audio = new NoisePlayer();
 const phoneMq = window.matchMedia('(max-width: 719px)');
@@ -109,7 +122,9 @@ const phoneMq = window.matchMedia('(max-width: 719px)');
 /* ------------------------------------------------------------ scene */
 
 const scene = new Scene($('sheet'), store);
+scene.visitors = visitorStore;
 scene.onSelect = (id) => {
+  if (id && panel.openView) panel.closeView();
   store.select(id);
   if (id && phoneMq.matches && drawer === 'closed') setDrawer('peek');
 };
@@ -300,6 +315,9 @@ async function loadAuth() {
   }
   renderAccount();
   settingsView.setAuth(auth);
+  catPage.setAuth(auth);
+  syncTopButtons();
+  void visitorStore.refresh();
 }
 async function signOut() {
   await server.account?.logout().catch(() => {});
@@ -450,6 +468,162 @@ store.on(() => {
 });
 store.on(render);
 render();
+
+/* --------------------------------------------------------- visitors */
+
+// Airdrops, the mailbox and (admins) the catalogue. Views open in the inspector / phone drawer.
+const dropBtn = $<HTMLButtonElement>('drop-btn');
+const mailBtn = $<HTMLButtonElement>('mail-btn');
+const catBtn = $<HTMLAnchorElement>('cat-btn');
+const catPage = new CataloguePage(visitorStore);
+$('catalogue-page').append(catPage.el);
+let enabledCache: { at: number; ids: string[] | null } | null = null;
+
+const host: VisitorUiHost = {
+  store,
+  visitors: visitorStore,
+  auth: () => auth,
+  async enabledItems() {
+    if (enabledCache && performance.now() - enabledCache.at < 10_000) return enabledCache.ids;
+    let ids: string[] | null = null;
+    try {
+      const v = (await server.account?.settings())?.values['catalogEnabled'];
+      ids = Array.isArray(v) && !v.includes('*') ? v : null; // `*` = every item
+    } catch {
+      ids = null;
+    }
+    enabledCache = { at: performance.now(), ids };
+    return ids;
+  },
+  signIn: () => server.account?.login(location.href),
+  startPlacing(item, onPlace) {
+    scene.placing = { icon: item.icon, name: item.name };
+    scene.placeAt = null;
+    scene.onPlace = (t) => onPlace(t);
+  },
+  stopPlacing() {
+    scene.placing = null;
+    scene.placeAt = null;
+    scene.onPlace = () => {};
+  },
+  setPlaceAt(t: Vec2 | null) {
+    scene.placeAt = t;
+  },
+  revealPlan() {
+    if (phoneMq.matches) setDrawer('peek');
+  },
+  focusDrop(id) {
+    scene.focusDrop = id;
+  },
+  close: () => panel.closeView(),
+};
+
+function openVisitorView(key: string, title: string, el: HTMLElement, onClose?: () => void) {
+  if (store.selectedId) store.select(null);
+  panel.showView(key, title, el, () => {
+    host.stopPlacing();
+    scene.focusDrop = null;
+    onClose?.();
+    syncTopButtons();
+  });
+  if (phoneMq.matches && drawer !== 'full') setDrawer('full');
+  syncTopButtons();
+}
+function openDrop(dropId: string) {
+  openVisitorView(`drop:${dropId}`, 'Airdropped item', itemCard(host, dropId));
+}
+function openAirdrop() {
+  if (panel.openView === 'airdrop') return panel.closeView();
+  openVisitorView('airdrop', 'Airdrop an item', airdropFlow(host));
+}
+function openMail() {
+  if (panel.openView === 'mail') return panel.closeView();
+  openVisitorView('mail', 'Mailbox', mailView(host));
+}
+function syncTopButtons() {
+  dropBtn.setAttribute('aria-pressed', String(panel.openView === 'airdrop'));
+  mailBtn.setAttribute('aria-pressed', String(panel.openView === 'mail'));
+  const n = visitorStore.waiting;
+  const count = $('mail-count');
+  count.hidden = n === 0;
+  count.textContent = String(n);
+  mailBtn.setAttribute('aria-label', n ? `Mailbox, ${n} waiting` : 'Mailbox');
+  const admin = auth?.role === 'admin';
+  catBtn.hidden = !admin || !server.visitors;
+  catBtn.href = withParam('page', 'catalogue');
+  dropBtn.hidden = mailBtn.hidden = !server.visitors;
+}
+scene.onSelectDrop = (id) => openDrop(id);
+scene.onOpenMail = () => openMail();
+panel.onOpenDrop = (id) => openDrop(id);
+panel.onFocusDrop = (id) => (scene.focusDrop = id);
+panel.onOpenAirdrop = () => openAirdrop();
+panel.onOpenMail = () => openMail();
+dropBtn.addEventListener('click', openAirdrop);
+mailBtn.addEventListener('click', openMail);
+store.onVisitorDelta(() => visitorStore.soon());
+visitorStore.on(() => {
+  syncTopButtons();
+  settingsView.catalogueChanged();
+  if (!panel.openView) panel.update();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && scene.placing && panel.openView === 'airdrop') {
+    host.stopPlacing();
+  }
+});
+
+// The catalogue page replaces the workspace; it has its own URL so it can be linked and reloaded.
+function showPage() {
+  const page = new URLSearchParams(location.search).get('page');
+  const cat = page === 'catalogue';
+  shell.dataset['page'] = cat ? 'catalogue' : 'plan';
+  $('catalogue-page').hidden = !cat;
+  app.querySelector<HTMLElement>('.workspace')!.hidden = cat;
+  {
+    const p = new URLSearchParams(location.search);
+    p.delete('page');
+    p.delete('item');
+    $<HTMLAnchorElement>('cat-back').href = `${location.pathname}${p.size ? `?${p}` : ''}`;
+  }
+  // The plan isn't on screen behind the catalogue: stop drawing it.
+  if (cat) scene.app.ticker.stop();
+  else scene.app.ticker.start();
+  if (cat) {
+    catBtn.setAttribute('aria-current', 'page');
+    void catPage.show(new URLSearchParams(location.search).get('item'));
+  } else {
+    catBtn.removeAttribute('aria-current');
+    catPage.hide();
+    requestAnimationFrame(layoutInsets);
+  }
+}
+for (const a of [catBtn, $<HTMLAnchorElement>('cat-back')]) {
+  a.addEventListener('click', (e) => {
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    history.pushState(null, '', a.href);
+    showPage();
+  });
+}
+window.addEventListener('popstate', showPage);
+visitorStore.start();
+syncTopButtons();
+showPage();
+{
+  const open = params.get('open');
+  if (open) {
+    const off = store.on(() => {
+      if (!store.world) return;
+      off();
+      setTimeout(() => {
+        if (open === 'airdrop') openAirdrop();
+        else if (open === 'mail') openMail();
+        else if (open.startsWith('drop:')) openDrop(open.slice(5));
+      }, 400);
+    });
+  }
+}
 
 // Review switches.
 const at = params.get('at');

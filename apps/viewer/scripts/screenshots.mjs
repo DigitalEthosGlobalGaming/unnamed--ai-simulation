@@ -2,8 +2,9 @@
 //   node scripts/screenshots.mjs [baseUrl]     (ONLY=desktop,mobile to limit)
 // SET=real (default) captures against the world server through the Vite /api proxy; the world
 // server must be running (npm start). SET=sample captures the offline sample (?source=sample) under
-// names prefixed `sample-`. Noise shots need a visitor key on the server (UAS_VISITOR_KEYS) passed
-// here as VISITOR_KEY: a visitor makes noises at the robot so the plan draws real sound arcs.
+// names prefixed `sample-` (noise shots replay a stretch of the sample where robots trade notes).
+// `steps` run in order: { click }, { type: {sel, value} } (fills, no Enter), { tile: [x, y] } taps a
+// plan tile, { wait }.
 // Chromium needs its shared libraries; on hosts without them set LD_LIBRARY_PATH.
 // Writes to ../../.impeccable/review/.
 import { chromium } from 'playwright';
@@ -18,28 +19,15 @@ const base = process.argv[2] ?? 'http://localhost:5173/';
 
 const API = process.env.API ?? 'http://localhost:8080';
 const live = async () => (await (await fetch(`${API}/worlds`)).json())[0];
-/** A visitor (joined once) makes a noise chain at the first robot; returns once the request is in. */
-async function visitorNoise() {
-  const key = process.env.VISITOR_KEY;
-  if (!key) throw new Error('noise shots need VISITOR_KEY (a key from the server\'s UAS_VISITOR_KEYS)');
-  const w = await live();
-  const h = { 'content-type': 'application/json', authorization: `Bearer ${key}` };
-  const { visitorId } = await (await fetch(`${API}/worlds/${w.id}/visitors`, { method: 'POST', headers: h, body: JSON.stringify({ pos: { x: 6, y: 9 } }) })).json();
-  const notes = [['beep-C', 'chirp-E'], ['trill-G', 'chirp-E', 'beep-D'], ['chirp-C', 'chirp-G']][Math.floor(Date.now() / 1000) % 3];
-  await fetch(`${API}/worlds/${w.id}/visitors/${visitorId}/actions`, { method: 'POST', headers: h, body: JSON.stringify({ actions: [{ verb: 'vocalize', args: { notes, at: 'robot' }, reason: 'visitor' }] }) });
-}
-
 const realShots = [
   { name: 'desktop', vp: [1440, 900], q: '' },
   { name: 'desktop-selected', vp: [1440, 900], q: 'select=robot' },
   { name: 'desktop-beliefs', vp: [1440, 900], q: 'select=robot', click: '#tab-beliefs' },
   { name: 'desktop-replay', vp: [1440, 900], q: async () => `select=robot&at=${Math.floor((await live()).status.tick * 0.55)}` },
-  { name: 'desktop-noise', vp: [1440, 900], q: 'view=6,8,2', noise: true },
   { name: 'mobile', vp: [390, 844], q: '', mobile: true },
   { name: 'mobile-drawer-peek', vp: [390, 844], q: 'select=robot&drawer=peek', mobile: true },
   { name: 'mobile-drawer-full', vp: [390, 844], q: 'select=robot&drawer=full', mobile: true },
   { name: 'mobile-replay', vp: [390, 844], q: async () => `drawer=closed&at=${Math.floor((await live()).status.tick * 0.55)}`, mobile: true },
-  { name: 'mobile-noise', vp: [390, 844], q: 'drawer=closed', mobile: true, noise: true },
   { name: 'desktop-settings', vp: [1440, 900], q: '', click: '#tab-settings' },
 ];
 
@@ -78,6 +66,56 @@ const sampleShots = [
   { name: 'desktop-settings-error', vp: [1440, 900], q: 'as=admin', click: '#tab-settings', type: { sel: '#set-ticksPerRealSecond', value: '99' } },
   { name: 'desktop-settings-signedout', vp: [1440, 900], q: '', click: '#tab-settings' },
   { name: 'mobile-settings-admin', vp: [390, 844], q: 'as=admin&drawer=full', mobile: true, click: '#tab-settings' },
+  // Visitors: airdrops, the mailbox and the catalogue (sample mocks the API).
+  { name: 'desktop-drops', vp: [1440, 900], q: 'as=visitor&view=12,10,1.6' },
+  { name: 'desktop-item-card', vp: [1440, 900], q: 'as=admin&open=drop:d1', wait: 3800, steps: [{ click: '[data-act="json"]' }] },
+  { name: 'desktop-airdrop-pick', vp: [1440, 900], q: 'as=visitor&open=airdrop', wait: 3800 },
+  {
+    name: 'desktop-airdrop-place',
+    vp: [1440, 900],
+    q: 'as=visitor&open=airdrop',
+    wait: 3800,
+    steps: [{ click: 'input[name="pick"][value="cool-pack"]' }, { click: '[data-act="next"]' }, { tile: [15, 9] }],
+  },
+  {
+    name: 'desktop-airdrop-error',
+    vp: [1440, 900],
+    q: 'as=visitor&open=airdrop',
+    wait: 3800,
+    steps: [
+      { click: 'input[name="pick"][value="parasol"]' }, { click: '[data-act="next"]' }, { tile: [15, 9] }, { click: '[data-act="confirm"]' }, { wait: 900 },
+      { click: '[data-act="again"]' }, { click: 'input[name="pick"][value="cool-pack"]' }, { click: '[data-act="next"]' }, { tile: [16, 12] }, { click: '[data-act="confirm"]' },
+    ],
+  },
+  { name: 'desktop-airdrop-spectator', vp: [1440, 900], q: 'open=airdrop', wait: 3800 },
+  { name: 'desktop-mail', vp: [1440, 900], q: 'as=visitor&open=mail', wait: 3800, steps: [{ type: { sel: '#mail-text', value: 'Hello robot. The parasol by the pond is for you, it keeps the sun off.' } }] },
+  { name: 'desktop-mail-admin', vp: [1440, 900], q: 'as=admin&open=mail', wait: 3800 },
+  { name: 'desktop-catalogue', vp: [1440, 900], q: 'as=admin&page=catalogue&item=battery-snack', wait: 3000 },
+  {
+    name: 'desktop-catalogue-errors',
+    vp: [1440, 900],
+    q: 'as=admin&page=catalogue&item=squeaky-ball',
+    wait: 3000,
+    js: () => {
+      const t = document.querySelector('#cat-json');
+      t.value = t.value.replace('"squeak"', '"squeak me"').replace(/"range": \d+/, '"range": 40');
+      t.dispatchEvent(new Event('input', { bubbles: true }));
+    },
+  },
+  { name: 'desktop-settings-catalogue', vp: [1440, 900], q: 'as=admin', click: '#tab-settings', steps: [{ js: () => document.querySelector('.item-checks')?.scrollIntoView() }] },
+  { name: 'mobile-mailbox', vp: [390, 844], q: 'as=visitor&drawer=closed&view=10,13,2.2', mobile: true },
+  { name: 'mobile-airdrop', vp: [390, 844], q: 'as=visitor&open=airdrop', mobile: true, wait: 3800 },
+  {
+    name: 'mobile-airdrop-place',
+    vp: [390, 844],
+    q: 'as=visitor&open=airdrop',
+    mobile: true,
+    wait: 3800,
+    steps: [{ click: 'input[name="pick"][value="squeaky-ball"]' }, { click: '[data-act="next"]' }, { tile: [14, 8] }],
+  },
+  { name: 'mobile-mail', vp: [390, 844], q: 'as=visitor&open=mail', mobile: true, wait: 3800 },
+  { name: 'mobile-item-card', vp: [390, 844], q: 'as=visitor&open=drop:d2', mobile: true, wait: 3800 },
+  { name: 'mobile-catalogue', vp: [390, 844], q: 'as=admin&page=catalogue&item=battery-snack', mobile: true, wait: 3000 },
 ].map((s) => ({ ...s, name: `sample-${s.name}`, sample: true, q: `source=sample${s.q ? `&${s.q}` : ''}` }));
 
 const shots = process.env.SET === 'sample' ? sampleShots : realShots;
@@ -118,9 +156,8 @@ for (const s of shots) {
     await page.waitForTimeout(600);
   }
   if (s.noise) {
-    // Sample: replay a stretch where robots trade note chains. Real: a visitor makes noises at the robot.
-    if (s.sample) await page.click('.timeline .play');
-    else await visitorNoise();
+    // Replay a stretch of the sample where robots trade note chains.
+    await page.click('.timeline .play');
     await page.waitForFunction(() => window.__uas?.store.noises.some((n) => performance.now() - n.at < 300), null, { timeout: 90000, polling: 50 });
     await page.waitForTimeout(450);
   }
@@ -132,6 +169,18 @@ for (const s of shots) {
     await page.fill(s.type.sel, s.type.value);
     await page.press(s.type.sel, 'Enter');
     await page.waitForTimeout(900);
+  }
+  for (const st of s.steps ?? []) {
+    if (st.click) await page.click(st.click);
+    if (st.type) await page.fill(st.type.sel, st.type.value);
+    if (st.js) await page.evaluate(st.js);
+    if (st.tile) {
+      const box = await page.locator('.sheet canvas').boundingBox();
+      const at = await page.evaluate(([x, y]) => window.__uas.scene.screenOfTile(x, y), st.tile);
+      if (s.mobile) await page.touchscreen.tap(box.x + at.x, box.y + at.y);
+      else await page.mouse.click(box.x + at.x, box.y + at.y);
+    }
+    await page.waitForTimeout(st.wait ?? 500);
   }
   await page.screenshot({ path: `${out}/${s.name}.png` });
   console.log('saved', s.name);

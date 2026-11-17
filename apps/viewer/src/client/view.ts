@@ -65,8 +65,8 @@ function characterView(e: Character, cat: WorldCatalog | null): CharacterView {
     id: e.id,
     kind: 'character',
     type: e.type,
-    // Display name from the entity (`state.name`); visitors get a short tag rather than their long id.
-    name: (e.state['visitor'] === true && !e.state['name'] ? `Visitor ${e.id.slice(-4)}` : String(e.state['name'] ?? e.id)).toUpperCase(),
+    // Display name from the entity (`state.name`).
+    name: String(e.state['name'] ?? e.id).toUpperCase(),
     pos: { ...e.pos },
     heading: 0,
     mind: {
@@ -83,7 +83,6 @@ function characterView(e: Character, cat: WorldCatalog | null): CharacterView {
     trail: [],
     sightRange: arch?.sightRange ?? 6,
     hearingRange: arch?.hearingRange ?? 8,
-    visitor: e.state['visitor'] === true,
   };
   c.alerts = needAlerts(c, cat, 0);
   return c;

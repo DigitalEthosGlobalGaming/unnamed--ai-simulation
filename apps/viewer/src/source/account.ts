@@ -3,7 +3,7 @@
  * Vite `/api` proxy, so the session cookie rides along). An `?key=` API key, when given, is sent
  * too, so key-based admin access keeps working.
  */
-import { SettingsError, type AccountApi, type AuthState, type SettingField, type WorldSettings } from '../types.ts';
+import { SettingsError, type AccountApi, type AuthState, type SettingField, type SettingValue, type WorldSettings } from '../types.ts';
 
 export class RestAccount implements AccountApi {
   private readonly base: string;
@@ -74,7 +74,7 @@ export class RestAccount implements AccountApi {
   }
 
   /** PATCH returns `{ values, derived, effects }`; the schema doesn't change, so the last one is kept. */
-  async updateSettings(patch: Record<string, number | boolean>): Promise<WorldSettings> {
+  async updateSettings(patch: Record<string, SettingValue>): Promise<WorldSettings> {
     const out = await this.req<{ values: WorldSettings['values']; derived: WorldSettings['derived']; effects?: string[] }>('PATCH', `/worlds/${this.worldId()}/settings`, patch);
     return { values: out.values, schema: this.schema, derived: out.derived, ...(out.effects && { effects: out.effects }) };
   }

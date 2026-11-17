@@ -8,6 +8,9 @@ import { clockOf, esc, fmtAud, fmtPct, pct, TIER_LABEL, TRIGGER_LABEL } from './
 import { icons } from './icons.ts';
 import { gaugesFor } from '../client/view.ts';
 import type { SettingsView } from './settings.ts';
+import type { VisitorStore } from '../client/visitors.ts';
+import { iconSvg } from '../icons/render.ts';
+import { durationText } from './format.ts';
 
 
 const TIER_RANK: Record<Tier, number> = { 'carry-on': 0, autopilot: 0, local: 1, decision: 2, llm: 3, fallback: 0 };
@@ -27,7 +30,16 @@ function tierBars(tier: Tier): string {
 type Tab = 'feed' | 'beliefs' | 'settings';
 
 export class Panel {
-  private mode: 'overview' | 'robot' | null = null;
+  private mode: 'overview' | 'robot' | 'view' | null = null;
+  /** A temporary view (item card, airdrop flow, mail) shown in place of the inspector's content. */
+  private view: { key: string; el: HTMLElement; onClose?: () => void } | null = null;
+  /** Item schedule rows link to the item card. */
+  onOpenDrop: (dropId: string) => void = () => {};
+  onFocusDrop: (dropId: string | null) => void = () => {};
+  onOpenAirdrop: () => void = () => {};
+  onOpenMail: () => void = () => {};
+  visitors: VisitorStore | null = null;
+  private lastDropsKey: string | null = null;
   private robotId: string | null = null;
   private tab: Tab = 'feed';
   private lastFeedKey: string | null = null;
@@ -46,6 +58,10 @@ export class Panel {
       const a = t.dataset['action'];
       if (a === 'select') store.select(t.dataset['id'] ?? null);
       if (a === 'back') store.select(null);
+      if (a === 'close-view') this.closeView();
+      if (a === 'open-drop') this.onOpenDrop(t.dataset['id']!);
+      if (a === 'open-airdrop') this.onOpenAirdrop();
+      if (a === 'open-mail') this.onOpenMail();
       if (a === 'tab') this.setTab(t.dataset['tab'] as Tab);
       if (a === 'rev') {
         const k = t.dataset['key'] ?? null;
@@ -84,7 +100,37 @@ export class Panel {
     this.update();
   }
 
+  /** Show a view in the inspector (or phone drawer) with a back button; replaces any open view. */
+  showView(key: string, title: string, el: HTMLElement, onClose?: () => void) {
+    this.view?.onClose?.();
+    this.view = { key, el, ...(onClose && { onClose }) };
+    this.mode = 'view';
+    this.root.innerHTML = `<section class="pane-section view-section" aria-labelledby="view-h">
+      <div class="robot-title">
+        <button type="button" class="btn ghost icon-only" data-action="close-view" aria-label="Back">${icons.back()}</button>
+        <h2 id="view-h" class="draft-h big">${esc(title)}</h2>
+      </div>
+      <div data-ref="view-slot"></div>
+    </section>`;
+    this.root.querySelector('[data-ref="view-slot"]')!.append(el);
+    this.root.querySelector<HTMLElement>('[data-action="close-view"]')?.focus();
+  }
+
+  get openView(): string | null {
+    return this.view?.key ?? null;
+  }
+
+  closeView() {
+    if (!this.view) return;
+    const v = this.view;
+    this.view = null;
+    this.mode = null;
+    v.onClose?.();
+    this.update();
+  }
+
   update() {
+    if (this.view) return;
     const s = this.store;
     const world = s.world;
     if (!world) {
@@ -122,6 +168,21 @@ export class Panel {
           <tbody data-ref="robots"></tbody>
         </table>
         <p class="hint" data-ref="hint">Tap a robot on the plan, or its mark here, to read its mind.</p>
+        ${this.visitors?.api ? `<div class="visitor-actions" role="group" aria-label="Visitors">
+          <button type="button" class="btn" data-action="open-airdrop">${icons.airdrop()}<span>Airdrop</span></button>
+          <button type="button" class="btn" data-action="open-mail">${icons.mail()}<span>Mailbox</span><span class="btn-count" data-ref="drawer-mail-count" hidden></span></button>
+        </div>` : ''}
+      </section>
+      <section class="pane-section" aria-labelledby="items-h" data-ref="items-section" hidden>
+        <div class="section-head">
+          <h2 id="items-h" class="draft-h">Item schedule</h2>
+          <p class="section-meta">Airdropped by visitors</p>
+        </div>
+        <table class="schedule item-schedule">
+          <caption class="sr-only">Items airdropped into this world. Choose one to see what it is and what the robots believe about it.</caption>
+          <thead><tr><th scope="col">Item</th><th scope="col">Dropped by</th><th scope="col" class="c-num">Expires</th></tr></thead>
+          <tbody data-ref="drops"></tbody>
+        </table>
       </section>
       <section class="pane-section tabs-section">
         <div class="tabs" role="tablist" aria-label="World">
@@ -186,6 +247,35 @@ export class Panel {
       row.querySelector('.mark-btn')!.setAttribute('aria-label', `${c.name}: read its mind`);
     }
     this.updateFeed(null);
+    this.updateDrops();
+  }
+
+  private updateDrops() {
+    const sec = this.root.querySelector<HTMLElement>('[data-ref="items-section"]');
+    const body = this.root.querySelector<HTMLElement>('[data-ref="drops"]');
+    const v = this.visitors;
+    if (!sec || !body || !v) return;
+    const mc = this.root.querySelector<HTMLElement>('[data-ref="drawer-mail-count"]');
+    if (mc) {
+      mc.hidden = v.waiting === 0;
+      mc.textContent = String(v.waiting);
+    }
+    const w = this.store.world!;
+    const drops = v.airdrops;
+    sec.hidden = drops.length === 0;
+    const key = drops.map((d) => `${d.id}${d.expiresTick}`).join(',') + `|${Math.floor(w.clock.tick / 60)}`;
+    if (key === this.lastDropsKey) return;
+    this.lastDropsKey = key;
+    body.innerHTML = drops
+      .map((d) => {
+        const left = d.expiresTick ? d.expiresTick - w.clock.tick : null;
+        return `<tr>
+          <th scope="row"><button type="button" class="mark-btn drop-btn" data-action="open-drop" data-id="${d.id}">${iconSvg(d.item.icon, 20)}<span>${esc(d.item.name)}</span></button></th>
+          <td>${esc(d.droppedBy.username)}${d.droppedBy.admin ? ' <span class="role-chip">admin</span>' : ''}</td>
+          <td class="c-num">${left === null ? '<span class="nil">never</span>' : esc(durationText(left * w.clock.secondsPerTick))}</td>
+        </tr>`;
+      })
+      .join('');
   }
 
   private doing(c: CharacterView): string {

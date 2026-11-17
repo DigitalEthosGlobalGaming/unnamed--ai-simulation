@@ -55,6 +55,13 @@ export class ViewerStore {
     return this.conn.catalog();
   }
 
+  private visitorListeners = new Set<() => void>();
+  /** Called when a delta says airdrops or mail changed. */
+  onVisitorDelta(l: () => void): () => void {
+    this.visitorListeners.add(l);
+    return () => this.visitorListeners.delete(l);
+  }
+
   on(l: Listener): () => void {
     this.listeners.add(l);
     return () => this.listeners.delete(l);
@@ -230,6 +237,8 @@ export class ViewerStore {
       case 'deltas': {
         if (m.sessionId !== this.session || !this.world) return;
         const fx = applyDeltas(this.world, m.tick, m.changes, this.catalog);
+        // Airdrops and mail are fetched over REST; these deltas just say "look again".
+        if (m.changes.some((c) => c.kind === 'airdrop' || c.kind === 'mailbox' || c.kind === 'mail')) for (const l of this.visitorListeners) l();
         for (const n of fx.noises) this.addNoise(n.id, n.notes, n.pos);
         if (this.mode === 'replay') this.feed = this.conn.feedUntil(m.tick);
         if (this.mode === 'live' && this.selectedId && fx.beliefsChanged.includes(this.selectedId) && this.conn.memories) void this.refreshBeliefs(this.selectedId);

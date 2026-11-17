@@ -6,13 +6,16 @@
  * `GET /worlds/:id/catalog`.
  */
 import type { Delta, FeedEntry, WorldCatalog, WorldStateView } from '@uas/client';
-import type { AccountApi, BeliefMark, ConnectionStatus, ViewerMessage, WorldConnection } from '../types.ts';
+import type { AccountApi, VisitorApi, BeliefMark, ConnectionStatus, ViewerMessage, WorldConnection } from '../types.ts';
 import { SampleAccount } from './account.ts';
+import { SampleVisitors } from './visitors.ts';
+import { terrainAt } from './map.ts';
 import { cloneState, createSim, dayOf, step, SECONDS_PER_TICK, TICKS_PER_SECOND, type RobotState, type Scenario, type SimState, type StepOutput } from './sim.ts';
 import { OBJECT_VERBS } from './map.ts';
 import type { Change } from './types.ts';
 
 const SNAPSHOT_EVERY = 200;
+const MAILBOX = { x: 10, y: 13 };
 const TERRAIN_KEY = { floor: '.', path: ':', wall: '#', water: '~' } as const;
 
 export interface SampleOptions {
@@ -186,13 +189,28 @@ export class SampleServer implements WorldConnection {
   private replayAction = new Map<string, Change & { kind: 'action' }>();
   private opts: SampleOptions;
   readonly account: AccountApi;
+  readonly visitors: VisitorApi;
+  private sampleVisitors: SampleVisitors;
 
   constructor(opts: SampleOptions) {
     this.opts = opts;
-    this.account = new SampleAccount(new URLSearchParams(location.search), () => (this.live.spendDay === dayOf(this.live.tick) ? this.live.spendTodayAud : 0));
     this.live = createSim(opts.seed, opts.scenario);
     this.snapshots.push(cloneState(this.live));
     while (this.live.tick < opts.startTick) this.advanceLive(false);
+    const account = new SampleAccount(new URLSearchParams(location.search), () => (this.live.spendDay === dayOf(this.live.tick) ? this.live.spendTodayAud : 0));
+    this.account = account;
+    this.sampleVisitors = new SampleVisitors({
+      tick: () => this.live.tick,
+      secondsPerTick: SECONDS_PER_TICK,
+      width: this.live.map.width,
+      height: this.live.map.height,
+      free: (x, y) => terrainAt(this.live.map, x, y).walkable && !this.live.objects.some((o) => o.pos.x === x && o.pos.y === y) && !(x === MAILBOX.x && y === MAILBOX.y),
+      role: () => account.role(),
+      username: () => account.username(),
+      enabled: () => account.enabled(),
+      feedTickNear: (t) => this.feed.find((e) => e.tick >= t)?.tick ?? t,
+    });
+    this.visitors = this.sampleVisitors;
   }
 
   catalog(): WorldCatalog {
@@ -225,7 +243,10 @@ export class SampleServer implements WorldConnection {
     for (const o of s.objects) prev.set(o.id, { ...o.pos });
     const acts = sessionId ? this.replayAction : this.liveAction;
     acts.clear();
-    this.emit({ type: 'snapshot', worldId: s.worldId, ...(sessionId && { sessionId }), tick: s.tick, state: stateOf(s) });
+    const state = stateOf(s);
+    // The sample world's mailbox (a basic-pack object on the real server), with its waiting count.
+    if (s.objects.length) state.entities['mailbox'] = { id: 'mailbox', kind: 'object', type: 'mailbox', pos: { ...MAILBOX }, tags: ['metal'], state: { waiting: this.sampleVisitors?.waiting ?? 0 } } as never;
+    this.emit({ type: 'snapshot', worldId: s.worldId, ...(sessionId && { sessionId }), tick: s.tick, state });
     this.emitSpend(s);
   }
 

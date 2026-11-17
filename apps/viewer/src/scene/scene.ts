@@ -9,6 +9,8 @@ import type { NoiseEvent, ViewerStore } from '../client/store.ts';
 import { NoisePlayer } from '../ui/audio.ts';
 import { C, FONT_DRAFT } from './palette.ts';
 import { clockOf } from '../ui/format.ts';
+import type { VisitorStore } from '../client/visitors.ts';
+import { drawIcon } from '../icons/render.ts';
 
 
 export interface Insets {
@@ -92,6 +94,20 @@ export class Scene {
   private reserved: Rect[] = [];
   follow = false;
   onSelect: (id: string | null) => void = () => {};
+  /** Visitor layer: airdropped items and the mailbox (set by main when the source has visitors). */
+  visitors: VisitorStore | null = null;
+  onSelectDrop: (dropId: string) => void = () => {};
+  onOpenMail: () => void = () => {};
+  /** Airdrop placement: the item being placed, the chosen tile, and where the pointer hovers. */
+  placing: { icon: string; name: string } | null = null;
+  placeAt: Vec2 | null = null;
+  private placeHover: Vec2 | null = null;
+  onPlace: (tile: Vec2) => void = () => {};
+  /** Drop highlighted from the HTML item schedule (focus) or the open item card. */
+  focusDrop: string | null = null;
+  private hoverDrop: string | null = null;
+  private dropPts: { id: string; x: number; y: number }[] = [];
+  private mailboxPt: Vec2 | null = null;
   /** Fired when zoom or centre changes (for the title block scale). */
   onViewChange: () => void = () => {};
   /** Fired when follow turns off because the user panned. */
@@ -151,6 +167,11 @@ export class Scene {
   screenOf(id: string): Vec2 | null {
     const d = this.disp.get(id);
     return d && this.L ? this.center(d) : null;
+  }
+
+  /** Canvas position of a tile's centre (tests and screenshots tap tiles through this). */
+  screenOfTile(x: number, y: number): Vec2 | null {
+    return this.L ? this.center({ x, y }) : null;
   }
 
   viewParam(): string {
@@ -315,10 +336,17 @@ export class Scene {
       const p = local(e);
       if (!pts.has(e.pointerId)) {
         // hover
+        if (this.placing) {
+          this.placeHover = this.tileAt(p.x, p.y);
+          canvas.style.cursor = 'crosshair';
+          return;
+        }
         const id = this.hit(p.x, p.y);
-        if (id !== this.hoverId) {
+        const drop = id ? null : this.hitDrop(p.x, p.y);
+        if (id !== this.hoverId || drop !== this.hoverDrop) {
           this.hoverId = id;
-          canvas.style.cursor = id ? 'pointer' : 'grab';
+          this.hoverDrop = drop;
+          canvas.style.cursor = id || drop || (!id && this.hitMailbox(p.x, p.y)) ? 'pointer' : 'grab';
         }
         return;
       }
@@ -366,7 +394,21 @@ export class Scene {
         this.onRevision(spot.key, spot.id);
         return;
       }
-      this.onSelect(this.hit(p.x, p.y));
+      if (this.placing) {
+        const t = this.tileAt(p.x, p.y);
+        if (t) {
+          this.placeAt = t;
+          this.onPlace(t);
+        }
+        return;
+      }
+      const robot = this.hit(p.x, p.y);
+      if (!robot) {
+        const drop = this.hitDrop(p.x, p.y);
+        if (drop) return this.onSelectDrop(drop);
+        if (this.hitMailbox(p.x, p.y)) return this.onOpenMail();
+      }
+      this.onSelect(robot);
     };
     canvas.addEventListener('pointerup', (e) => end(e, false));
     canvas.addEventListener('pointercancel', (e) => end(e, true));
@@ -873,6 +915,98 @@ export class Scene {
 
   /* ---------------------------------------------------------- objects */
 
+  /** The tile under a screen point, or null outside the map. */
+  private tileAt(sx: number, sy: number): Vec2 | null {
+    if (!this.L) return null;
+    const w = this.toWorld(sx, sy);
+    const x = Math.floor(w.x);
+    const y = Math.floor(w.y);
+    return x >= 0 && y >= 0 && x < this.L.W && y < this.L.H ? { x, y } : null;
+  }
+
+  private hitDrop(sx: number, sy: number): string | null {
+    const r = Math.max(14, Math.min((this.L?.ts ?? 30) * 0.5, 40));
+    let best: string | null = null;
+    let bd = r;
+    for (const d of this.dropPts) {
+      const dist = Math.hypot(d.x - sx, d.y - sy);
+      if (dist < bd) {
+        bd = dist;
+        best = d.id;
+      }
+    }
+    return best;
+  }
+
+  private hitMailbox(sx: number, sy: number): boolean {
+    const m = this.mailboxPt;
+    return !!m && Math.hypot(m.x - sx, m.y - sy) < Math.max(14, Math.min((this.L?.ts ?? 30) * 0.55, 40));
+  }
+
+  /** Airdropped items: icon, a dashed drop ring with a ▼ drop mark, an expiry arc, and a name label on hover/focus. */
+  private drawDrops(world: WorldView) {
+    const g = this.objectsG;
+    const L = this.L!;
+    const ts = L.ts;
+    this.dropPts = [];
+    const v = this.visitors;
+    if (!v) return;
+    for (const d of v.airdrops) {
+      const ent = world.objects.find((o) => o.id === d.entityId);
+      if (ent?.heldBy) continue; // carried: drawn with its carrier as an object
+      const c = this.center(ent?.pos ?? d.pos);
+      const size = Math.max(18, Math.min(ts * 0.78, 44));
+      const r = size * 0.62;
+      this.dropPts.push({ id: d.id, x: c.x, y: c.y });
+      this.placed.push({ x: c.x, y: c.y, w: r * 2, h: r * 2 });
+      g.circle(c.x, c.y, r).fill({ color: C.sheet, alpha: 0.85 });
+      dashCircle(g, c.x, c.y, r, 3, 3);
+      g.stroke({ width: 1, color: C.ink2, alpha: 0.8 });
+      // expiry: the remaining share of its life, as an arc on the ring
+      if (d.expiresTick && d.expiresTick > d.droppedTick) {
+        const left = Math.max(0, Math.min(1, (d.expiresTick - world.clock.tick) / (d.expiresTick - d.droppedTick)));
+        const a0 = -Math.PI / 2;
+        g.moveTo(c.x + Math.cos(a0) * r, c.y + Math.sin(a0) * r);
+        g.arc(c.x, c.y, r, a0, a0 + left * Math.PI * 2);
+        g.stroke({ width: 2, color: C.ink, cap: 'round' });
+      }
+      // drop mark: a small chevron above the ring, as if it came from above
+      g.poly([c.x - 4, c.y - r - 9, c.x + 4, c.y - r - 9, c.x, c.y - r - 3]).fill({ color: C.ink });
+      drawIcon(g, d.item.icon, c.x, c.y, size, C.ink);
+      const lit = this.focusDrop === d.id || this.hoverDrop === d.id;
+      if (lit || ts >= 44) {
+        const name = d.item.name.toUpperCase();
+        const w = name.length * 8 + 10;
+        // below the ring, else above its drop mark, else beside it: whichever is clear
+        const spots = [{ x: c.x, y: c.y + r + 12 }, { x: c.x, y: c.y - r - 20 }, { x: c.x + r + 8 + w / 2, y: c.y }, { x: c.x - r - 8 - w / 2, y: c.y }];
+        const at = spots.find((p) => !this.collides(p.x, p.y, w, 16)) ?? spots[0]!;
+        this.label(`drop-${d.id}`, name, at.x, at.y, { size: 13, spacing: 1, weight: lit ? '700' : '600' });
+        this.placed.push({ x: at.x, y: at.y, w, h: 16 });
+      }
+      if (lit) g.circle(c.x, c.y, r + 5).stroke({ width: 1.5, color: C.ink });
+    }
+  }
+
+  /** Placement preview: the chosen (or hovered) tile outlined, the item's icon dashed into it. */
+  private drawPlacement(g: Graphics) {
+    if (!this.placing) return;
+    const t = this.placeAt ?? this.placeHover;
+    if (!t) return;
+    const ts = this.L!.ts;
+    const a = this.P(t.x, t.y);
+    const b = this.P(t.x + 1, t.y + 1);
+    const x = Math.min(a.x, b.x);
+    const y = Math.min(a.y, b.y);
+    g.rect(x, y, ts, ts).stroke({ width: 2, color: C.focus });
+    const c = this.center(t);
+    drawIcon(g, this.placing.icon, c.x, c.y, Math.max(18, Math.min(ts * 0.78, 44)), C.focus, this.placeAt ? 1 : 0.6);
+    const label = this.placeAt ? `DROP HERE · ${this.placing.name.toUpperCase()}` : this.placing.name.toUpperCase();
+    const w = label.length * 8 + 10;
+    const spots = [{ x: c.x, y: y - 12 }, { x: c.x, y: y + ts + 12 }, { x: x + ts + 6 + w / 2, y: c.y }, { x: x - 6 - w / 2, y: c.y }];
+    const at = spots.find((p) => !this.collides(p.x, p.y, w, 16)) ?? spots[0]!;
+    this.label('place-tag', label, at.x, at.y, { size: 13, weight: '700', color: C.focus, spacing: 0.8 });
+  }
+
   private drawObjects(world: WorldView) {
     const g = this.objectsG;
     g.clear();
@@ -881,7 +1015,9 @@ export class Scene {
     const daylight = clockOf(world.clock.tick, world.clock).daylight;
     // Activity is read from what the robots are doing, so it is the same for any pack state shape.
     const busy = (id: string, verb: string) => world.characters.some((c) => c.action?.verb === verb && c.action.targetId === id);
+    this.mailboxPt = null;
     for (const o of world.objects) {
+      if (o.type === 'airdrop') continue; // drawn by drawDrops from the visitor layer
       // A carried object rides with its carrier (at the carrier's glide position), slightly ahead of it.
       const carrier = o.heldBy ? this.disp.get(o.heldBy) : undefined;
       if (o.heldBy && !carrier) continue;
@@ -942,6 +1078,31 @@ export class Scene {
               g.moveTo(c.x + Math.cos(a) * ts * 0.11, c.y + Math.sin(a) * ts * 0.11).lineTo(c.x + Math.cos(a) * ts * 0.2, c.y + Math.sin(a) * ts * 0.2);
             }
             g.stroke({ width: 1, color: C.ink2, alpha: 0.85 });
+          }
+          break;
+        }
+        case 'mailbox': {
+          // A post box (plan view: box with a slot) and a flag that rises while mail is waiting.
+          const waiting = this.visitors?.mail ? this.visitors.waiting : Number(o.state['waiting'] ?? 0);
+          this.mailboxPt = c;
+          g.poly(poly([[-0.34, -0.26], [0.34, -0.26], [0.34, 0.3], [-0.34, 0.3]])).fill({ color: C.sheet }).stroke({ width: 2, color: C.ink });
+          const s0 = s(-0.18, -0.06), s1 = s(0.18, -0.06);
+          g.moveTo(s0.x, s0.y).lineTo(s1.x, s1.y).stroke({ width: 2.5, color: C.ink, cap: 'round' });
+          const pole0 = s(0.34, 0.2), pole1 = s(0.34, waiting ? -0.62 : -0.1);
+          g.moveTo(pole0.x, pole0.y).lineTo(pole1.x, pole1.y).stroke({ width: 1.5, color: C.ink });
+          if (waiting) {
+            g.poly(poly([[0.34, -0.62], [0.66, -0.52], [0.34, -0.42]])).fill({ color: C.ink });
+            // count callout: a circled number on a short leader
+            // placed on whichever diagonal is clear of other things on the plan
+            const others = [...world.objects.filter((x) => x.id !== o.id && x.type !== 'airdrop').map((x) => x.pos), ...(this.visitors?.airdrops.map((d) => d.pos) ?? [])].map((p) => this.center(p));
+            const cands = [[1, -1], [-1, -1], [1, 1], [-1, 1]].map(([sx, sy]) => ({ x: c.x + sx! * (ts * 0.62 + 12), y: c.y + sy! * (ts * 0.62 + 8) }));
+            const cc = cands.find((q) => !this.collides(q.x, q.y, 24, 24) && others.every((p) => Math.hypot(p.x - q.x, p.y - q.y) > Math.max(22, ts * 0.6))) ?? cands[0]!;
+            const tip = cc.x > c.x ? s(0.62, -0.5) : { x: c.x - ts * 0.34, y: cc.y > c.y ? c.y + ts * 0.3 : c.y - ts * 0.26 };
+            const ang = Math.atan2(tip.y - cc.y, tip.x - cc.x);
+            g.moveTo(tip.x, tip.y).lineTo(cc.x + Math.cos(ang) * 11, cc.y + Math.sin(ang) * 11).stroke({ width: 1, color: C.ink2 });
+            g.circle(cc.x, cc.y, 11).fill({ color: C.sheet }).stroke({ width: 1.5, color: C.ink });
+            this.label(`mail-count`, String(waiting), cc.x, cc.y + 1, { size: 13, weight: '700', bg: false });
+            this.placed.push({ x: cc.x, y: cc.y, w: 24, h: 24 });
           }
           break;
         }
@@ -1059,6 +1220,7 @@ export class Scene {
     }
     this.placed = [...this.staticBoxes];
     this.drawObjects(world);
+    this.drawDrops(world);
     this.drawDynamic(world, dt, now);
     // A label sliced by the drawing-area edge reads as a fragment: hide it until it is fully in view.
     const m = this.maskRect;
@@ -1153,6 +1315,8 @@ export class Scene {
     // The selected robot claims its label spot first; the others make way.
     for (const c of [...world.characters].sort((a, b) => Number(b.id === selected) - Number(a.id === selected)))
       this.drawRobot(g, c, c.id === selected, c.id === this.hoverId);
+
+    this.drawPlacement(g);
 
     // Red pen alerts (revision clouds) and the selected callout.
     this.hotspots = [];

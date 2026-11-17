@@ -4,7 +4,8 @@
  * server's confirmed value or its validation error inline. Everyone else sees the same table
  * read-only, because the energy rate and the daily cap explain how the robots behave.
  */
-import { SettingsError, type AccountApi, type AuthState, type SettingField, type WorldSettings } from '../types.ts';
+import { iconSvg } from '../icons/render.ts';
+import { SettingsError, type AccountApi, type AuthState, type CatalogItem, type SettingField, type SettingValue, type WorldSettings } from '../types.ts';
 import { esc, fmtAud, fmtPct } from './format.ts';
 
 const REFRESH_MS = 15_000;
@@ -17,6 +18,8 @@ export class SettingsView {
   private timer: number | undefined;
   private failure = '';
   onSignOut: () => void = () => {};
+  /** Catalogue items, for list settings such as which items may be airdropped (`catalogEnabled`). */
+  catalogue: () => CatalogItem[] = () => [];
 
   constructor(private readonly account: AccountApi | undefined) {
     this.el.className = 'settings';
@@ -32,6 +35,11 @@ export class SettingsView {
     this.el.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).closest('[data-acct="logout"]')) this.onSignOut();
     });
+  }
+
+  /** The catalogue changed: rebuild any item checklists. */
+  catalogueChanged() {
+    if (this.data) this.render();
   }
 
   setAuth(auth: AuthState | null) {
@@ -77,7 +85,10 @@ export class SettingsView {
       return;
     }
     const fields = Object.keys(this.data.schema);
-    const key = `${this.canEdit}|${fields.join(',')}`;
+    const items = fields.some((f) => this.data!.schema[f]!.kind === 'string[]')
+      ? this.catalogue().map((i) => `${i.id}:${i.name}:${i.icon.length}:${i.disabled ?? ''}`).join(',')
+      : '';
+    const key = `${this.canEdit}|${fields.join(',')}|${items}`;
     if (key !== this.builtKey) {
       this.builtKey = key;
       this.build(fields);
@@ -93,6 +104,7 @@ export class SettingsView {
       .map((f) => {
         const s = d.schema[f]!;
         const id = `set-${f}`;
+        if (s.kind === 'string[]') return this.itemsRowHtml(f, s, edit);
         const control = edit ? this.controlHtml(f, s, id) : `<span class="set-ro" data-ro="${f}"></span>`;
         return `<tr data-field="${f}">
           <th scope="row">${edit ? `<label for="${id}">${esc(s.label)}</label>` : esc(s.label)}${s.help ? `<span class="sub" id="help-${f}">${esc(s.help)}</span>` : ''}</th>
@@ -116,6 +128,27 @@ export class SettingsView {
         <tbody>${rows}</tbody>
       </table>
       ${who ? `<p class="settings-account">Signed in as <strong>${esc(who.name)}</strong> · ${esc(this.auth!.role)} <button type="button" class="btn ghost" data-acct="logout">Sign out</button></p>` : ''}`;
+  }
+
+  /** A list setting over catalogue items: a checklist with icons (read-only: the enabled items). */
+  private itemsRowHtml(f: string, s: SettingField, edit: boolean): string {
+    const cat = this.catalogue();
+    const help = s.help ? `<span class="sub" id="help-${f}">${esc(s.help)}</span>` : '';
+    const body = !cat.length
+      ? `<span class="set-ro" data-ro="${f}"></span>`
+      : edit
+        ? `<fieldset class="item-checks" aria-describedby="${s.help ? `help-${f} ` : ''}err-${f}"><legend class="sr-only">${esc(s.label)}</legend>
+            <label class="check-row"><input type="checkbox" data-field="${f}" data-item="*"><span><strong>Every item</strong> <span class="sub">including ones added to the catalogue later</span></span></label>
+            ${cat
+              .map(
+                (i) => `<label class="check-row"><input type="checkbox" data-field="${f}" data-item="${esc(i.id)}">${iconSvg(i.icon, 24)}<span>${esc(i.name)}${i.disabled ? ' <span class="sub">disabled in the catalogue</span>' : ''}</span></label>`,
+              )
+              .join('')}
+          </fieldset>`
+        : `<ul class="item-checks ro" data-items-ro="${f}"></ul>`;
+    return `<tr data-field="${f}" class="items-head"><th scope="row" colspan="2">${esc(s.label)}${help}</th></tr>
+      <tr class="items-body"><td colspan="2">${body}<span class="set-state" data-state="${f}" aria-live="polite"></span>
+        <p class="field-error" id="err-${f}" data-err="${f}" hidden></p></td></tr>`;
   }
 
   private controlHtml(f: string, s: SettingField, id: string): string {
@@ -142,6 +175,23 @@ export class SettingsView {
     for (const [f, v] of Object.entries(d.values)) {
       const s = d.schema[f];
       if (!s) continue;
+      if (s.kind === 'string[]') {
+        const ids = Array.isArray(v) ? v : [];
+        const all = ids.includes('*'); // `*` enables every catalogue item, present and future
+        const ro = this.el.querySelector<HTMLElement>(`[data-ro="${f}"]`);
+        if (ro) ro.textContent = all ? 'Every item' : ids.length ? ids.join(', ') : 'None';
+        const list = this.el.querySelector<HTMLElement>(`[data-items-ro="${f}"]`);
+        if (list) {
+          const cat = this.catalogue().filter((i) => all || ids.includes(i.id));
+          list.innerHTML = cat.length ? cat.map((i) => `<li class="check-row">${iconSvg(i.icon, 24)}<span>${esc(i.name)}</span></li>`).join('') : '<li class="hint">None</li>';
+        }
+        for (const box of this.el.querySelectorAll<HTMLInputElement>(`input[data-field="${f}"][data-item]`)) {
+          const id = box.dataset['item']!;
+          box.checked = id === '*' ? all : all || ids.includes(id);
+          if (id !== '*') box.disabled = all;
+        }
+        continue;
+      }
       const ro = this.el.querySelector<HTMLElement>(`[data-ro="${f}"]`);
       if (ro) ro.textContent = s.kind === 'boolean' ? (v ? 'On' : 'Off') : s.unit === 'A$' ? fmtAud(Number(v)) : `${v}${s.unit ? ` ${s.unit}` : ''}`;
       const input = this.el.querySelector<HTMLInputElement>(`input[data-field="${f}"]`);
@@ -167,8 +217,10 @@ export class SettingsView {
     const f = input.dataset['field'];
     if (!f || !this.data || !this.account || !this.canEdit) return;
     const s = this.data.schema[f]!;
-    let value: number | boolean;
-    if (s.kind === 'boolean') value = input.checked;
+    let value: SettingValue;
+    if (s.kind === 'string[]')
+      value = input.dataset['item'] === '*' && input.checked ? ['*'] : [...this.el.querySelectorAll<HTMLInputElement>(`input[data-field="${f}"][data-item]:checked`)].map((b) => b.dataset['item']!).filter((id) => id !== '*');
+    else if (s.kind === 'boolean') value = input.checked;
     else {
       value = input.valueAsNumber;
       if (!Number.isFinite(value)) return this.setError(f, `${s.label} needs a number.`);
@@ -195,6 +247,7 @@ export class SettingsView {
       input.disabled = false;
       if (state) state.textContent = '';
       if (s.kind === 'boolean') input.checked = Boolean(this.data.values[f]); // a refused switch flips back
+      if (s.kind === 'string[]') input.checked = !input.checked;
       const err = e as SettingsError;
       const msg = err.status === 401 ? 'Your session ended. Sign in again to change settings.' : err.status === 403 ? 'Only admins can change world settings.' : err.message;
       this.setError(err.field && this.data.schema[err.field] ? err.field : f, msg);
