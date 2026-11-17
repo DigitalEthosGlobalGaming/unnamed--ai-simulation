@@ -1,4 +1,4 @@
-import { inBounds, neighbors4, type EffectContext, type EffectHandler, type Pos, type StateChange } from '@uas/core';
+import { inBounds, neighbors4, type EffectContext, type EffectHandler, type EffectResult, type Pos, type StateChange } from '@uas/core';
 
 const DIRS: Pos[] = [
   { x: 0, y: -1 },
@@ -19,6 +19,7 @@ function roll(ctx: EffectContext, from: Pos, dir: Pos, max: number): Pos {
 }
 
 export const pickup: EffectHandler = ({ actor, target, world }) => {
+  if (target.heldBy === actor.id) return { ok: false, reason: "you're already holding it", observation: 'it was already in your grippers' };
   if (target.heldBy) return { ok: false, reason: 'someone is already holding it', observation: 'it would not come loose' };
   if (world.entities().some((e) => e.heldBy === actor.id)) {
     return { ok: false, reason: 'already carrying something', observation: 'your grippers were full' };
@@ -31,8 +32,13 @@ export const drop: EffectHandler = ({ actor, target }) =>
     ? { ok: true, stateChanges: [{ id: target.id, heldBy: null }], observation: 'the ball bounced once and settled' }
     : { ok: false, reason: 'not holding it', observation: 'there was nothing to let go of' };
 
-export const push: EffectHandler = (ctx) => {
+export const push: EffectHandler = (ctx): EffectResult => {
   const { actor, target, rng } = ctx;
+  // Pushing what you hold tosses it: it leaves your grippers and rolls away.
+  if (target.heldBy === actor.id) {
+    const to = roll(ctx, actor.pos, rng.pick(DIRS), rng.int(1, 3));
+    return { ok: true, needDeltas: { curiosity: 0.04 }, stateChanges: [{ id: target.id, heldBy: null, pos: to }], observation: 'you tossed the ball and it rolled away' };
+  }
   if (target.heldBy) return { ok: false, reason: 'it is being held', observation: 'it would not budge' };
   const dx = Math.sign(target.pos.x - actor.pos.x);
   const dy = Math.sign(target.pos.y - actor.pos.y);

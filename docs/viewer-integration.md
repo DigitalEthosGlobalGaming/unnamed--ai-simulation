@@ -104,7 +104,9 @@ Live messages carry no `sessionId`; replay messages always do.
 
 ### `FeedEntry`
 
-`{ tick, characterId, trigger, tier, modelId?, confidence?, actions: [{ verb, targetId?, reason, status }], usage?, energyCost?, notes?, reason? }`
+`{ tick, characterId, trigger, tier, modelId?, confidence?, actions: [{ verb, targetId?, reason, status }], usage?, energyCost?, notes?, reason?, escalated? }`
+
+- `escalated: { from, confidence }` marks a decision the decision model (`from`) was unsure about, answered by a stronger model or a text-model plan. Plans (tier `llm`) carry no `confidence`.
 
 - `tier: 'carry-on'` marks the later steps of a model plan that run without a new call.
 - `reason` explains a `fallback`: `queued too long` (the model queue dropped the job as stale), `no model answered`, or `no answer in time`.
@@ -127,7 +129,7 @@ A note `chirp-E` means the `chirp` noise played at E. Play the notes of a chain 
 | Method and path | Role | Returns |
 | --- | --- | --- |
 | `GET /worlds` | spectator | `WorldSummary[]` with live `status` (`WorldStatus`): `tick, day, timeOfDay, paused, timeScale, clockMode, timezone, worldSeconds, driftSeconds, ticksPerRealSecond, idleTicksPerRealSecond, watched, effectiveTicksPerRealSecond, secondsPerTick, inWorldSecondsPerRealSecond, pendingJobs, mailWaiting, costAudToday, modelLatencyMs, tickLagMs, queue` where `queue` is `QueueStats { waiting, running, byLane, waitMs {p50,p95,max}, runMs {p50,p95,max}, completed, dropped {stale, superseded, failed}, timeouts }` |
-| `GET /worlds/:id/catalog` | spectator | `WorldCatalog`: pack objects (type, tags, portable, solid, verbs), archetypes (needs, energy, noises, ranges), `ticksPerRealSecond` (`ticksPerSecond` is a deprecated alias), `secondsPerTick`, cost settings |
+| `GET /worlds/:id/catalog` | spectator | `WorldCatalog`: pack objects (type, tags, portable, solid, verbs), archetypes (needs, energy, noises, ranges), `ticksPerRealSecond` (`ticksPerSecond` is a deprecated alias), `secondsPerTick`, cost settings, `models` (id = the feed's `modelId`, adapter, model, provider, local) |
 | `GET /worlds/:id` | spectator | `WorldSummary` |
 | `PATCH /worlds/:id/clock` | admin | `{ paused?, timeScale?, realign? }` sets the clock and returns the status; real-time worlds re-align (logged jump) on resume, on `timeScale` back to 1, or on `realign: true` |
 | `POST /worlds/:id/entities` | admin | body `EntityDef { type, pos, id?, state? }`; returns the logged `InputEvent` |

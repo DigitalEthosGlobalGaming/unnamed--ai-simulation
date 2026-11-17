@@ -39,7 +39,7 @@ interface InputEvent<T> {
 
 `causedBy.userId` is a hash prefix of the API key, never the key itself. `by` on visitor inputs is `{ username, admin, userKey }`, where `userKey` is that same kind of hash. Non-admins get `mail.post` without its `text` from `GET /events`.
 
-**Pack upgrades.** A world normally loads only with the pack versions its snapshot was saved with. When the packs change (for example, when the airdrop and mailbox objects were added), the runtime loads the snapshot anyway (`allowPackUpgrade`), replays the log as recorded, then logs `pack.loaded` with the new versions; the sim accepts it only if they match the loaded packs. Events are stamped with the world's versions at the time. A replay from a snapshot taken before the upgrade runs the old part of the log on the current pack code, so it is only as exact as the packs' unchanged behaviour.
+**Pack upgrades.** A world normally loads only with the pack versions its snapshot was saved with. When the packs change (for example, when the airdrop and mailbox objects were added), the runtime loads the snapshot anyway (`allowPackUpgrade`), replays the log as recorded, then logs `pack.loaded` with the new versions; the sim accepts it only if they match the loaded packs. Events are stamped with the world's versions at the time. A replay or seek enqueues a stretch of the log at once, so a world restored for an upgrade accepts inputs stamped with older versions as well as the loaded ones; seeking before, across and after the upgrade works ([`visitors.test.ts`](../../packages/server/test/visitors.test.ts)). A replay from a snapshot taken before the upgrade runs the old part of the log on the current pack code, so it is only as exact as the packs' unchanged behaviour.
 
 ### Deltas
 

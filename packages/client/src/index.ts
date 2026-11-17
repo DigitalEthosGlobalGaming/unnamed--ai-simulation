@@ -87,6 +87,8 @@ export interface WorldCatalog {
   energyFloor: number | null;
   energyPerAud: number | null;
   objects: { type: string; tags: string[]; portable: boolean; solid: boolean; verbs: string[] }[];
+  /** The world's models: config alias (the feed's `modelId`), adapter, real model, provider. No keys. */
+  models: { id: string; adapter: string; model?: string; provider?: string; local: boolean }[];
   archetypes: {
     type: string;
     tags: string[];
@@ -323,8 +325,9 @@ export class UasClient {
     this.req<{ day: number; entries: { tick: number; text: string }[] }>('GET', `/worlds/${id}/characters/${cid}/diary${day === undefined ? '' : `?day=${day}`}`);
   poke = (id: string, cid: string) => this.req<InputEvent>('POST', `/worlds/${id}/characters/${cid}/poke`);
   events = (id: string, fromSeq = 0, limit = 100) => this.req<InputEvent[]>('GET', `/worlds/${id}/events?fromSeq=${fromSeq}&limit=${limit}`);
-  feed = (id: string, characterId?: string, limit = 100) =>
-    this.req<FeedEntry[]>('GET', `/worlds/${id}/feed?limit=${limit}${characterId ? `&characterId=${characterId}` : ''}`);
+  /** Newest `limit` feed entries, oldest first; pass `beforeTick` for the page before that tick. */
+  feed = (id: string, characterId?: string, limit = 100, beforeTick?: number) =>
+    this.req<FeedEntry[]>('GET', `/worlds/${id}/feed?limit=${limit}${characterId ? `&characterId=${characterId}` : ''}${beforeTick !== undefined ? `&beforeTick=${beforeTick}` : ''}`);
   seek = (id: string, tick: number) => this.req<{ sessionId: string; tick: number; state: unknown }>('POST', `/worlds/${id}/seek`, { tick });
   fork = (id: string, tick: number, opts: { id?: string; config?: Record<string, Json> } = {}) => this.req<WorldSummary>('POST', `/worlds/${id}/fork`, { tick, ...opts });
   packs = () => this.req<{ name: string; version: string; licence: string; contentHash: string }[]>('GET', '/packs');

@@ -21,7 +21,7 @@ import {
   type Usage,
 } from '@uas/core';
 import type { SimPlugin, World } from '@uas/sim';
-import { buildCandidates, choose, confident, score } from './autopilot.ts';
+import { buildCandidates, carrying, choose, confident, score } from './autopilot.ts';
 import { mindConfigOf, type MindConfig } from './config.ts';
 import { admit, hearsay, recall, updateBelief } from './memory.ts';
 import { band, clamp, computeMood, feltWord, round3, updateNeeds } from './needs.ts';
@@ -291,18 +291,21 @@ export class MindSystem implements SimPlugin {
         case 'failed': {
           finished = true;
           const objectType = target?.kind === 'object' ? perceivedType(target) : undefined;
+          if (objectType) this.countFailure(world, m, `${d.action.verb}:${objectType}`, d.status === 'failed');
           if (d.action.verb === 'vocalize' && Array.isArray(d.action.args?.notes)) {
             m.usedChains = [...m.usedChains, { notes: d.action.args.notes as string[], valence: m.mood.valence }].slice(-8);
           }
           if (m.actionStart && !NO_OUTCOME.has(d.action.verb) && (objectType || d.action.verb === 'rest')) {
             this.outcome(world, c, d.action.verb, objectType, d.observation ?? d.reason ?? '', isNight);
           }
-          if (d.status === 'failed') m.triggers.push({ kind: 'action-rejected', tick: world.tick, salience: 0.5, detail: d.reason });
+          // A failed step doesn't throw away the valid steps after it: only re-think when nothing is left.
+          if (d.status === 'failed' && !c.current && c.queue.length === 0) m.triggers.push({ kind: 'action-rejected', tick: world.tick, salience: 0.5, detail: d.reason });
           m.actionStart = undefined;
           break;
         }
         case 'rejected': {
-          m.triggers.push({ kind: 'action-rejected', tick: world.tick, salience: 0.6, detail: d.reason });
+          if (target?.kind === 'object') this.countFailure(world, m, `${d.action.verb}:${perceivedType(target)}`, true);
+          if (!c.current && c.queue.length === 0) m.triggers.push({ kind: 'action-rejected', tick: world.tick, salience: 0.6, detail: d.reason });
           if (d.reason?.startsWith('no such target') && d.action.targetId) delete m.known[d.action.targetId];
           this.openItem(world, m, 'unfinished', `I could not ${d.action.verb}${target ? ` the ${perceivedType(target)}` : ''}: ${d.reason}`, d.action.verb);
           this.diary(world, c, `tried to ${d.action.verb} but ${d.reason}`);
@@ -635,7 +638,9 @@ export class MindSystem implements SimPlugin {
       this.queue(world, c, obvious.actions, top.kind, 'autopilot', { reason: obvious.reason });
       return;
     }
-    if (useModels && !(ROUTINE.includes(top.kind) && confident(scored))) {
+    // Waiting again after waiting, with nothing new (a routine trigger), needs no model call.
+    const idleAgain = m.idle === true && ROUTINE.includes(top.kind);
+    if (useModels && !idleAgain && !(ROUTINE.includes(top.kind) && confident(scored))) {
       this.dispatch(world, c, arch, 'decide', isNight, top.kind, { question: 'Which action next?', candidates: modelOptions(scored) });
       return;
     }
@@ -675,6 +680,7 @@ export class MindSystem implements SimPlugin {
 
   private queue(world: World, c: Character, actions: Action[], trigger: TriggerKind, tier: FeedEntry['tier'], extra: Partial<FeedEntry> = {}, keepPlan = false): void {
     if (!keepPlan) c.mind!.planSteps = undefined;
+    c.mind!.idle = actions.length > 0 && actions.every((a) => a.verb === 'wait');
     world.replaceQueue(c, actions.slice(0, 3));
     this.feed(world, {
       tick: world.tick,
@@ -720,6 +726,9 @@ export class MindSystem implements SimPlugin {
     const extra: Partial<FeedEntry> = {
       modelId: p.modelId,
       ...(typeof answer.confidence === 'number' && { confidence: answer.confidence }),
+      ...(isRecord(answer.escalated) && typeof answer.escalated.from === 'string' && typeof answer.escalated.confidence === 'number' && {
+        escalated: { from: answer.escalated.from, confidence: answer.escalated.confidence },
+      }),
       usage: p.usage,
       energyCost: round3(energyCost),
       ...(p.job === 'vocalize' && { notes: actions.flatMap((a) => (Array.isArray(a.args?.notes) ? (a.args.notes as string[]) : [])) }),
@@ -789,7 +798,14 @@ export class MindSystem implements SimPlugin {
       tick: world.tick,
       energy: round3(c.energy),
       isNight,
-      context: buildPrompt(c, m, arch, { isNight, timeWord: timeWord(world.timeOfDay), trigger, question: o.question, ...(o.candidates && { candidates: o.candidates }) }),
+      context: buildPrompt(c, m, arch, {
+        isNight,
+        timeWord: timeWord(world.timeOfDay),
+        trigger,
+        question: o.question,
+        carrying: carrying(world, c).map((x) => x.type),
+        ...(o.candidates && { candidates: o.candidates }),
+      }),
       question: o.question,
       ...(o.candidates && { options: o.candidates.map((x) => ({ id: x.id, label: x.label })) }),
       ...(o.candidates && { multi: { max: o.multi ?? 3 } }),
@@ -821,6 +837,15 @@ export class MindSystem implements SimPlugin {
       if (best) return { actions: best.s.candidate.actions, reason: `I'm overheating; ${best.s.reason}` };
     }
     return undefined;
+  }
+
+  /** Loop protection: count failures in a row per option; a success clears them. */
+  private countFailure(world: World, m: MindState, key: string, failed: boolean): void {
+    const f = { ...(m.failures ?? {}) };
+    if (failed) f[key] = { n: (f[key]?.n ?? 0) + 1, tick: world.tick };
+    else delete f[key];
+    if (Object.keys(f).length) m.failures = f;
+    else delete m.failures;
   }
 
   private charge(world: World, c: Character, usage: Usage): number {

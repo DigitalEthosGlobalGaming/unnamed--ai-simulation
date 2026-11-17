@@ -62,7 +62,7 @@ Each world's YAML has a `models:` block, validated by `ModelsConfigSchema` ([`co
 | --- | --- | --- |
 | `audPerUsd` | 1.55 | Fixed conversion rate, never fetched, so replays agree |
 | `dailyCapAud` | 2 | Real-money cap per world per real (UTC) day; paid models are skipped once reached |
-| `escalateBelow` | 0.35 | A `decide` answer below this confidence escalates to the `plan` chain |
+| `escalateBelow` | 0.35 | Upper bound of the escalation bar: a `decide` answer escalates (to `escalateTo`, then the `plan` chain) when its confidence is below `min(escalateBelow, 1.5 / options)`, i.e. 0.25 with the usual 6 options |
 | `energyFloor` | 0.1 | Paid models are skipped below this battery level |
 | `energyPerAud` | 2 | Battery charged per AUD; provisional (an open question in the spec) |
 | `defaultTimeoutMs` | 30,000 | Per-call timeout when an entry doesn't set one |
@@ -91,7 +91,7 @@ flowchart TB
   ok{"Answered?"}
   more{"More entries?"}
   none["No answer: mind falls back to autopilot"]
-  esc{"decide and confidence below escalateBelow?"}
+  esc{"decide and confidence below min(escalateBelow, 1.5 / options)?"}
   plan["Run plan chain; use its answer if any"]
   price["Price usage in AUD, record in CostMeter"]
   out["ModelAnswerPayload with tier"]
@@ -213,12 +213,14 @@ flowchart TD
   R -- yes --> AP2["Autopilot"]
   R -- no --> L["Hosted Laya (convaiinnovations/laya)"]
   L -- "no key, cap reached, network error" --> LL["Local Laya (uas-laya on Ollama)"]
-  L -- "confidence below escalateBelow" --> J["Jev (typesafe-ai/jev)"]
+  L -- "confidence below the bar (0.25 with 6 options)" --> J["Jev (typesafe-ai/jev)"]
   J -- "still unsure" --> P["Plan chain: hosted text, then local qwen3.5 planner"]
   LL -- "Ollama down or busy too long" --> AP3["Autopilot (fallback)"]
   P -- "nothing answers" --> AP3
 ```
 
+- **Escalation bar.** A decision model's confidence is spread over the options it was offered, so the bar is relative to chance: `min(escalateBelow, 1.5 / n)` for n options. With the usual 6, chance is 0.17 and the bar 0.25. On 17 Nov 2026 the live garden escalated 152 of 156 decisions with the old fixed 0.35 bar, because hosted Laya's confidence over 6 options sits around 0.2 to 0.36 (the local bake-off over 12 options had a median of 0.63). Re-check against real data: an escalated feed entry records Laya's confidence in `escalated`.
+- **Plan answers have no confidence.** A text model's plan used to report confidence 1, which meant nothing. Now it reports none; the feed entry has tier `llm` and `escalated: { from, confidence }` naming the decision model that was unsure.
 - Night: robots go into standby at the dock and make no decision calls while asleep. Low-battery drowsy decisions are the exception.
 - A plan answer can hold up to 6 steps. The first 3 go into the queue, and the rest (`planSteps`) follow without another model call for up to an in-world hour, unless something salient interrupts. Those continuation steps appear in the feed as tier `carry-on`.
 - The decide prompt offers only the 6 most relevant options: the top by autopilot utility, plus the best untried one for curiosity. The state is compact: day-stable beliefs first, then recent events, observations, needs and the question. That ordering helps prefix caches (Ollama's KV reuse; cached-input pricing on hosted chat models, whose system message carries the stable prefix).

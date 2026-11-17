@@ -94,6 +94,9 @@ describe('M7: server', () => {
     const c = anon();
     const cat = await c.catalog('garden');
     expect(cat.objects.find((o) => o.type === 'solarPad')?.verbs).toEqual(['charge', 'scan']);
+    expect(cat.models.find((m) => m.id === 'hostedText')).toMatchObject({ adapter: 'openai-compatible', model: 'meta/llama-3.1-8b', provider: 'meta', local: false });
+    expect(cat.models.find((m) => m.id === 'localDm')).toMatchObject({ adapter: 'ollama-decision', provider: 'ollama', local: true });
+    expect(JSON.stringify(cat.models)).not.toMatch(/apiKey/);
     const robot = cat.archetypes.find((a) => a.type === 'robot')!;
     expect(robot.needs.cool?.low).toBe(0.25);
     expect(robot.noises?.pitches.C).toBe(523.25);

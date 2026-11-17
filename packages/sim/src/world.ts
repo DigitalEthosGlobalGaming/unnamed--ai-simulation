@@ -129,6 +129,8 @@ export class World implements WorldView {
   private readonly pathCache = new Map<string, Pos[] | null>();
   private tickSounds: Sound[] = [];
   readonly plugin: SimPlugin | undefined;
+  /** Loaded for a pack upgrade: inputs recorded under other pack versions are accepted (see `enqueue`). */
+  private readonly allowPackUpgrade: boolean;
 
   constructor(state: WorldState, registry: Registry, plugin?: SimPlugin, opts: { allowPackUpgrade?: boolean } = {}) {
     // A world saved under older pack versions may be loaded to upgrade it (see `pack.loaded`).
@@ -139,6 +141,7 @@ export class World implements WorldView {
     this.state = state;
     this.registry = registry;
     this.plugin = plugin;
+    this.allowPackUpgrade = !!opts.allowPackUpgrade;
     this.streams = new RngStreams(state.config.seed, state.rng);
   }
 
@@ -286,7 +289,10 @@ export class World implements WorldView {
   /** Queue an input event for the tick it is stamped with. */
   enqueue(event: SimInputEvent | InputEvent): void {
     if (event.tick < this.state.tick) throw new Error(`input seq ${event.seq} is for past tick ${event.tick}`);
-    if (event.packVersions !== this.state.packVersions) {
+    // Inputs carry the pack versions in force when they were recorded. Replays enqueue a whole
+    // log stretch at once, so across a `pack.loaded` upgrade later inputs carry the loaded
+    // registry's versions and earlier ones older versions (accepted only when upgrading).
+    if (event.packVersions !== this.state.packVersions && event.packVersions !== this.registry.packVersions && !this.allowPackUpgrade) {
       throw new Error(`input seq ${event.seq} was recorded with packs ${event.packVersions}`);
     }
     this.pending.push(event as SimInputEvent);

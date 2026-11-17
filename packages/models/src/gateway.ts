@@ -164,9 +164,14 @@ export class ModelGateway {
     const first = await this.runChain(req.job, req, (m, signal) => this.call(m, req, signal));
     if (!first) return undefined;
     let { answer, usage, model } = first;
-    const unsure = () => typeof answer.confidence === 'number' && answer.confidence < this.config.escalateBelow;
+    // Confidence is spread over the options offered, so the bar is relative to chance: with n
+    // options it is min(escalateBelow, 1.5 / n) (0.25 for the usual 6).
+    const bar = Math.min(this.config.escalateBelow, req.options?.length ? 1.5 / req.options.length : this.config.escalateBelow);
+    const unsure = () => typeof answer.confidence === 'number' && answer.confidence < bar;
+    let escalated: { from: string; confidence: number } | undefined;
     // Unsure decisions are asked again of a stronger decision model (e.g. Jev)...
     if (req.job === 'decide' && unsure() && this.config.escalateTo.length) {
+      escalated = { from: model.name, confidence: answer.confidence as number };
       const again = await this.runEntries('decide', this.config.escalateTo.filter((u) => u !== model.name), req, (m, signal) => this.call(m, req, signal));
       if (again) {
         usage = sumUsage(usage, again.usage);
@@ -175,7 +180,8 @@ export class ModelGateway {
       }
     }
     // ...and if still unsure, go to the LLM plan chain.
-    if (req.job === 'decide' && typeof answer.confidence === 'number' && answer.confidence < this.config.escalateBelow && this.config.jobs.plan) {
+    if (req.job === 'decide' && unsure() && this.config.jobs.plan) {
+      escalated ??= { from: model.name, confidence: answer.confidence as number };
       const plan = await this.runChain('plan', req, (m, signal) => this.callPlan(m, req, signal));
       if (plan) {
         usage = sumUsage(usage, plan.usage);
@@ -191,7 +197,7 @@ export class ModelGateway {
       characterId: req.characterId,
       modelId: model.name,
       promptHash: hashJson(req.context),
-      answer: { ...answer, tier: model.tier },
+      answer: { ...answer, tier: model.tier, ...(escalated && model.name !== escalated.from && { escalated }) },
       usage,
     };
   }
@@ -307,7 +313,8 @@ export class ModelGateway {
     const valid = r.object.choices.filter((c) => ids.has(c.id) && !seen.has(c.id) && seen.add(c.id));
     if (valid.length === 0) throw new Error('plan referenced no valid options');
     return {
-      answer: { choices: valid.map((c) => ({ id: c.id, p: 1 })), confidence: 1, reasons: Object.fromEntries(valid.map((c) => [c.id, c.reason])) },
+      // No confidence: a text model's plan has none worth reporting (the feed shows the tier and why it escalated).
+      answer: { choices: valid.map((c) => ({ id: c.id, p: 1 })), reasons: Object.fromEntries(valid.map((c) => [c.id, c.reason])) },
       usage: r.usage,
     };
   }

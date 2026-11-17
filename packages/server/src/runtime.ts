@@ -157,6 +157,7 @@ export class WorldRuntime {
     }
     // Visitor characters are gone (visitors drop items and post mail now): remove leftovers, logged.
     for (const e of this.world.entities()) if (e.kind === 'character' && e.state.visitor === true) this.recorder.submit('admin.despawn', { id: e.id });
+    if (latest) this.spawnMissingConfigEntities();
     this.restoreSettings();
     if (this.config.clock.mode === 'realtime') {
       // A world switching to real time (e.g. from an older scaled config) gets the configured
@@ -173,6 +174,23 @@ export class WorldRuntime {
       // wall clock; an anchored one jumps over the downtime. Both are logged inputs.
       if (!this.world.state.clock?.anchored) this.submitClock('clock.anchor');
       else if (latest) this.submitClock('clock.jump', 'restart');
+    }
+  }
+
+  /**
+   * Config entities with a fixed id that a resumed world lacks (e.g. the mailbox, added to
+   * garden.yaml after the world was created) are spawned once, logged as `admin.spawn`. One an
+   * admin deleted (a logged `admin.despawn` of that id) stays deleted.
+   */
+  private spawnMissingConfigEntities(): void {
+    const deleted = new Set<string>();
+    for (const e of this.log.read(this.config.id)) {
+      if (e.type === 'admin.despawn') deleted.add(String((e.payload as { id?: unknown }).id));
+    }
+    for (const e of this.config.entities) {
+      if (!e.id || this.world.entity(e.id) || deleted.has(e.id)) continue;
+      this.opts.log?.(`spawning ${e.id} (${e.type}) from the world config: it is missing from this world`);
+      this.recorder.submit('admin.spawn', { id: e.id, type: e.type, pos: e.pos, ...(e.state && { state: e.state as Record<string, Json> }) });
     }
   }
 

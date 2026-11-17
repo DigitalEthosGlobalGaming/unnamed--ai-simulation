@@ -216,6 +216,8 @@ export interface FeedEntry {
   notes?: string[];
   /** Why a fallback happened, e.g. 'queued too long'. */
   reason?: string;
+  /** The decision model was unsure, so this was planned by a text model: which model, and its confidence. */
+  escalated?: { from: string; confidence: number };
 }
 
 // ---------------------------------------------------------------- validation

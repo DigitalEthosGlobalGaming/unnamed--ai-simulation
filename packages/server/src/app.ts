@@ -176,6 +176,7 @@ export function createApp(opts: AppOptions): App {
       dailyCapAud: models.dailyCapAud ?? null,
       energyFloor: models.energyFloor ?? null,
       energyPerAud: models.energyPerAud ?? null,
+      models: modelInfo(w.config.models),
       objects: [...registry.objects.values()].map((o) => ({ type: o.type, tags: o.tags, portable: o.portable, solid: o.solid, verbs: Object.keys(o.verbs) })),
       archetypes: [...registry.archetypes.values()].map((a) => ({
         type: a.type,
@@ -208,7 +209,10 @@ export function createApp(opts: AppOptions): App {
     const admin = isAdmin(req);
     return page.map((e) => redactEvent(e, admin));
   }));
-  app.get('/worlds/:id/feed', need('spectator'), route((req) => reads.feed(world(req).config.id, req.query.characterId ? String(req.query.characterId) : undefined, Math.min(500, Number(req.query.limit ?? 100)))));
+  app.get('/worlds/:id/feed', need('spectator'), route((req) =>
+    // Newest `limit` entries (oldest first); `beforeTick` pages back through older history.
+    reads.feed(world(req).config.id, req.query.characterId ? String(req.query.characterId) : undefined, Math.min(500, Number(req.query.limit ?? 100)), req.query.beforeTick !== undefined && Number.isFinite(Number(req.query.beforeTick)) ? Number(req.query.beforeTick) : undefined),
+  ));
   app.get('/worlds/:id/deltas', need('spectator'), route((req) => {
     const rows = reads.deltas(world(req).config.id, Number(req.query.fromTick ?? 0), Number(req.query.toTick ?? Number.MAX_SAFE_INTEGER));
     // `kinds=beliefs,sleep` keeps only those delta kinds (e.g. a viewer's belief markers on the timeline).
@@ -325,4 +329,21 @@ export function createApp(opts: AppOptions): App {
       await new Promise<void>((r) => server.close(() => r()));
     },
   };
+}
+
+/** The world's model entries for display (alias, adapter, real model, provider); never keys. */
+function modelInfo(cfg: unknown): { id: string; adapter: string; model?: string; provider?: string; local: boolean }[] {
+  const models = ((cfg as { models?: Record<string, { adapter?: string; model?: string; providerOrder?: string[] }> }).models ?? {}) as Record<
+    string,
+    { adapter?: string; model?: string; providerOrder?: string[] }
+  >;
+  const LOCAL = new Set(['local', 'ollama-decision', 'fake-decision', 'fake-chat']);
+  return Object.entries(models)
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([id, m]) => {
+      const adapter = String(m.adapter ?? 'unknown');
+      const local = LOCAL.has(adapter);
+      const provider = local ? (adapter.startsWith('fake') ? 'offline' : 'ollama') : m.model?.includes('/') ? m.model.split('/')[0] : undefined;
+      return { id, adapter, ...(m.model && { model: m.model }), ...(provider && { provider }), local };
+    });
 }

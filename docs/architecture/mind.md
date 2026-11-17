@@ -88,7 +88,7 @@ Each tick the brain takes the single most salient trigger and clears the rest.
 | Tier (feed `tier`) | When | Cost |
 | --- | --- | --- |
 | Carry on (not written to the feed) | Busy and the trigger is below `wakeThreshold`; or a decision is already pending and the new trigger isn't salient enough to replace it | none |
-| `autopilot` | `brain: autopilot`; energy floor latched; models busy and trigger salience < 0.7; or a routine trigger (`action-finished`, `idle-timeout`) where autopilot is confident | none |
+| `autopilot` | `brain: autopilot`; energy floor latched; models busy and trigger salience < 0.7; a routine trigger (`action-finished`, `idle-timeout`) where autopilot is confident; or a routine trigger right after a decision that was only `wait` (`idle`), so waiting again costs no call | none |
 | `decision` / `local` / `llm` | Otherwise a `decide` job (or `vocalize` for `heard-noise`). The tier written to the feed is the tier of the model that answered. | priced, charged to the battery |
 | `fallback` | The job's deadline passed (`jobTimeoutTicks`), or the host's queue dropped it | none |
 
@@ -98,7 +98,12 @@ While **drowsy** with a battery ≥ 0.45 the brain skips all of this and heads f
 
 ### Candidates
 
-`buildCandidates` ([`autopilot.ts`](../../packages/mind/src/autopilot.ts)) makes a bounded list of at most 12: each affordance of each known object, nearest first (with a `moveTo` prepended when out of range), plus `rest here` and `wait and watch`. Models can only pick candidate IDs; anything else is rejected in the feed as "not one of the options".
+`buildCandidates` ([`autopilot.ts`](../../packages/mind/src/autopilot.ts)) makes a bounded list of at most 12: each affordance of each known object, nearest first (with a `moveTo` prepended when out of range), plus `go and look around`, `rest here` and `wait and watch`.
+
+- **Carrying.** Something the robot holds is labelled "(carrying it)"; it is offered `drop` and `push` (a toss) but not `pickup` or `chase`. While carrying anything, no `pickup` is offered (grippers full), and `drop` is offered only for what is carried. Prompts state what the robot is carrying (`carrying: the ball`, in the `state` part).
+- **Loop protection.** Each `verb:type` that fails or is rejected counts up in `failures`; a success clears it. Two in a row set the option aside for 10 in-world minutes. A failed or rejected step no longer raises `action-rejected` while later steps are still queued, so a plan's valid steps still run.
+- **Looking around.** `go and look around` walks to the farthest of nine fixed waypoints (sector centres). It scores `curiosityWeight × (1 − curiosity) − 0.05` by day with battery ≥ 0.3 (else −1), so restlessness beats waiting and a satisfied robot still watches.
+ Models can only pick candidate IDs; anything else is rejected in the feed as "not one of the options".
 
 Autopilot scores candidates from **beliefs only**: expected need changes, weighted by how low each need is and capped by headroom, times firmness, plus expected valence, minus travel. An unbelieved affordance gets `curiosityWeight` instead, so curiosity drives exploration. Near dusk, a day-only charging belief is valued against the battery expected to be left by dawn. It explores among the top 4 at `exploreRate`.
 

@@ -5,6 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ApiError, UasClient, type CatalogItem } from '@uas/client';
 import { KeyRing, WorldRuntime, createApp, parseWorldFile, type App } from '../src/index.ts';
+import { ReplaySession } from '../src/replay-session.ts';
 
 const ADMIN = 'admin-key';
 const ADA = 'visitor-ada';
@@ -144,5 +145,69 @@ describe('visitors: world start', () => {
     const types = again.log.read('old').map((e) => e.type);
     expect(types).toContain('pack.loaded');
     expect(types.filter((t) => t === 'admin.despawn')).toHaveLength(1);
+  });
+
+  it('spawns config entities a resumed world lacks, once, unless an admin deleted them', () => {
+    const dbPath = join(mkdtempSync(join(tmpdir(), 'uas-missing-')), 'uas.db');
+    const withoutMailbox = world('mw');
+    withoutMailbox.entities = withoutMailbox.entities.filter((e) => e.id !== 'mailbox');
+    const first = new WorldRuntime(withoutMailbox, { dbPath });
+    first.start();
+    first.tick();
+    first.shutdown();
+    const spawns = (rt: WorldRuntime) => rt.log.read('mw').filter((e) => e.type === 'admin.spawn' && (e.payload as { id: string }).id === 'mailbox').length;
+    const restart = () => {
+      const rt = new WorldRuntime(world('mw'), { dbPath });
+      rt.start();
+      rt.tick();
+      return rt;
+    };
+    const second = restart();
+    expect(second.world.entity('mailbox')?.type).toBe('mailbox');
+    expect(spawns(second)).toBe(1);
+    second.shutdown();
+    const third = restart();
+    expect(spawns(third)).toBe(1); // already there: not spawned again
+    third.submit('admin.despawn', { id: 'mailbox' });
+    third.tick();
+    third.shutdown();
+    const fourth = restart();
+    expect(fourth.world.entity('mailbox')).toBeUndefined(); // an admin's deletion stands
+    expect(spawns(fourth)).toBe(1);
+  });
+
+  it('seeks before, across and after a pack upgrade', () => {
+    const dbPath = join(mkdtempSync(join(tmpdir(), 'uas-seek-')), 'uas.db');
+    const OLD = 'basic@0.1.0#0000000000000000';
+    const rt = new WorldRuntime(world('sk'), { dbPath });
+    rt.start();
+    // Pretend this world was recorded under the old packs: inputs from here on carry OLD.
+    rt.world.state.packVersions = OLD;
+    rt.recorder.takeSnapshot();
+    for (let i = 0; i < 10; i++) rt.tick();
+    rt.submit('admin.edit', { id: 'pad', pos: { x: 6, y: 6 } });
+    for (let i = 0; i < 10; i++) rt.tick();
+    rt.shutdown();
+    const upgradedAt = rt.world.tick;
+    const after = new WorldRuntime(world('sk'), { dbPath });
+    after.start(); // logs pack.loaded
+    for (let i = 0; i < 10; i++) after.tick();
+    after.submit('admin.edit', { id: 'pad', pos: { x: 7, y: 7 } });
+    for (let i = 0; i < 10; i++) after.tick();
+    const current = after.world.state.packVersions;
+    expect(current).not.toBe(OLD);
+    const stamps = new Set(after.log.read('sk').map((e) => e.packVersions));
+    expect(stamps).toEqual(new Set([OLD, current]));
+    const session = new ReplaySession('r', world('sk'), after.log, after.snapshots, () => {}, () => {});
+    const before = session.seek(upgradedAt - 5);
+    expect(before.packVersions).toBe(OLD);
+    expect(before.entities.pad!.pos).toEqual({ x: 6, y: 6 });
+    const across = session.seek(upgradedAt + 5);
+    expect(across.packVersions).toBe(current);
+    expect(across.entities.pad!.pos).toEqual({ x: 6, y: 6 });
+    const end = session.seek(after.world.tick);
+    expect(end.packVersions).toBe(current);
+    expect(end.entities.pad!.pos).toEqual({ x: 7, y: 7 });
+    expect(end.tick).toBe(after.world.tick);
   });
 });

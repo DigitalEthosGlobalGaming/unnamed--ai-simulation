@@ -86,7 +86,7 @@ Auth: `Authorization: Bearer <key>` or `x-api-key: <key>`. An unknown key gets 4
 | `GET /worlds/:id/settings` | spectator | `{ values, schema, derived }`: live world settings, each with a label, unit, range, step and help text for a generic UI, plus derived costs ([below](#live-world-settings)) |
 | `PATCH /worlds/:id/settings` | admin | Validate and apply a partial `values` live; returns `{ values, derived, effects }` |
 | `PATCH /worlds/:id/clock` | admin | `{ paused?, timeScale? }`; returns the status |
-| `GET /worlds/:id/catalog` | spectator | Display data from the world's packs: objects (tags, solid, portable, verb names), archetypes (needs, energy label, noises, sight and hearing range), `ticksPerRealSecond`, `secondsPerTick`, daily cap, energy floor, energy per AUD |
+| `GET /worlds/:id/catalog` | spectator | Display data from the world's packs: objects (tags, solid, portable, verb names), archetypes (needs, energy label, noises, sight and hearing range), `ticksPerRealSecond`, `secondsPerTick`, daily cap, energy floor, energy per AUD, and `models: { id, adapter, model?, provider?, local }[]` (the feed's `modelId` is the `id`; no keys) |
 | `POST /worlds/:id/entities` | admin | `admin.spawn` input; returns the logged event |
 | `PATCH /worlds/:id/entities/:eid` | admin | `admin.edit` input (`pos`, `state`, `needs`, `energy`) |
 | `DELETE /worlds/:id/entities/:eid` | admin | `admin.despawn` input |
@@ -107,7 +107,7 @@ Auth: `Authorization: Bearer <key>` or `x-api-key: <key>`. An unknown key gets 4
 | `POST /worlds/:id/mail` | visitor | `{ text }` → `MailStatus`; `mail.post` input. 400 empty, over 280 characters or filtered; 429 mailbox full, per-visitor limit or cooldown |
 | `DELETE /worlds/:id/mail/:mailId` | admin | `mail.remove` input (waiting messages only) |
 | `GET /worlds/:id/events?fromSeq=&limit=` | spectator | Page the input log (limit up to 1,000); `mail.post` text is removed for non-admins |
-| `GET /worlds/:id/feed?characterId=&limit=` | spectator | Brain feed, oldest first (limit up to 500) |
+| `GET /worlds/:id/feed?characterId=&limit=&beforeTick=` | spectator | Brain feed: the newest `limit` entries (up to 500), oldest first; `beforeTick` returns the page of entries before that tick |
 | `GET /worlds/:id/deltas?fromTick=&toTick=&kinds=` | spectator | Stored deltas per tick; `kinds` filters by delta kind |
 | `POST /worlds/:id/seek` | spectator | `{ tick }`; opens a replay session, returns `{ sessionId, tick, state }` (waiting mail text blanked for non-admins) |
 | `POST /worlds/:id/fork` | admin | `{ tick, id?, config? }`; starts a fork ([events-and-replay.md](events-and-replay.md#forking)) |
@@ -172,7 +172,7 @@ Visitors are never characters. They drop catalogue items into a world and post n
 - **Drops.** The server copies the item's JSON into an `airdrop.drop` input (so later catalogue edits don't change it), snapped to the nearest free walkable tile. Expiry is the item's `expiresAfter`, else the world's `airdropDefaultExpiry`.
 - **Mail.** Text is cleaned (control characters and line breaks collapsed), capped at 280 characters and checked against a small local word list. The text is stored in the `mail` table (statuses follow `mail` deltas) and logged in `mail.post`. `reaction` on a read message is the reader's first feed entry at or after the read tick.
 - **Limits** are world settings ([below](#live-world-settings)); admins are exempt. Cooldowns are counted in real seconds per user in the worker, outside the sim (not persisted).
-- **Start-up.** Leftover visitor characters (`state.visitor: true`, from before) are removed with logged `admin.despawn` inputs. A world whose snapshot was saved under older pack versions loads, replays its log, then logs `pack.loaded` with the current versions ([events-and-replay.md](events-and-replay.md)).
+- **Start-up.** A resumed world gets any config entity with a fixed `id` that it lacks (e.g. the mailbox, added to `garden.yaml` after the world was created), once, as a logged `admin.spawn`. An entity an admin deleted (a logged `admin.despawn` of that id) is not brought back. Leftover visitor characters (`state.visitor: true`, from before) are removed with logged `admin.despawn` inputs. A world whose snapshot was saved under older pack versions loads, replays its log, then logs `pack.loaded` with the current versions ([events-and-replay.md](events-and-replay.md)).
 
 ## Persistence
 

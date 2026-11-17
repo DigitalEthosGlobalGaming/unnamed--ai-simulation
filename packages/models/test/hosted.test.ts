@@ -159,5 +159,21 @@ describe('hosted models through AI Gateway (mocked fetch)', () => {
     expect(a?.modelId).toBe('hostedText');
     expect((a!.answer as { choices: { id: string }[] }).choices.map((c) => c.id)).toEqual(['c1', 'c0']);
   });
-});
 
+  it('escalation is relative to chance: with 6 options Laya at 0.3 stands, at 0.2 it goes to a plan with no fake confidence', async () => {
+    const six = Array.from({ length: 6 }, (_, i) => ({ id: `c${i}`, label: `option ${i}` }));
+    const sure = gatewayFetch({ confidence: { 'convaiinnovations/laya': 0.3 } });
+    const gw = new ModelGateway(loadModelsConfigYaml(yaml(KEY).replace('escalateTo: [jev]', 'escalateTo: []'), {}), { fetch: sure.fn, today: () => 'd' });
+    const a = await gw.run(job({ options: six }));
+    expect(a?.modelId).toBe('laya'); // 0.3 ≥ min(0.4, 1.5 / 6 = 0.25)
+    const unsure = gatewayFetch({
+      confidence: { 'convaiinnovations/laya': 0.2 },
+      chat: () => ({ choices: [{ message: { content: JSON.stringify({ choices: [{ id: 'c1', reason: 'why not' }] }) } }], usage: { prompt_tokens: 10, completion_tokens: 5 } }),
+    });
+    const gw2 = new ModelGateway(loadModelsConfigYaml(yaml(KEY).replace('escalateTo: [jev]', 'escalateTo: []'), {}), { fetch: unsure.fn, today: () => 'd' });
+    const b = await gw2.run(job({ options: six }));
+    expect(b?.modelId).toBe('hostedText');
+    expect(b?.answer).not.toHaveProperty('confidence');
+    expect(b?.answer).toMatchObject({ tier: 'llm', escalated: { from: 'laya', confidence: 0.2 } });
+  });
+});

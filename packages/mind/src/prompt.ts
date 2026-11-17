@@ -56,7 +56,7 @@ export function buildPrompt(
   c: Character,
   m: MindState,
   arch: ArchetypeDef,
-  opts: { isNight: boolean; timeWord: string; trigger: string; question: string; candidates?: Candidate[]; extra?: string },
+  opts: { isNight: boolean; timeWord: string; trigger: string; question: string; candidates?: Candidate[]; extra?: string; carrying?: string[] },
 ): PromptParts {
   const needs = Object.keys(arch.needs).map((n) => `${n}: ${feltWord(c.needs[n] ?? 1)}`);
   const items = [...m.openItems].sort((a, b) => b.weight - a.weight).slice(0, 3);
@@ -70,7 +70,13 @@ export function buildPrompt(
       'On my mind:',
       ...items.map((i) => `- ${i.text}`),
     ].join('\n'),
-    state: [`${arch.energy.label}: ${feltWord(c.energy)}`, ...needs, `mood: ${m.mood.word}`, `it is ${opts.isNight ? 'night' : 'day'} (${opts.timeWord})`].join('\n'),
+    state: [
+      `${arch.energy.label}: ${feltWord(c.energy)}`,
+      ...needs,
+      `mood: ${m.mood.word}`,
+      `carrying: ${opts.carrying?.length ? opts.carrying.map((t) => `the ${t}`).join(', ') : 'nothing'}`,
+      `it is ${opts.isNight ? 'night' : 'day'} (${opts.timeWord})`,
+    ].join('\n'),
     observations: [
       'I notice:',
       ...observationSummaries(m).map((s) => `- ${s}`),

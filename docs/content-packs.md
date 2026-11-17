@@ -87,9 +87,9 @@ Effects below are what the handlers do. **The robot is never told any of this**:
 | | | `scan` | 6 | 20 | `basic.inspect` | +0.03 curiosity; describes tags and state |
 | `dock` | no | `dock` | 0 | 60 | `basic.dock` | +0.02 battery, +0.05 cool |
 | | | `rest` | 0 | 200 | `basic.dock` | +0.004 battery, +0.05 cool; used for standby |
-| `ball` (portable) | no | `pickup` | 1 | 10 | `basic.pickup` | holds it; +0.02 curiosity; fails if held or grippers full |
+| `ball` (portable) | no | `pickup` | 1 | 10 | `basic.pickup` | holds it; +0.02 curiosity; fails if held ("you're already holding it" when it's yours) or grippers full |
 | | | `drop` | 0 | 5 | `basic.drop` | puts it down |
-| | | `push` | 1 | 10 | `basic.push` | rolls 1 to 3 tiles away; +0.04 curiosity, −0.01 cool |
+| | | `push` | 1 | 10 | `basic.push` | rolls 1 to 3 tiles away; +0.04 curiosity, −0.01 cool. Pushing the ball you hold tosses it (released, rolls 1 to 3 tiles) |
 | | | `chase` | 3 | 40 | `basic.chase` | ball moves 1 to 2 tiles, robot follows; +0.08 curiosity, −0.02 battery, −0.04 cool |
 | `fountain` (tags `water`, `loud`) | yes | `rinse` | 1 | 30 | `basic.rinse` | +0.25 cool if flowing |
 | | | `splash` | 1 | 15 | `basic.splash` | +0.12 curiosity, +0.05 cool, −0.03 battery; boredom step 0.35 |

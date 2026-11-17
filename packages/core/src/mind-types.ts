@@ -158,6 +158,10 @@ export interface MindState {
   lastLevels: Record<string, string>;
   /** Steps of a model plan beyond the 3-action queue; followed without another model call until they expire. */
   planSteps?: { actions: Action[]; untilTick: number; tier: 'decision' | 'llm' | 'local' };
+  /** The last decision was only `wait`: routine triggers then go to autopilot, not a model. */
+  idle?: boolean;
+  /** Recent failures per candidate key (`verb:type`); two in a row set the option aside for a while. */
+  failures?: Record<string, { n: number; tick: number }>;
 }
 
 // ---------------------------------------------------------------- prompts and jobs
