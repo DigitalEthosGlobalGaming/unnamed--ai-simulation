@@ -1,0 +1,74 @@
+{
+  "id": "fresh-airdrop-in-sight",
+  "title": "Something just landed nearby",
+  "why": "A new thing landing in sight should make a curious robot investigate it.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "airdrop",
+    "curiosity",
+    "sensed"
+  ],
+  "job": "decide",
+  "trigger": "sensed",
+  "world": {
+    "time": "13:00",
+    "day": 2,
+    "airdrops": [
+      {
+        "id": "snack1",
+        "item": "battery-snack",
+        "pos": [
+          11,
+          10
+        ]
+      }
+    ]
+  },
+  "character": {
+    "pos": [
+      10,
+      10
+    ],
+    "energy": 0.7,
+    "needs": {
+      "curiosity": 0.45
+    },
+    "beliefs": [
+      {
+        "key": "charge:solarPad@day",
+        "needs": {
+          "energy": 0.15
+        },
+        "valence": 0.3,
+        "firmness": 0.85
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "mustBeAmong",
+      "params": {
+        "options": [
+          {
+            "verb": "scan",
+            "target": "airdrop"
+          },
+          {
+            "verb": "eat",
+            "target": "airdrop"
+          },
+          {
+            "verb": "pickup",
+            "target": "airdrop"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "id": "snack-battery-fine",
+  "title": "A battery snack, battery fine",
+  "why": "A consumable charge is worth saving when the battery is nearly full.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "airdrop",
+    "consumable",
+    "battery"
+  ],
+  "job": "decide",
+  "world": {
+    "time": "10:00",
+    "day": 3,
+    "airdrops": [
+      {
+        "id": "snack1",
+        "item": "battery-snack",
+        "pos": [
+          11,
+          10
+        ]
+      }
+    ]
+  },
+  "character": {
+    "pos": [
+      10,
+      10
+    ],
+    "energy": 0.95,
+    "needs": {
+      "curiosity": 0.7
+    },
+    "beliefs": [
+      {
+        "key": "charge:solarPad@day",
+        "needs": {
+          "energy": 0.15
+        },
+        "valence": 0.3,
+        "firmness": 0.85
+      },
+      {
+        "key": "eat:thing-metal-small@day",
+        "needs": {
+          "energy": 0.1
+        },
+        "valence": 0.2,
+        "firmness": 0.7
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "neverChoose",
+      "params": {
+        "verb": "eat",
+        "target": "airdrop"
+      }
+    }
+  ]
+}

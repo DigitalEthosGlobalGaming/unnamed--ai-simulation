@@ -12,6 +12,7 @@ COPY packages/models/package.json packages/models/
 COPY packages/store/package.json packages/store/
 COPY packages/pack-basic/package.json packages/pack-basic/
 COPY packages/client/package.json packages/client/
+COPY packages/evals/package.json packages/evals/
 COPY packages/server/package.json packages/server/
 # The viewer is built separately; its manifest is only here so the lockfile matches.
 COPY apps/viewer/package.json apps/viewer/

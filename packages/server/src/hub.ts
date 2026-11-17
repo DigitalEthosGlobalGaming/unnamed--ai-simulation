@@ -60,6 +60,9 @@ export class Hub {
     const base = { worldId: sub.worldId, ...(sessionId && { sessionId }) };
     if (sub.channels.has('deltas') && ch.deltas.length) send(ws, { type: 'deltas', ...base, tick, changes: ch.deltas });
     if (sub.channels.has('feed')) for (const entry of ch.feed) send(ws, { type: 'feed', ...base, entry });
+    if (sub.channels.has('feed')) {
+      for (const { kind: _k, ...step } of ch.feedSteps) send(ws, { type: 'feedStep', ...base, ...step });
+    }
     if (sub.channels.has('noises') && ch.noises.length) send(ws, { type: 'noises', ...base, tick, noises: ch.noises as never });
   }
 

@@ -2,6 +2,8 @@
 
 Bake-offs of local models on a fixed set of prompts recorded from the garden world. They're produced by [`bakeoff.ts`](../../packages/models/scripts/bakeoff.ts).
 
+For checking model *behaviour* in specific moments (low battery at dusk, holding the ball, a prompt-injection note…), use the situation evals instead: [`evals/`](evals/) holds their reports (`npm run eval`), and [testing-models.md](../testing-models.md) explains them. The bake-off's checks live on there as the check catalogue.
+
 ## Rerun
 
 ```sh

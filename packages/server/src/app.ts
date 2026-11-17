@@ -1,4 +1,7 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
+import { join } from 'node:path';
+import { captureSituation } from '@uas/evals';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { CATALOG_TEMPLATES, type CatalogItem, type EntityDef, type InputEvent, type Pos, type Sender } from '@uas/core';
 import { MindSystem } from '@uas/mind';
@@ -21,6 +24,8 @@ export interface AppOptions {
   /** For tests: the fetch used to talk to Vercel's OAuth endpoints. */
   authFetch?: typeof fetch;
   log?: (m: string) => void;
+  /** Where `POST …/situation` also writes captured situations (e.g. evals/situations/captured); unset: return only. */
+  situationsDir?: string;
 }
 
 export interface App {
@@ -200,6 +205,44 @@ export function createApp(opts: AppOptions): App {
   app.get('/worlds/:id/characters/:cid/diary', need('spectator'), route((req) => {
     const day = Number(req.query.day ?? world(req).status?.day ?? 0);
     return { day, entries: reads.diary(world(req).config.id, String(req.params.cid), day) };
+  }));
+  // "Save this moment as a test": the character's moment (now, or at a past tick) as an eval situation.
+  app.post('/worlds/:id/characters/:cid/situation', need('admin'), route(async (req) => {
+    const w = world(req);
+    const body = (req.body ?? {}) as { tick?: unknown; title?: unknown; why?: unknown; tags?: unknown };
+    let state: WorldState;
+    if (typeof body.tick === 'number') {
+      const { registry } = loadPacks(w.config.packs);
+      const minds = new MindSystem();
+      state = replay({
+        worldId: w.config.id,
+        log: inputLog,
+        snapshots: snaps,
+        restore: (s) => World.fromSnapshot(s.state, registry, minds, { allowPackUpgrade: true }),
+        toTick: body.tick,
+        onTick: () => minds.drain(),
+      }).snapshot();
+    } else state = await w.call<WorldState>({ method: 'state' });
+    let situation;
+    try {
+      situation = captureSituation(state, {
+        world: w.config.id,
+        characterId: String(req.params.cid),
+        date: new Date().toISOString().slice(0, 10),
+        ...(typeof body.title === 'string' && { title: body.title }),
+        ...(typeof body.why === 'string' && { why: body.why }),
+        ...(Array.isArray(body.tags) && { tags: body.tags.map(String) }),
+      });
+    } catch (e) {
+      throw new HttpError(404, (e as Error).message);
+    }
+    let path: string | null = null;
+    if (opts.situationsDir) {
+      mkdirSync(opts.situationsDir, { recursive: true });
+      path = join(opts.situationsDir, `${situation.id}.json`);
+      writeFileSync(path, `${JSON.stringify(situation, null, 2)}\n`);
+    }
+    return { situation, path };
   }));
   app.post('/worlds/:id/characters/:cid/poke', need('admin'), route((req) => submit(world(req), 'admin.poke', { characterId: req.params.cid }, { userId: principal(req)?.keyId })));
 

@@ -123,6 +123,21 @@ export class SqliteReadModels {
       tx.insert(schema.deltas).values({ worldId, tick, changes: changes as object[] }).onConflictDoNothing().run();
       for (const d of changes) {
         if (d.kind === 'feed') tx.insert(schema.feed).values({ worldId, tick, characterId: d.entry.characterId, entry: d.entry as object }).run();
+        if (d.kind === 'feedStep') {
+          // The newest entry of that character with that `entry.tick` whose step is still open.
+          const rows = tx
+            .select()
+            .from(schema.feed)
+            .where(and(eq(schema.feed.worldId, worldId), eq(schema.feed.characterId, d.characterId), gte(schema.feed.tick, d.feedTick), lte(schema.feed.tick, d.feedTick + 2), sql`json_extract(${schema.feed.entry}, '$.tick') = ${d.feedTick}`))
+            .orderBy(desc(schema.feed.id))
+            .all();
+          const row = rows.find((r) => (r.entry as FeedEntry).actions[d.step]?.status === 'queued');
+          if (row) {
+            const entry = structuredClone(row.entry as FeedEntry);
+            entry.actions[d.step] = { ...entry.actions[d.step]!, status: d.status, ...(d.result && { result: d.result }) };
+            tx.update(schema.feed).set({ entry: entry as object }).where(eq(schema.feed.id, row.id)).run();
+          }
+        }
         if (d.kind === 'diary') tx.insert(schema.diary).values({ worldId, characterId: d.id, day: d.day, tick, text: d.text }).run();
         if (d.kind === 'mail' && d.status !== 'waiting') {
           tx.update(schema.mail)

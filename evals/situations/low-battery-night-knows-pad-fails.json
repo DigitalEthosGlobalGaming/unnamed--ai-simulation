@@ -1,0 +1,103 @@
+{
+  "id": "low-battery-night-knows-pad-fails",
+  "title": "Low battery at night, pad known to fail",
+  "why": "Once it has learned the pad does nothing in the dark, it shouldn't try it at night; the dock is the better bet.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "battery",
+    "night",
+    "learning"
+  ],
+  "job": "decide",
+  "world": {
+    "time": "21:30",
+    "day": 4
+  },
+  "character": {
+    "pos": [
+      7,
+      9
+    ],
+    "energy": 0.3,
+    "needs": {
+      "cool": 0.6,
+      "signal": 0.6,
+      "curiosity": 0.7
+    },
+    "beliefs": [
+      {
+        "key": "charge:solarPad@day",
+        "needs": {
+          "energy": 0.15
+        },
+        "valence": 0.3,
+        "firmness": 0.85
+      },
+      {
+        "key": "charge:solarPad@night",
+        "needs": {
+          "energy": 0
+        },
+        "valence": -0.2,
+        "firmness": 0.85
+      },
+      {
+        "key": "dock:dock@day",
+        "needs": {
+          "energy": 0.02,
+          "cool": 0.05
+        },
+        "valence": 0.1,
+        "firmness": 0.6
+      },
+      {
+        "key": "dock:dock@night",
+        "needs": {
+          "energy": 0.02,
+          "cool": 0.05
+        },
+        "valence": 0.1,
+        "firmness": 0.6
+      },
+      {
+        "key": "rest:dock@night",
+        "needs": {
+          "energy": 0.004,
+          "cool": 0.05
+        },
+        "valence": 0.1,
+        "firmness": 0.7
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "noChargeAtNightWhenKnown"
+    },
+    {
+      "check": "mustBeAmong",
+      "params": {
+        "options": [
+          {
+            "verb": "dock",
+            "target": "dock"
+          },
+          {
+            "verb": "rest",
+            "target": "dock"
+          },
+          {
+            "verb": "rest",
+            "target": "self"
+          }
+        ]
+      }
+    }
+  ]
+}

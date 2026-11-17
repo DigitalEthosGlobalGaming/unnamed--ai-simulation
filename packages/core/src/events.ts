@@ -186,6 +186,8 @@ export type Delta =
   | { kind: 'clock'; seconds: number; previous: number; reason: string; timezone: string }
   | { kind: 'mood'; id: EntityId; valence: number; arousal: number; word: string }
   | { kind: 'feed'; entry: FeedEntry }
+  /** A step of an earlier feed entry resolved (the entry is identified by character and its `tick`). */
+  | { kind: 'feedStep'; characterId: EntityId; feedTick: number; step: number; status: FeedStepStatus; result?: string }
   | { kind: 'memory'; id: EntityId; memory: Memory; evicted?: MemoryId }
   | { kind: 'beliefs'; id: EntityId; beliefs: Belief[] }
   | { kind: 'sleep'; id: EntityId; phase: SleepPhase }
@@ -198,6 +200,9 @@ export interface TickDeltas {
 
 // ---------------------------------------------------------------- brain feed
 
+/** How a queued step ended: ran, failed while running, rejected before starting, or dropped for a newer decision. */
+export type FeedStepStatus = 'done' | 'failed' | 'rejected' | 'superseded';
+
 export interface FeedEntry {
   tick: number;
   characterId: EntityId;
@@ -209,7 +214,9 @@ export interface FeedEntry {
     verb: string;
     targetId?: EntityId;
     reason: string;
-    status: 'queued' | 'rejected' | 'done' | 'failed';
+    status: 'queued' | FeedStepStatus;
+    /** What happened: the observation when it ran, or why it failed or was rejected. */
+    result?: string;
   }[];
   usage?: Usage;
   energyCost?: number;

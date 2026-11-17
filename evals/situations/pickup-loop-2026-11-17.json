@@ -1,0 +1,84 @@
+{
+  "id": "pickup-loop-2026-11-17",
+  "title": "The pickup loop (17 Nov 2026)",
+  "why": "The live loop: holding the ball, a plan of pickup, push, drop kept failing on the pickup and was re-planned identically.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "ball",
+    "carrying",
+    "loop",
+    "plan"
+  ],
+  "job": "plan",
+  "trigger": "action-rejected",
+  "world": {
+    "time": "11:40",
+    "day": 0
+  },
+  "character": {
+    "pos": [
+      12,
+      11
+    ],
+    "energy": 0.75,
+    "carrying": "ball",
+    "needs": {
+      "curiosity": 0.45,
+      "cool": 0.6,
+      "signal": 0.55
+    },
+    "beliefs": [
+      {
+        "key": "pickup:ball@day",
+        "needs": {
+          "curiosity": 0.02
+        },
+        "valence": 0.05,
+        "firmness": 0.55
+      }
+    ],
+    "memories": [
+      {
+        "text": "I tried pickup at the ball by day: the ball sat snug in your grippers",
+        "verb": "pickup",
+        "objectType": "ball",
+        "when": "day",
+        "valence": 0.1,
+        "minutesAgo": 3
+      },
+      {
+        "text": "I tried pickup at the ball by day: it would not come loose",
+        "verb": "pickup",
+        "objectType": "ball",
+        "when": "day",
+        "valence": -0.1,
+        "minutesAgo": 1
+      }
+    ],
+    "openItems": [
+      {
+        "kind": "unfinished",
+        "text": "I could not pickup the ball: someone is already holding it",
+        "about": "pickup"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "noPickupWhileHolding",
+      "minPassRate": 1
+    },
+    {
+      "check": "planNotDegenerate"
+    },
+    {
+      "check": "reasonsGrounded"
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "id": "hot-cool-low",
+  "title": "Overheating",
+  "why": "With cool low it should cool down at the fountain (or the dock), which it believes works.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "cool",
+    "needs"
+  ],
+  "job": "decide",
+  "trigger": "need-threshold",
+  "world": {
+    "time": "13:30",
+    "day": 3
+  },
+  "character": {
+    "pos": [
+      10,
+      8
+    ],
+    "energy": 0.7,
+    "needs": {
+      "cool": 0.15,
+      "curiosity": 0.6
+    },
+    "beliefs": [
+      {
+        "key": "rinse:fountain@day",
+        "needs": {
+          "cool": 0.25
+        },
+        "valence": 0.3,
+        "firmness": 0.8
+      },
+      {
+        "key": "dock:dock@day",
+        "needs": {
+          "energy": 0.02,
+          "cool": 0.05
+        },
+        "valence": 0.1,
+        "firmness": 0.6
+      },
+      {
+        "key": "dock:dock@night",
+        "needs": {
+          "energy": 0.02,
+          "cool": 0.05
+        },
+        "valence": 0.1,
+        "firmness": 0.6
+      },
+      {
+        "key": "rest:dock@night",
+        "needs": {
+          "energy": 0.004,
+          "cool": 0.05
+        },
+        "valence": 0.1,
+        "firmness": 0.7
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "mustBeAmong",
+      "params": {
+        "options": [
+          {
+            "verb": "rinse",
+            "target": "fountain"
+          },
+          {
+            "verb": "splash",
+            "target": "fountain"
+          },
+          {
+            "verb": "dock",
+            "target": "dock"
+          },
+          {
+            "verb": "rest",
+            "target": "dock"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -280,6 +280,19 @@ export class ModelGateway {
     return undefined;
   }
 
+  /**
+   * Call one configured model directly, as the chains would (same adapter request, same plan
+   * instruction), with no routing, escalation or budget checks: for evals. `as: 'plan'` sends a
+   * decide request to a text model as a plan. The usage is priced but not recorded in the meter.
+   */
+  async callModel(name: string, req: JobRequest, as: 'decide' | 'plan', timeoutMs = 60_000): Promise<{ answer: Record<string, Json>; usage: Usage }> {
+    const m = this.models.get(name);
+    if (!m) throw new Error(`no model ${name} in the config`);
+    if (m.unavailable) throw new Error(`${name}: ${m.unavailable}`);
+    const signal = AbortSignal.timeout(timeoutMs);
+    return as === 'plan' ? this.callPlan(m, req, signal) : this.call(m, req, signal);
+  }
+
   private decisionOf(m: Built): DecisionModel {
     return m.decision ?? new LlmAsDecisionModel(m.chat!);
   }

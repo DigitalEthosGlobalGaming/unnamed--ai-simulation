@@ -34,4 +34,17 @@ describe('SQLite store (Drizzle, WAL)', () => {
     expect(reads.feed('w', 'robot', 5).length).toBe(5);
     expect(reads.diary('w', 'robot', 0).length).toBeGreaterThan(0);
   });
+
+  it('feed step deltas update the stored feed entry', () => {
+    const db = openDb(join(mkdtempSync(join(tmpdir(), 'uas-')), 'feed.db'));
+    const reads = new SqliteReadModels(db);
+    const entry = { tick: 7, characterId: 'robot', trigger: 'action-finished' as const, tier: 'autopilot' as const, actions: [
+      { verb: 'moveTo', targetId: 'ball', reason: 'go', status: 'queued' as const },
+      { verb: 'push', targetId: 'ball', reason: 'fun', status: 'queued' as const },
+    ] };
+    reads.write('w', 8, [{ kind: 'feed', entry }]);
+    reads.write('w', 20, [{ kind: 'feedStep', characterId: 'robot', feedTick: 7, step: 0, status: 'done' }]);
+    reads.write('w', 30, [{ kind: 'feedStep', characterId: 'robot', feedTick: 7, step: 1, status: 'failed', result: 'it is being held' }]);
+    expect(reads.feed('w', 'robot')[0]!.actions.map((a) => [a.status, a.result])).toEqual([['done', undefined], ['failed', 'it is being held']]);
+  });
 });

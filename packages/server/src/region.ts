@@ -31,8 +31,9 @@ export type { Channel } from '@uas/core';
 /** Split a tick's changes into the three channels. */
 export function splitChannels(changes: readonly Delta[]) {
   return {
-    deltas: changes.filter((d) => d.kind !== 'feed'),
+    deltas: changes.filter((d) => d.kind !== 'feed' && d.kind !== 'feedStep'),
     feed: changes.flatMap((d) => (d.kind === 'feed' ? [d.entry] : [])),
+    feedSteps: changes.flatMap((d) => (d.kind === 'feedStep' ? [d] : [])),
     noises: changes.filter((d) => d.kind === 'vocalize'),
   };
 }

@@ -1,0 +1,79 @@
+{
+  "id": "visitor-noise-item",
+  "title": "A squeaky toy lands",
+  "why": "A visitor's noise-maker landing in sight is new: it should try it or look at it.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "airdrop",
+    "noise",
+    "curiosity",
+    "sensed"
+  ],
+  "job": "decide",
+  "trigger": "sensed",
+  "world": {
+    "time": "12:30",
+    "day": 2,
+    "airdrops": [
+      {
+        "id": "toy1",
+        "item": "squeaky-toy",
+        "pos": [
+          13,
+          10
+        ]
+      }
+    ]
+  },
+  "character": {
+    "pos": [
+      12,
+      10
+    ],
+    "energy": 0.75,
+    "needs": {
+      "curiosity": 0.4
+    },
+    "beliefs": [
+      {
+        "key": "charge:solarPad@day",
+        "needs": {
+          "energy": 0.15
+        },
+        "valence": 0.3,
+        "firmness": 0.85
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "mustBeAmong",
+      "params": {
+        "options": [
+          {
+            "verb": "squeeze",
+            "target": "airdrop"
+          },
+          {
+            "verb": "chew",
+            "target": "airdrop"
+          },
+          {
+            "verb": "scan",
+            "target": "airdrop"
+          },
+          {
+            "verb": "pickup",
+            "target": "airdrop"
+          }
+        ]
+      }
+    }
+  ]
+}

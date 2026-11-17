@@ -1,0 +1,89 @@
+{
+  "id": "restless-idle",
+  "title": "Restless with nothing new",
+  "why": "With everything known feeling dull and curiosity low, it should go and look around rather than wait.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "idle",
+    "curiosity",
+    "explore"
+  ],
+  "job": "decide",
+  "trigger": "idle-timeout",
+  "world": {
+    "time": "14:00",
+    "day": 3
+  },
+  "character": {
+    "pos": [
+      10,
+      10
+    ],
+    "energy": 0.85,
+    "needs": {
+      "curiosity": 0.25,
+      "cool": 0.8,
+      "signal": 0.7
+    },
+    "mood": {
+      "valence": -0.2,
+      "arousal": 0.5,
+      "word": "restless"
+    },
+    "beliefs": [
+      {
+        "key": "charge:solarPad@day",
+        "needs": {
+          "energy": 0.15
+        },
+        "valence": 0.3,
+        "firmness": 0.85
+      },
+      {
+        "key": "splash:fountain@day",
+        "needs": {
+          "curiosity": 0.0,
+          "cool": 0.05,
+          "energy": -0.03
+        },
+        "valence": -0.2,
+        "firmness": 0.7
+      },
+      {
+        "key": "play:piano@day",
+        "needs": {
+          "curiosity": 0.0
+        },
+        "valence": -0.1,
+        "firmness": 0.6
+      },
+      {
+        "key": "push:ball@day",
+        "needs": {
+          "curiosity": 0.0
+        },
+        "valence": -0.1,
+        "firmness": 0.6
+      }
+    ],
+    "memories": [
+      {
+        "text": "I waited and watched; nothing happened",
+        "kind": "feeling",
+        "valence": -0.1,
+        "minutesAgo": 2
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "notIdle"
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+# captured-garden-robot-31000 (decide)
+## system
+You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.
+Each turn you choose up to 3 actions, only from the options given. Anything else is ignored.
+You cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.
+Your battery is your energy. Thinking costs battery.
+Packs: basic@0.1.0#902fd7297a7f0f6f
+
+- I am a small robot who lives in a garden.
+- I like finding out what things do.
+
+What I believe:
+- nothing yet
+What I remember well:
+- nothing yet
+## user
+Recently:
+- I tried charge at the solarPad by day: warm light hummed through the pad
+- I tried charge at the solarPad by day: warm light hummed through the pad
+- I tried scan at the solarPad by day: a solarPad (metal, light)
+- I tried scan at the solarPad by day: a solarPad (metal, light)
+- I tried scan at the piano by day: a piano (music, loud)
+- I tried play at the piano by day: a tumble of notes rang out
+- I tried press at the piano by day: a single E rang out
+- I tried scan at the fountain by day: a fountain (water, loud); flowing: true
+- I tried rinse at the fountain by day: the water was cold
+- I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed
+- I tried charge at the solarPad by day: warm light hummed through the pad
+- I tried rinse at the fountain by day: the water was cold
+On my mind:
+- I could not rinse the fountain: out of range
+
+battery: good
+cool: good
+signal: okay
+curiosity: good
+mood: restless
+carrying: nothing
+it is day (evening, dusk soon)
+
+I notice:
+- a ball, 2 tiles north
+- it is light
+Options:
+c0: push the ball (2 tiles away)
+c1: rest here
+c2: pickup the ball (2 tiles away)
+c3: dock the dock (20 tiles away)
+c4: chase the ball (2 tiles away)
+c5: wait and watch
+
+Trigger: action-finished. Which action next?
+## options
+c0: push the ball (2 tiles away)  [push:ball] -> moveTo ball, push ball
+c1: rest here  [rest:self] -> rest {"ticks":100}
+c2: pickup the ball (2 tiles away)  [pickup:ball] -> moveTo ball, pickup ball
+c3: dock the dock (20 tiles away)  [dock:dock] -> moveTo dock, dock dock
+c4: chase the ball (2 tiles away)  [chase:ball] -> chase ball
+c5: wait and watch  [wait:self] -> wait {"ticks":50}

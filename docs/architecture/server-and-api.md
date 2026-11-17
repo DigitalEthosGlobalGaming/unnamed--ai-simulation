@@ -94,6 +94,7 @@ Auth: `Authorization: Bearer <key>` or `x-api-key: <key>`. An unknown key gets 4
 | `GET /worlds/:id/characters/:cid/memories` | spectator | STM, LTM, beliefs, character sheet |
 | `GET /worlds/:id/characters/:cid/diary?day=` | spectator | Diary lines for a day (default: today) |
 | `POST /worlds/:id/characters/:cid/poke` | admin | `admin.poke` input |
+| `POST /worlds/:id/characters/:cid/situation` | admin | `{ tick?, title?, why?, tags? }` → `{ situation, path }`: "save this moment as a test", the character's moment now (or at `tick`, by replay) as an eval situation; also written under `UAS_SITUATIONS_DIR` when set ([testing-models.md](../testing-models.md#capturing-a-moment)) |
 | `GET /catalog` | spectator | The server-wide airdrop catalogue: enabled `CatalogItem`s; admins also get disabled ones with `disabled`, `updatedAt`, `updatedBy` |
 | `GET /catalog/templates` | admin | `{ name, item }[]` starter items: snack, toy, noise-maker, inert |
 | `POST /catalog/validate` | admin | `{ item }` → `{ ok: true, item }` or `{ ok: false, errors: [{ path, message }] }` |

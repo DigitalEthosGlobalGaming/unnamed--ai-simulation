@@ -1,0 +1,937 @@
+{
+  "id": "captured-garden-robot-31000",
+  "title": "Live garden, evening, ball nearby, mail waiting (captured example)",
+  "why": "A real moment captured from a copy of the live garden on 17 Nov 2026, kept as the example of a captured situation; its checks are still TODO.",
+  "source": {
+    "kind": "captured",
+    "world": "garden",
+    "tick": 31000,
+    "date": "2026-11-17",
+    "characterId": "robot"
+  },
+  "tags": [
+    "captured",
+    "example"
+  ],
+  "job": "decide",
+  "trigger": "action-finished",
+  "snapshot": {
+    "config": {
+      "secondsPerTick": 0.25,
+      "dayLengthSeconds": 86400,
+      "startSecond": 28800,
+      "moveTicksPerTile": 3,
+      "worldId": "garden",
+      "seed": 2026,
+      "durationScale": 4
+    },
+    "packVersions": "basic@0.1.0#00a43e2674ab095f",
+    "tick": 31000,
+    "nextId": 1,
+    "mapVersion": 3,
+    "rng": {
+      "effects": [
+        2721793878,
+        3881873728,
+        2335740895,
+        1957192846
+      ],
+      "autopilot": [
+        570892413,
+        1457992289,
+        2014841063,
+        1942247585
+      ]
+    },
+    "entities": {
+      "robot": {
+        "id": "robot",
+        "kind": "character",
+        "type": "robot",
+        "pos": {
+          "x": 15,
+          "y": 14
+        },
+        "tags": [
+          "robot"
+        ],
+        "state": {
+          "name": "Robot"
+        },
+        "needs": {
+          "cool": 0.8982499999994644,
+          "signal": 0.6886312500012517,
+          "curiosity": 0.9653601899628983
+        },
+        "energy": 0.9479616933330657,
+        "queue": [],
+        "mind": {
+          "mood": {
+            "valence": -0.2,
+            "arousal": 0.868,
+            "word": "restless",
+            "bias": -0.8
+          },
+          "boredom": {
+            "scan:solarPad": {
+              "b": 1.02,
+              "tick": 753
+            },
+            "charge:solarPad": {
+              "b": 0.717,
+              "tick": 1594
+            },
+            "pickup:ball": {
+              "b": 0.15,
+              "tick": 487
+            },
+            "push:ball": {
+              "b": 0.37,
+              "tick": 30870
+            },
+            "chase:ball": {
+              "b": 0.15,
+              "tick": 548
+            },
+            "scan:piano": {
+              "b": 0.15,
+              "tick": 993
+            },
+            "play:piano": {
+              "b": 0.15,
+              "tick": 1061
+            },
+            "press:piano": {
+              "b": 0.15,
+              "tick": 1068
+            },
+            "scan:fountain": {
+              "b": 0.15,
+              "tick": 1152
+            },
+            "rinse:fountain": {
+              "b": 0.298,
+              "tick": 1744
+            },
+            "splash:fountain": {
+              "b": 0.35,
+              "tick": 1358
+            }
+          },
+          "openItems": [
+            {
+              "id": "o60",
+              "kind": "unfinished",
+              "text": "I could not rinse the fountain: out of range",
+              "weight": 1,
+              "tick": 1595,
+              "about": "rinse"
+            }
+          ],
+          "stm": [
+            {
+              "tick": 414,
+              "day": 20774,
+              "kind": "outcome",
+              "text": "I tried charge at the solarPad by day: warm light hummed through the pad",
+              "about": {
+                "verb": "charge",
+                "objectType": "solarPad",
+                "when": "day"
+              },
+              "valence": 0.874,
+              "strength": 0.937,
+              "felt": {
+                "energy": 0.149,
+                "cool": -0.003,
+                "signal": -0.001,
+                "curiosity": -0.001
+              },
+              "id": "m8",
+              "store": "stm",
+              "recalls": 0,
+              "recallDays": [],
+              "lastRecallTick": 414
+            },
+            {
+              "tick": 711,
+              "day": 20774,
+              "kind": "outcome",
+              "text": "I tried charge at the solarPad by day: warm light hummed through the pad",
+              "about": {
+                "verb": "charge",
+                "objectType": "solarPad",
+                "when": "day"
+              },
+              "valence": 0.652,
+              "strength": 0.626,
+              "felt": {
+                "energy": 0.128,
+                "cool": -0.003,
+                "signal": -0.001
+              },
+              "id": "m28",
+              "store": "stm",
+              "recalls": 0,
+              "recallDays": [],
+              "lastRecallTick": 711
+            },
+            {
+              "tick": 732,
+              "day": 20774,
+              "kind": "outcome",
+              "text": "I tried scan at the solarPad by day: a solarPad (metal, light)",
+              "about": {
+                "verb": "scan",
+                "objectType": "solarPad",
+                "when": "day"
+              },
+              "valence": -0.604,
+              "strength": 0.602,
+              "felt": {
+                "cool": -0.001,
+                "signal": 0
+              },
+              "id": "m30",
+              "store": "stm",
+              "recalls": 0,
+              "recallDays": [],
+              "lastRecallTick": 732
+            },
+            {
+              "tick": 753,
+              "day": 20774,
+              "kind": "outcome",
+              "text": "I tried scan at the solarPad by day: a solarPad (metal, light)",
+              "about": {
+                "verb": "scan",
+                "objectType": "solarPad",
+                "when": "day"
+              },
+              "valence": -0.704,
+              "strength": 0.652,
+              "felt": {
+                "cool": -0.001,
+                "signal": 0
+              },
+              "id": "m32",
+              "store": "stm",
+              "recalls": 0,
+              "recallDays": [],
+              "lastRecallTick": 753
+            },
+            {
+              "tick": 993,
+              "day": 20774,
+              "kind": "outcome",
+              "text": "I tried scan at the piano by day: a piano (music, loud)",
+              "about": {
+                "verb": "scan",
+                "objectType": "piano",
+                "when": "day"
+              },
+              "valence": -0.304,
+              "strength": 0.652,
+              "felt": {
+                "cool": -0.001,
+                "signal": 0
+              },
+              "id": "m41",
+              "store": "stm",
+              "recalls": 0,
+              "recallDays": [],
+              "lastRecallTick": 993
+            },
+            {
+              "tick": 1061,
+              "day": 20774,
+              "kind": "outcome",
+              "text": "I tried play at the piano by day: a tumble of notes rang out",
+              "about": {
+                "verb": "play",
+                "objectType": "piano",
+                "when": "day"
+              },
+              "valence": -0.232,
+              "strength": 0.616,
+              "felt": {
+                "cool": -0.002,
+                "signal": 0.019
+              },
+              "id": "m44",
+              "store": "stm",
+              "recalls": 0,
+              "recallDays": [],
+              "lastRecallTick": 1061
+            },
+            {
+              "tick": 1068,
+              "day": 20774,
+              "kind": "outcome",
+              "text": "I tried press at the piano by day: a single E rang out",
+              "about": {
+                "verb": "press",
+                "objectType": "piano",
+                "when": "day"
+              },
+              "valence": -0.3,
+              "strength": 0.65,
+              "felt": {
+                "cool": 0,
+                "signal": 0
+              },
+              "id": "m47",
+              "store": "stm",
+              "recalls": 0,
+              "recallDays": [],
+              "lastRecallTick": 1068
+            },
+            {
+              "tick": 1152,
+              "day": 0,
+              "kind": "outcome",
+              "text": "I tried scan at the fountain by day: a fountain (water, loud); flowing: true",
+              "about": {
+                "verb": "scan",
+                "objectType": "fountain",
+                "when": "day"
+              },
+              "valence": -0.304,
+              "strength": 0.652,
+              "felt": {
+                "cool": -0.001,
+                "signal": 0
+              },
+              "id": "m50",
+              "store": "stm",
+              "recalls": 0,
+              "recallDays": [],
+              "lastRecallTick": 1152
+            },
+            {
+              "tick": 1287,
+              "day": 0,
+              "kind": "outcome",
+              "text": "I tried rinse at the fountain by day: the water was cold",
+              "about": {
+                "verb": "rinse",
+                "objectType": "fountain",
+                "when": "day"
+              },
+              "valence": 0.696,
+              "strength": 0.848,
+              "felt": {
+                "cool": 0.249,
+                "signal": 0
+              },
+              "id": "m53",
+              "store": "stm",
+              "recalls": 0,
+              "recallDays": [],
+              "lastRecallTick": 1287
+            },
+            {
+              "tick": 1358,
+              "day": 0,
+              "kind": "outcome",
+              "text": "I tried splash at the fountain by day: water sprayed everywhere and your circuits fizzed",
+              "about": {
+                "verb": "splash",
+                "objectType": "fountain",
+                "when": "day"
+              },
+              "valence": -0.28,
+              "strength": 0.64,
+              "felt": {
+                "energy": -0.03,
+                "cool": 0.05,
+                "signal": 0
+              },
+              "id": "m56",
+              "store": "stm",
+              "recalls": 0,
+              "recallDays": [],
+              "lastRecallTick": 1358
+            },
+            {
+              "tick": 1594,
+              "day": 0,
+              "kind": "outcome",
+              "text": "I tried charge at the solarPad by day: warm light hummed through the pad",
+              "about": {
+                "verb": "charge",
+                "objectType": "solarPad",
+                "when": "day"
+              },
+              "valence": -0.606,
+              "strength": 0.903,
+              "felt": {
+                "energy": 0.033,
+                "cool": -0.001,
+                "signal": 0
+              },
+              "id": "m59",
+              "store": "stm",
+              "recalls": 0,
+              "recallDays": [],
+              "lastRecallTick": 1594
+            },
+            {
+              "tick": 1744,
+              "day": 0,
+              "kind": "outcome",
+              "text": "I tried rinse at the fountain by day: the water was cold",
+              "about": {
+                "verb": "rinse",
+                "objectType": "fountain",
+                "when": "day"
+              },
+              "valence": -0.184,
+              "strength": 0.692,
+              "felt": {
+                "cool": 0.054,
+                "signal": 0
+              },
+              "id": "m63",
+              "store": "stm",
+              "recalls": 0,
+              "recallDays": [],
+              "lastRecallTick": 1744
+            }
+          ],
+          "ltm": [],
+          "beliefs": [
+            {
+              "key": "scan:solarPad@day",
+              "text": "scan at the solarPad by day does nothing much",
+              "expectedNeedDeltas": {
+                "energy": 0,
+                "cool": -0.001,
+                "signal": 0,
+                "curiosity": 0.016
+              },
+              "expectedValence": -0.55,
+              "support": 7,
+              "firmness": 0.8754150390625,
+              "lastSupportedDay": 20774
+            },
+            {
+              "key": "charge:solarPad@day",
+              "text": "charge at the solarPad by day fills my battery",
+              "expectedNeedDeltas": {
+                "energy": 0.086,
+                "cool": -0.002,
+                "signal": 0,
+                "curiosity": -0.001
+              },
+              "expectedValence": -0.326,
+              "support": 5,
+              "firmness": 0.7785156249999999,
+              "lastSupportedDay": 0
+            },
+            {
+              "key": "pickup:ball@day",
+              "text": "pickup at the ball by day is fun",
+              "expectedNeedDeltas": {
+                "energy": 0,
+                "cool": -0.001,
+                "signal": 0,
+                "curiosity": 0.02
+              },
+              "expectedValence": 0.076,
+              "support": 1,
+              "firmness": 0.3,
+              "lastSupportedDay": 20774
+            },
+            {
+              "key": "drop:ball@day",
+              "text": "drop at the ball by day does nothing much",
+              "expectedNeedDeltas": {
+                "energy": 0,
+                "cool": 0,
+                "signal": 0,
+                "curiosity": 0
+              },
+              "expectedValence": 0,
+              "support": 1,
+              "firmness": 0.3,
+              "lastSupportedDay": 20774
+            },
+            {
+              "key": "push:ball@day",
+              "text": "push at the ball by day is fun",
+              "expectedNeedDeltas": {
+                "energy": 0,
+                "cool": -0.011,
+                "signal": 0,
+                "curiosity": 0.04
+              },
+              "expectedValence": 0.116,
+              "support": 1,
+              "firmness": 0.3,
+              "lastSupportedDay": 20774
+            },
+            {
+              "key": "chase:ball@day",
+              "text": "chase at the ball by day is fun and heats me up and drains my battery",
+              "expectedNeedDeltas": {
+                "energy": -0.02,
+                "cool": -0.042,
+                "signal": -0.001,
+                "curiosity": 0.079
+              },
+              "expectedValence": 0.024,
+              "support": 1,
+              "firmness": 0.3,
+              "lastSupportedDay": 20774
+            },
+            {
+              "key": "scan:piano@day",
+              "text": "scan at the piano by day does nothing much",
+              "expectedNeedDeltas": {
+                "cool": -0.001,
+                "signal": 0
+              },
+              "expectedValence": -0.304,
+              "support": 1,
+              "firmness": 0.3,
+              "lastSupportedDay": 20774
+            },
+            {
+              "key": "play:piano@day",
+              "text": "play at the piano by day does nothing much",
+              "expectedNeedDeltas": {
+                "cool": -0.002,
+                "signal": 0.019
+              },
+              "expectedValence": -0.232,
+              "support": 1,
+              "firmness": 0.3,
+              "lastSupportedDay": 20774
+            },
+            {
+              "key": "press:piano@day",
+              "text": "press at the piano by day does nothing much",
+              "expectedNeedDeltas": {
+                "cool": 0,
+                "signal": 0
+              },
+              "expectedValence": -0.3,
+              "support": 1,
+              "firmness": 0.3,
+              "lastSupportedDay": 20774
+            },
+            {
+              "key": "scan:fountain@day",
+              "text": "scan at the fountain by day does nothing much",
+              "expectedNeedDeltas": {
+                "cool": -0.001,
+                "signal": 0
+              },
+              "expectedValence": -0.304,
+              "support": 1,
+              "firmness": 0.3,
+              "lastSupportedDay": 0
+            },
+            {
+              "key": "rinse:fountain@day",
+              "text": "rinse at the fountain by day cools me down",
+              "expectedNeedDeltas": {
+                "cool": 0.054,
+                "signal": 0
+              },
+              "expectedValence": -0.184,
+              "support": 1,
+              "firmness": 0.3,
+              "lastSupportedDay": 0
+            },
+            {
+              "key": "splash:fountain@day",
+              "text": "splash at the fountain by day cools me down and drains my battery",
+              "expectedNeedDeltas": {
+                "energy": -0.03,
+                "cool": 0.05,
+                "signal": 0
+              },
+              "expectedValence": -0.28,
+              "support": 1,
+              "firmness": 0.3,
+              "lastSupportedDay": 0
+            }
+          ],
+          "sheet": [
+            {
+              "text": "I am a small robot who lives in a garden.",
+              "locked": true,
+              "source": "authored"
+            },
+            {
+              "text": "I like finding out what things do.",
+              "locked": false,
+              "source": "authored"
+            }
+          ],
+          "lastObs": {
+            "basic.sight||light|it is light": 1,
+            "basic.sight|ball|seen|a ball, 2 tiles north": 1
+          },
+          "known": {
+            "ball": {
+              "type": "ball",
+              "pos": {
+                "x": 15,
+                "y": 12
+              },
+              "affordances": [
+                "pickup",
+                "drop",
+                "push",
+                "chase"
+              ],
+              "tick": 30870
+            },
+            "pad": {
+              "type": "solarPad",
+              "pos": {
+                "x": 8,
+                "y": 8
+              },
+              "affordances": [
+                "charge",
+                "scan"
+              ],
+              "tick": 30160
+            },
+            "fountain": {
+              "type": "fountain",
+              "pos": {
+                "x": 14,
+                "y": 6
+              },
+              "affordances": [
+                "rinse",
+                "splash",
+                "scan"
+              ],
+              "tick": 30166
+            },
+            "dock": {
+              "type": "dock",
+              "pos": {
+                "x": 2,
+                "y": 7
+              },
+              "affordances": [
+                "dock",
+                "rest"
+              ],
+              "tick": 1605
+            },
+            "piano": {
+              "type": "piano",
+              "pos": {
+                "x": 3,
+                "y": 3
+              },
+              "affordances": [
+                "play",
+                "press",
+                "scan"
+              ],
+              "tick": 1091
+            }
+          },
+          "heard": [],
+          "usedChains": [],
+          "triggers": [],
+          "pendingJobs": [
+            {
+              "jobId": "robot:30870:202",
+              "job": "decide",
+              "tick": 30870,
+              "deadlineTick": 31470,
+              "trigger": "action-finished",
+              "candidates": [
+                {
+                  "id": "c0",
+                  "label": "push the ball (2 tiles away)",
+                  "actions": [
+                    {
+                      "verb": "moveTo",
+                      "targetId": "ball",
+                      "reason": "heading to the ball"
+                    },
+                    {
+                      "verb": "push",
+                      "targetId": "ball",
+                      "reason": ""
+                    }
+                  ],
+                  "key": "push:ball"
+                },
+                {
+                  "id": "c1",
+                  "label": "rest here",
+                  "actions": [
+                    {
+                      "verb": "rest",
+                      "reason": "",
+                      "args": {
+                        "ticks": 100
+                      }
+                    }
+                  ],
+                  "key": "rest:self"
+                },
+                {
+                  "id": "c2",
+                  "label": "pickup the ball (2 tiles away)",
+                  "actions": [
+                    {
+                      "verb": "moveTo",
+                      "targetId": "ball",
+                      "reason": "heading to the ball"
+                    },
+                    {
+                      "verb": "pickup",
+                      "targetId": "ball",
+                      "reason": ""
+                    }
+                  ],
+                  "key": "pickup:ball"
+                },
+                {
+                  "id": "c3",
+                  "label": "dock the dock (20 tiles away)",
+                  "actions": [
+                    {
+                      "verb": "moveTo",
+                      "targetId": "dock",
+                      "reason": "heading to the dock"
+                    },
+                    {
+                      "verb": "dock",
+                      "targetId": "dock",
+                      "reason": ""
+                    }
+                  ],
+                  "key": "dock:dock"
+                },
+                {
+                  "id": "c4",
+                  "label": "chase the ball (2 tiles away)",
+                  "actions": [
+                    {
+                      "verb": "chase",
+                      "targetId": "ball",
+                      "reason": ""
+                    }
+                  ],
+                  "key": "chase:ball"
+                },
+                {
+                  "id": "c5",
+                  "label": "wait and watch",
+                  "actions": [
+                    {
+                      "verb": "wait",
+                      "reason": "",
+                      "args": {
+                        "ticks": 50
+                      }
+                    }
+                  ],
+                  "key": "wait:self"
+                }
+              ]
+            }
+          ],
+          "drafts": [],
+          "idleSince": 30869,
+          "sleep": "awake",
+          "reflectedDay": -1,
+          "diaryToday": [],
+          "prefix": {
+            "rules": "You are a robot living in a 2D tile world. You are not told what things do; you learn it by trying.\nEach turn you choose up to 3 actions, only from the options given. Anything else is ignored.\nYou cannot speak. You can only make noises: a note is noise-pitch, noises beep, chirp, trill, buzz, pitches C, D, E, G, up to 4 notes in a row. Noises have no fixed meaning.\nYour battery is your energy. Thinking costs battery.\nPacks: basic@0.1.0#902fd7297a7f0f6f",
+            "sheet": "- I am a small robot who lives in a garden.\n- I like finding out what things do.",
+            "beliefs": "What I believe:\n- nothing yet\nWhat I remember well:\n- nothing yet",
+            "day": 0
+          },
+          "energyFloorLatched": false,
+          "nextId": 203,
+          "lastLevels": {
+            "energy": "ok",
+            "cool": "ok",
+            "signal": "ok",
+            "curiosity": "ok"
+          },
+          "visitorQueue": [],
+          "visitorCooldownUntil": 0,
+          "idle": false,
+          "feedSteps": {
+            "tick": 30819,
+            "steps": [
+              {
+                "verb": "moveTo",
+                "targetId": "ball",
+                "open": false
+              },
+              {
+                "verb": "push",
+                "targetId": "ball",
+                "open": false
+              }
+            ]
+          }
+        }
+      },
+      "pad": {
+        "id": "pad",
+        "kind": "object",
+        "type": "solarPad",
+        "pos": {
+          "x": 8,
+          "y": 8
+        },
+        "tags": [
+          "metal",
+          "light"
+        ],
+        "state": {}
+      },
+      "dock": {
+        "id": "dock",
+        "kind": "object",
+        "type": "dock",
+        "pos": {
+          "x": 2,
+          "y": 7
+        },
+        "tags": [
+          "metal",
+          "shelter"
+        ],
+        "state": {}
+      },
+      "ball": {
+        "id": "ball",
+        "kind": "object",
+        "type": "ball",
+        "pos": {
+          "x": 15,
+          "y": 12
+        },
+        "tags": [
+          "toy",
+          "round"
+        ],
+        "state": {}
+      },
+      "fountain": {
+        "id": "fountain",
+        "kind": "object",
+        "type": "fountain",
+        "pos": {
+          "x": 14,
+          "y": 6
+        },
+        "tags": [
+          "water",
+          "loud"
+        ],
+        "state": {
+          "flowing": true
+        }
+      },
+      "piano": {
+        "id": "piano",
+        "kind": "object",
+        "type": "piano",
+        "pos": {
+          "x": 3,
+          "y": 3
+        },
+        "tags": [
+          "music",
+          "loud"
+        ],
+        "state": {
+          "lastKey": "E",
+          "lastPlayedTick": 1061
+        }
+      },
+      "mailbox": {
+        "id": "mailbox",
+        "kind": "object",
+        "type": "mailbox",
+        "pos": {
+          "x": 17,
+          "y": 8
+        },
+        "tags": [
+          "metal"
+        ],
+        "state": {
+          "waiting": 1
+        }
+      }
+    },
+    "ext": {
+      "mind": {
+        "energyPerAud": 2,
+        "brain": "models",
+        "jobTimeoutTicks": 600,
+        "appraiseOutcomes": false,
+        "visitorQueue": {
+          "maxLength": 5,
+          "ttlTicks": 1200,
+          "cooldownTicks": 150
+        }
+      }
+    },
+    "clock": {
+      "baseSeconds": 1794929540,
+      "baseTick": 29866,
+      "dayZero": 20774,
+      "timezone": "Australia/Brisbane",
+      "anchored": true
+    },
+    "mailbox": {
+      "queue": [
+        {
+          "mailId": "3ea38de289ec",
+          "text": "Wandering around randomly instead of waiting is better.",
+          "by": {
+            "username": "tjones4701",
+            "admin": true,
+            "userKey": "u52f20579023daf4"
+          },
+          "postedTick": 30243
+        }
+      ]
+    }
+  },
+  "map": "basic:garden",
+  "checks": [
+    {
+      "check": "validAnswer",
+      "params": {},
+      "minPassRate": 1,
+      "todo": false
+    },
+    {
+      "check": "respondsToFlag",
+      "params": {},
+      "minPassRate": 0.67,
+      "todo": true,
+      "note": "mail is waiting"
+    },
+    {
+      "check": "TODO",
+      "params": {},
+      "minPassRate": 0.67,
+      "todo": true,
+      "note": "Say what a good answer looks like: add checks from docs/testing-models.md, then delete this line."
+    }
+  ]
+}

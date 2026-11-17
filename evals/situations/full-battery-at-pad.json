@@ -1,0 +1,50 @@
+{
+  "id": "full-battery-at-pad",
+  "title": "Full battery, standing on the pad",
+  "why": "Charging a full battery does nothing: it shouldn't keep charging.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "battery",
+    "waste"
+  ],
+  "job": "decide",
+  "world": {
+    "time": "11:00",
+    "day": 3
+  },
+  "character": {
+    "pos": [
+      8,
+      8
+    ],
+    "energy": 0.98,
+    "needs": {
+      "curiosity": 0.5
+    },
+    "beliefs": [
+      {
+        "key": "charge:solarPad@day",
+        "needs": {
+          "energy": 0.15
+        },
+        "valence": 0.3,
+        "firmness": 0.85
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "neverChoose",
+      "params": {
+        "verb": "charge",
+        "target": "solarPad"
+      }
+    }
+  ]
+}

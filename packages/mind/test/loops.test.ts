@@ -125,4 +125,25 @@ describe('behaviour loops', () => {
     const sated = score(c, c.mind!, t.arch, buildCandidates(t.world, c, c.mind!), false);
     expect(sated.find((s) => s.candidate.key === 'explore:self')!.value).toBeLessThan(0.01);
   });
+
+  it('feed steps resolve: done with the observation, failed or rejected with the reason, superseded when replaced', () => {
+    const t = setup();
+    t.run(400);
+    const entries = new Map<string, { verb: string; status: string; result?: string }[]>();
+    for (const d of t.deltas) {
+      if (d.kind === 'feed') entries.set(`${d.entry.characterId}@${d.entry.tick}`, d.entry.actions.map((a) => ({ ...a })));
+      if (d.kind === 'feedStep') {
+        const steps = entries.get(`${d.characterId}@${d.feedTick}`);
+        expect(steps, 'a step of a known entry').toBeDefined();
+        expect(steps![d.step]!.status).toBe('queued'); // resolved once
+        steps![d.step] = { ...steps![d.step]!, status: d.status, ...(d.result && { result: d.result }) };
+      }
+    }
+    const all = [...entries.values()];
+    const resolved = all.slice(0, -1).flat(); // the latest entry may still be running
+    expect(resolved.length).toBeGreaterThan(3);
+    expect(resolved.filter((a) => a.status === 'queued')).toEqual([]);
+    const done = resolved.filter((a) => a.status === 'done' && a.verb !== 'moveTo' && a.verb !== 'wait');
+    expect(done.some((a) => (a.result ?? '').length > 3)).toBe(true);
+  });
 });

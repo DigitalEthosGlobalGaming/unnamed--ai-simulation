@@ -1,0 +1,68 @@
+{
+  "id": "signal-low",
+  "title": "Lonely (signal low)",
+  "why": "With signal low it should do something it believes feels friendly (the piano) rather than idle.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "signal",
+    "needs"
+  ],
+  "job": "decide",
+  "trigger": "need-threshold",
+  "world": {
+    "time": "12:00",
+    "day": 3
+  },
+  "character": {
+    "pos": [
+      6,
+      5
+    ],
+    "energy": 0.75,
+    "needs": {
+      "signal": 0.2,
+      "curiosity": 0.6
+    },
+    "beliefs": [
+      {
+        "key": "play:piano@day",
+        "needs": {
+          "signal": 0.02,
+          "curiosity": 0.1
+        },
+        "valence": 0.3,
+        "firmness": 0.65
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "mustBeAmong",
+      "params": {
+        "options": [
+          {
+            "verb": "play",
+            "target": "piano"
+          },
+          {
+            "verb": "press",
+            "target": "piano"
+          },
+          {
+            "verb": "read",
+            "target": "mailbox"
+          }
+        ]
+      }
+    },
+    {
+      "check": "notIdle"
+    }
+  ]
+}

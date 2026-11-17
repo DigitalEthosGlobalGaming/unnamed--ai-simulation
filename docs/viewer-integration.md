@@ -42,6 +42,7 @@ Server to client (`ServerMessage`):
 | `snapshot { worldId, sessionId?, tick, state }` | Once after `subscribe`, and after `replay.open` / `seek`. `state` is the full `WorldState`. |
 | `deltas { worldId, sessionId?, tick, changes: Delta[] }` | Each tick that changed something (feed entries are not repeated here). |
 | `feed { worldId, sessionId?, entry: FeedEntry }` | Each brain decision. |
+| `feedStep { worldId, sessionId?, characterId, feedTick, step, status, result? }` | A step of an earlier feed entry resolved (`done`, `failed`, `rejected`, `superseded`). |
 | `noises { worldId, sessionId?, tick, noises }` | Each `vocalize` (the same `vocalize` deltas, on their own channel for audio). |
 | `replay.opened { worldId, sessionId, tick }`, `replay.ended { sessionId, tick }` | Replay lifecycle; a replay ends when it reaches the live tick. |
 | `error { message }` | A bad message or an action that isn't allowed. |
@@ -106,6 +107,7 @@ Live messages carry no `sessionId`; replay messages always do.
 
 `{ tick, characterId, trigger, tier, modelId?, confidence?, actions: [{ verb, targetId?, reason, status }], usage?, energyCost?, notes?, reason?, escalated? }`
 
+- Each step's `status` starts `queued` and is updated as it resolves: `done` (with `result`, the observation), `failed` (it started but didn't work; `result` is why), `rejected` (invalid when its turn came; `result` is why), or `superseded` (a newer decision replaced it before it ran). Live updates arrive as `feedStep { worldId, sessionId?, characterId, feedTick, step, status, result? }` messages on the feed channel (and `feedStep` deltas in the store): update `actions[step]` of the entry with that `characterId` and `tick === feedTick`. `GET /feed` returns entries already updated.
 - `escalated: { from, confidence }` marks a decision the decision model (`from`) was unsure about, answered by a stronger model or a text-model plan. Plans (tier `llm`) carry no `confidence`.
 
 - `tier: 'carry-on'` marks the later steps of a model plan that run without a new call.

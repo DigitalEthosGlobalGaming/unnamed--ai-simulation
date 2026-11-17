@@ -124,6 +124,8 @@ Under podman-compose 1.5, `depends_on: condition: service_completed_successfully
 | `UAS_DB` | `data/uas.db` | server | SQLite file (WAL mode) |
 | `UAS_WORLDS` | `worlds` | server | Directory of world configs (`*.yaml`) |
 | `UAS_ADMIN_KEYS`, `UAS_VISITOR_KEYS`, `UAS_SPECTATOR_KEYS` | empty | server | Comma-separated API keys per role ([server-and-api.md](architecture/server-and-api.md#roles-and-api-keys)) |
+| `UAS_SITUATIONS_DIR` | `evals/situations/captured` when the server runs from the repository, else unset | server | Where `POST …/situation` writes captured eval situations; `none` turns writing off ([testing-models.md](testing-models.md#capturing-a-moment)) |
+| `UAS_ADMIN_KEY`, `UAS_URL` | first of `UAS_ADMIN_KEYS`; `http://localhost:8080` | `npm run eval:capture` | Admin key and server for capturing situations |
 | `UAS_BRAIN` | `models` | garden.yaml | `models` or `autopilot` |
 | `UAS_DECIDER` | `fake` | garden.yaml | Head of the `decide` and `vocalize` chains: `fake`, `localDm`, `local` or `small` |
 | `UAS_SCORER` | `fake` | garden.yaml | Head of `appraise` and `scoreMemory` |

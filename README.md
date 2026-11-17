@@ -14,6 +14,7 @@ A self-hosted world where little AI robots live in a 2D tile world. They learn w
 | `@uas/pack-basic` | The robot pack: solar pad, dock, ball, fountain and piano; sight and hearing; the `robot` archetype; the garden map. |
 | `@uas/server` | Express REST, the WebSocket hub, API-key roles, one `worker_thread` per world, replay sessions, forks, `/healthz` and `/metrics`. |
 | `@uas/client` | A typed REST and WebSocket client for frontends. See [`docs/viewer-integration.md`](docs/viewer-integration.md). |
+| `@uas/evals` | Model evals on saved situations: frozen moments rebuilt through the current prompt builder, property checks, golden prompts, capture. See [`docs/testing-models.md`](docs/testing-models.md). |
 
 Packages ship TypeScript source, and Node 26 runs it directly through type stripping, so there is no build step.
 
@@ -31,6 +32,17 @@ UAS_ADMIN_KEYS=secret npm start             # enable admin endpoints with that k
 - World configs live in `worlds/*.yaml`. The database file is `data/uas.db`.
 - Settings are environment variables; [`.env.example`](.env.example) lists all of them.
 - Stopping the server (Ctrl-C) snapshots every world. The next start resumes from that snapshot.
+
+## Testing models
+
+```sh
+npm run check                         # includes the free golden-prompt check for every saved situation
+npm run eval                          # live: each situation 3 times on hosted Laya / Llama; report in docs/benchmarks/evals/
+npm run eval -- --update-prompts      # accept intended prompt changes
+npm run eval:capture -- --world garden --character robot [--tick N]   # save a moment from a running server
+```
+
+See [docs/testing-models.md](docs/testing-models.md): how to find interesting moments in a world's history, write or capture situations, and read the report.
 
 ## Local models (Ollama)
 

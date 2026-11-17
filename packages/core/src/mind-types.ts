@@ -162,6 +162,8 @@ export interface MindState {
   idle?: boolean;
   /** Recent failures per candidate key (`verb:type`); two in a row set the option aside for a while. */
   failures?: Record<string, { n: number; tick: number }>;
+  /** The latest queued feed entry's steps, so each can be marked when it resolves. */
+  feedSteps?: { tick: number; steps: { verb: string; targetId?: string; open: boolean }[] };
 }
 
 // ---------------------------------------------------------------- prompts and jobs

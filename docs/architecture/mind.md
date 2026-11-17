@@ -189,6 +189,8 @@ Wants (from need thresholds), unfinished actions (from rejections) and questions
 | `observations` | current observations, numbered options | every call |
 | `question` | trigger and question | every call |
 
+`MindSystem.decisionRequest(world, character, trigger)` returns the exact `decide` request the brain would send at that moment, without queueing or charging anything; the [situation evals](../testing-models.md) and "save this moment as a test" use it, so they always test the current prompt builder.
+
 Note text only ever reaches a prompt inside a memory or observation line, as a JSON-quoted string (`quoteNote`: line breaks collapsed, quotes escaped, 280 characters at most), so it cannot add options, triggers or lines; [`visitors.test.ts`](../../packages/mind/test/visitors.test.ts) checks an injection attempt. The M6 test checks that no byte of the prefix changes outside standby ([`m6-sleep.test.ts`](../../packages/models/test/m6-sleep.test.ts)). How adapters render parts into messages is in [models.md](models.md#prompt-rendering).
 
 ## Standby (sleep)

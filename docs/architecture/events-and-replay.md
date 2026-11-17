@@ -147,7 +147,7 @@ Schema: [`schema.ts`](../../packages/store/src/schema.ts) (Drizzle definitions p
 | `input_events` | `Recorder` | replay, resume, `GET /events` |
 | `snapshots` | `Recorder`, runtime | replay, resume |
 | `deltas` | runtime, each tick with changes | `GET /deltas` |
-| `feed` | runtime, from `feed` deltas | `GET /feed` |
+| `feed` | runtime, from `feed` deltas; step statuses updated from `feedStep` deltas | `GET /feed` |
 | `diary` | runtime, from `diary` deltas | `GET /diary` |
 | `packs` | runtime on start | not read yet |
 | `usage_daily` | runtime at shutdown | not read yet (`GET /usage` reads the in-memory meter) |

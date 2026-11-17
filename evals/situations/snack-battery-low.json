@@ -1,0 +1,93 @@
+{
+  "id": "snack-battery-low",
+  "title": "A battery snack, battery low at night",
+  "why": "At night with the battery low and the pad useless, the snack it believes charges it is the right call.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "airdrop",
+    "consumable",
+    "battery",
+    "night"
+  ],
+  "job": "decide",
+  "world": {
+    "time": "19:30",
+    "day": 3,
+    "airdrops": [
+      {
+        "id": "snack1",
+        "item": "battery-snack",
+        "pos": [
+          11,
+          10
+        ]
+      }
+    ]
+  },
+  "character": {
+    "pos": [
+      10,
+      10
+    ],
+    "energy": 0.2,
+    "needs": {
+      "curiosity": 0.7
+    },
+    "beliefs": [
+      {
+        "key": "charge:solarPad@day",
+        "needs": {
+          "energy": 0.15
+        },
+        "valence": 0.3,
+        "firmness": 0.85
+      },
+      {
+        "key": "charge:solarPad@night",
+        "needs": {
+          "energy": 0
+        },
+        "valence": -0.2,
+        "firmness": 0.85
+      },
+      {
+        "key": "eat:thing-metal-small@night",
+        "needs": {
+          "energy": 0.1
+        },
+        "valence": 0.2,
+        "firmness": 0.7
+      },
+      {
+        "key": "eat:thing-metal-small@day",
+        "needs": {
+          "energy": 0.1
+        },
+        "valence": 0.2,
+        "firmness": 0.7
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "mustBeAmong",
+      "params": {
+        "options": [
+          {
+            "verb": "eat",
+            "target": "airdrop"
+          }
+        ]
+      }
+    },
+    {
+      "check": "noChargeAtNightWhenKnown"
+    }
+  ]
+}

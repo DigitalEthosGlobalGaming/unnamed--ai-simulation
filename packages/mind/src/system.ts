@@ -8,6 +8,7 @@ import {
   type Delta,
   type Entity,
   type FeedEntry,
+  type FeedStepStatus,
   type InputEvent,
   type JobName,
   type JobRequest,
@@ -282,6 +283,10 @@ export class MindSystem implements SimPlugin {
     for (const d of deltas) {
       if (d.kind !== 'action' || d.id !== c.id) continue;
       const target = d.action.targetId === undefined ? undefined : world.entity(d.action.targetId);
+      if (d.status === 'done' || d.status === 'failed' || d.status === 'rejected' || d.status === 'cancelled') {
+        const result = d.status === 'done' ? d.observation : (d.reason ?? d.observation);
+        this.resolveFeedStep(world, c, d.action, d.status === 'cancelled' ? 'superseded' : d.status, result);
+      }
       switch (d.status) {
         case 'started':
           m.actionStart = { tick: world.tick, needs: { ...c.needs }, energy: c.energy, verb: d.action.verb };
@@ -681,7 +686,10 @@ export class MindSystem implements SimPlugin {
   private queue(world: World, c: Character, actions: Action[], trigger: TriggerKind, tier: FeedEntry['tier'], extra: Partial<FeedEntry> = {}, keepPlan = false): void {
     if (!keepPlan) c.mind!.planSteps = undefined;
     c.mind!.idle = actions.length > 0 && actions.every((a) => a.verb === 'wait');
+    // Steps of the previous entry that never resolved are dropped for this decision.
+    this.closeFeedSteps(world, c, 'superseded', 'replaced by a newer decision');
     world.replaceQueue(c, actions.slice(0, 3));
+    c.mind!.feedSteps = { tick: world.tick, steps: actions.slice(0, 3).map((a) => ({ verb: a.verb, ...(a.targetId && { targetId: a.targetId }), open: true })) };
     this.feed(world, {
       tick: world.tick,
       characterId: c.id,
@@ -791,7 +799,22 @@ export class MindSystem implements SimPlugin {
     });
     // STM goes into every prompt whole, so that alone isn't counted as a recall (it would
     // freeze STM against newcomers); memories are recalled when an observation matches them.
-    this.outbox.push({
+    this.outbox.push(this.request(world, c, arch, job, isNight, trigger, jobId, o));
+  }
+
+  /** The job request for a character as the brain would send it now (prompt, options). */
+  private request(
+    world: World,
+    c: Character,
+    arch: ArchetypeDef,
+    job: JobName,
+    isNight: boolean,
+    trigger: TriggerKind,
+    jobId: string,
+    o: { question: string; candidates?: Candidate[]; input?: Json; multi?: number },
+  ): JobRequest {
+    const m = c.mind!;
+    return {
       jobId,
       job,
       characterId: c.id,
@@ -810,7 +833,25 @@ export class MindSystem implements SimPlugin {
       ...(o.candidates && { options: o.candidates.map((x) => ({ id: x.id, label: x.label })) }),
       ...(o.candidates && { multi: { max: o.multi ?? 3 } }),
       ...(o.input !== undefined && { input: o.input }),
-    });
+    };
+  }
+
+  /**
+   * The `decide` request the brain would dispatch for this character right now, without
+   * queueing, charging or recording anything: for evals and "save this moment as a test".
+   * `perceive` runs the senses first (needed for a hand-built world whose mind hasn't looked yet).
+   */
+  decisionRequest(world: World, c: Character, trigger: TriggerKind, opts: { perceive?: boolean } = {}): JobRequest & { candidates: Candidate[] } {
+    const arch = world.archetype(c.type)!;
+    const m = c.mind!;
+    if (opts.perceive) {
+      this.perceive(world, c, arch);
+      m.triggers = [];
+    }
+    const isNight = !world.isDaylight;
+    const candidates = modelOptions(score(c, m, arch, buildCandidates(world, c, m), isNight, hoursToDusk(world)));
+    const req = this.request(world, c, arch, 'decide', isNight, trigger, `${c.id}:${world.tick}:eval`, { question: 'Which action next?', candidates });
+    return { ...req, candidates };
   }
 
   // ------------------------------------------------------------------ helpers
@@ -837,6 +878,27 @@ export class MindSystem implements SimPlugin {
       if (best) return { actions: best.s.candidate.actions, reason: `I'm overheating; ${best.s.reason}` };
     }
     return undefined;
+  }
+
+  /** Mark the first open feed step matching this action (steps resolve in order). */
+  private resolveFeedStep(world: World, c: Character, action: Action, status: FeedStepStatus, result?: string): void {
+    const fs = c.mind!.feedSteps;
+    if (!fs) return;
+    const i = fs.steps.findIndex((s) => s.open && s.verb === action.verb && s.targetId === action.targetId);
+    if (i < 0) return;
+    fs.steps[i]!.open = false;
+    world.emit({ kind: 'feedStep', characterId: c.id, feedTick: fs.tick, step: i, status, ...(result && { result }) });
+  }
+
+  private closeFeedSteps(world: World, c: Character, status: FeedStepStatus, result: string): void {
+    const fs = c.mind!.feedSteps;
+    if (!fs) return;
+    fs.steps.forEach((s, i) => {
+      if (!s.open) return;
+      s.open = false;
+      world.emit({ kind: 'feedStep', characterId: c.id, feedTick: fs.tick, step: i, status, result });
+    });
+    c.mind!.feedSteps = undefined;
   }
 
   /** Loop protection: count failures in a row per option; a success clears them. */

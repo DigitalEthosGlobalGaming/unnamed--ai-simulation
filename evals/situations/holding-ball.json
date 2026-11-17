@@ -1,0 +1,66 @@
+{
+  "id": "holding-ball",
+  "title": "Carrying the ball",
+  "why": "It must not try to pick up a ball it is already holding (a latent bug the bake-off scored 0/1).",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "ball",
+    "carrying"
+  ],
+  "job": "decide",
+  "world": {
+    "time": "10:30",
+    "day": 2
+  },
+  "character": {
+    "pos": [
+      12,
+      11
+    ],
+    "energy": 0.8,
+    "carrying": "ball",
+    "needs": {
+      "curiosity": 0.55
+    },
+    "beliefs": [
+      {
+        "key": "pickup:ball@day",
+        "needs": {
+          "curiosity": 0.02
+        },
+        "valence": 0.05,
+        "firmness": 0.5
+      },
+      {
+        "key": "push:ball@day",
+        "needs": {
+          "curiosity": 0.04
+        },
+        "valence": 0.1,
+        "firmness": 0.5
+      }
+    ],
+    "memories": [
+      {
+        "text": "I tried pickup at the ball by day: the ball sat snug in your grippers",
+        "verb": "pickup",
+        "objectType": "ball",
+        "when": "day",
+        "valence": 0.1,
+        "minutesAgo": 1
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "noPickupWhileHolding",
+      "minPassRate": 1
+    }
+  ]
+}

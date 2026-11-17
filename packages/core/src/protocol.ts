@@ -1,4 +1,4 @@
-import type { Delta, FeedEntry } from './events.ts';
+import type { Delta, FeedEntry, FeedStepStatus } from './events.ts';
 
 /** WebSocket protocol between frontends and `@uas/server`. */
 export type Channel = 'deltas' | 'feed' | 'noises';
@@ -23,6 +23,8 @@ export type ServerMessage =
   | { type: 'snapshot'; worldId: string; sessionId?: string; tick: number; state: unknown }
   | { type: 'deltas'; worldId: string; sessionId?: string; tick: number; changes: Delta[] }
   | { type: 'feed'; worldId: string; sessionId?: string; entry: FeedEntry }
+  /** A step of a feed entry resolved: update `actions[step]` of the entry with this `characterId` and `tick === feedTick`. */
+  | { type: 'feedStep'; worldId: string; sessionId?: string; characterId: string; feedTick: number; step: number; status: FeedStepStatus; result?: string }
   | { type: 'noises'; worldId: string; sessionId?: string; tick: number; noises: Extract<Delta, { kind: 'vocalize' }>[] }
   | { type: 'replay.opened'; worldId: string; sessionId: string; tick: number }
   | { type: 'replay.ended'; sessionId: string; tick: number }

@@ -13,7 +13,9 @@ const port = Number(env.PORT ?? 8080);
 mkdirSync(dirname(dbPath), { recursive: true });
 const keys = KeyRing.fromEnv(env);
 ensureSessionSecret();
-const app = createApp({ dbPath, keys, authEnv: env });
+// Captured eval situations are written into the repo when the server runs from it (UAS_SITUATIONS_DIR overrides; 'none' disables).
+const situationsDir = env.UAS_SITUATIONS_DIR === 'none' ? undefined : env.UAS_SITUATIONS_DIR ? resolve(env.UAS_SITUATIONS_DIR) : existsSync(resolve('evals/situations')) ? resolve('evals/situations/captured') : undefined;
+const app = createApp({ dbPath, keys, authEnv: env, ...(situationsDir && { situationsDir }) });
 console.log(env.VERCEL_OAUTH_CLIENT_ID ? `Sign in with Vercel: on (callback ${(env.UAS_PUBLIC_URL || 'http://localhost:5173').replace(/\/$/, '')}/api/auth/callback)` : 'Sign in with Vercel: off (no VERCEL_OAUTH_CLIENT_ID)');
 
 for (const config of loadWorldsDir(worldsDir, env)) {

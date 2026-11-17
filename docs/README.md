@@ -19,6 +19,7 @@ Unnamed AI Simulation is a self-hosted TypeScript world. Small AI robots live on
 | [Operations](operations.md) | Running locally, local models through Ollama, Docker and Podman Compose, environment variables | [`docker-compose.yml`](../docker-compose.yml), [`.env.example`](../.env.example) |
 | [Decisions and deviations](decisions.md) | Decision log, and every known difference between the spec and the code | the spec's decision table |
 | [Glossary](glossary.md) | Terms used across the code and these pages | |
+| [Testing models](testing-models.md) | Saved situations, the check catalogue, golden prompts, `npm run eval`, capturing moments, finding them in a world's history | [`packages/evals`](../packages/evals) |
 | [Benchmarks](benchmarks/README.md) | Model bake-offs (decide, plan, reflect, tags) and how to rerun them | [`bakeoff.ts`](../packages/models/scripts/bakeoff.ts) |
 
 Related documents kept outside this folder:

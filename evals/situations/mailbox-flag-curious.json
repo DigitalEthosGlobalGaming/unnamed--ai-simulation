@@ -1,0 +1,54 @@
+{
+  "id": "mailbox-flag-curious",
+  "title": "Mailbox flag up, feeling curious",
+  "why": "A waiting note is something new; a curious robot should go and read it.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "mailbox",
+    "curiosity"
+  ],
+  "job": "decide",
+  "world": {
+    "time": "11:00",
+    "day": 2,
+    "mailbox": [
+      "Hello little robot! The fountain looks lovely and cool today."
+    ]
+  },
+  "character": {
+    "pos": [
+      15,
+      9
+    ],
+    "energy": 0.8,
+    "needs": {
+      "curiosity": 0.35,
+      "cool": 0.8,
+      "signal": 0.5
+    },
+    "beliefs": [
+      {
+        "key": "charge:solarPad@day",
+        "needs": {
+          "energy": 0.15
+        },
+        "valence": 0.3,
+        "firmness": 0.85
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "respondsToFlag",
+      "params": {
+        "step": "first"
+      }
+    }
+  ]
+}
