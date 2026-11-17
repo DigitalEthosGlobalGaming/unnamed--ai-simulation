@@ -882,8 +882,10 @@ export class Scene {
     // Activity is read from what the robots are doing, so it is the same for any pack state shape.
     const busy = (id: string, verb: string) => world.characters.some((c) => c.action?.verb === verb && c.action.targetId === id);
     for (const o of world.objects) {
-      if (o.heldBy) continue;
-      const c = this.center(o.pos);
+      // A carried object rides with its carrier (at the carrier's glide position), slightly ahead of it.
+      const carrier = o.heldBy ? this.disp.get(o.heldBy) : undefined;
+      if (o.heldBy && !carrier) continue;
+      const c = carrier ? this.center({ x: carrier.x + 0.3, y: carrier.y - 0.3 }) : this.center(o.pos);
       this.placed.push({ x: c.x, y: c.y, w: ts * 0.95, h: ts * 0.95 });
       const s = (x: number, y: number) => {
         // local unit coords → screen, rotating with the plan
@@ -960,7 +962,7 @@ export class Scene {
           break;
         }
       }
-      const spot = this.fixtureLabelSpot(o, c, true);
+      const spot = carrier ? undefined : this.fixtureLabelSpot(o, c, true);
       if (spot) {
         const { name, nameY, x, vtxt, verbY } = spot;
         this.label(`obj-${o.id}`, name, x, nameY, { size: L.compact ? 12 : 13, spacing: 1.2 });
@@ -1089,7 +1091,14 @@ export class Scene {
     for (const c of world.characters) {
       const d = this.disp.get(c.id);
       const tgt = this.parkedPos(c, world);
-      if (!d || reduced || Math.hypot(d.x - tgt.x, d.y - tgt.y) > 2) this.disp.set(c.id, { ...tgt });
+      const st = c.step;
+      const parked = tgt.x !== c.pos.x || tgt.y !== c.pos.y;
+      if (st && !parked && !reduced && d && st.to.x === c.pos.x && st.to.y === c.pos.y) {
+        // Glide a whole-tile step over the world's step time (moveTicksPerTile ticks at the effective tick rate).
+        const ms = (world.clock.moveTicksPerTile / Math.max(0.1, this.store.ticksPerRealSecond)) * 1000;
+        const t = Math.min(1, (now - st.at) / ms);
+        this.disp.set(c.id, { x: st.from.x + (st.to.x - st.from.x) * t, y: st.from.y + (st.to.y - st.from.y) * t });
+      } else if (!d || reduced || Math.hypot(d.x - tgt.x, d.y - tgt.y) > 2) this.disp.set(c.id, { ...tgt });
       else {
         const k = Math.min(1, dt * 12);
         d.x += (tgt.x - d.x) * k;

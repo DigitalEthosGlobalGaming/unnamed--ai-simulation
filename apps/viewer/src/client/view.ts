@@ -105,7 +105,10 @@ export function viewFromState(state: WorldStateView, cat: WorldCatalog | null, t
       ticksPerSecond,
       secondsPerTick: state.config.secondsPerTick,
       dayLengthSeconds: state.config.dayLengthSeconds,
-      startSecond: state.config.startSecond,
+      baseSeconds: state.clock?.baseSeconds ?? state.config.startSecond,
+      baseTick: state.clock?.baseTick ?? 0,
+      moveTicksPerTile: state.config.moveTicksPerTile,
+      realtime: false,
     },
     map: mapOf(state),
     objects,
@@ -163,6 +166,8 @@ export function applyDeltas(w: WorldView, tick: number, changes: Delta[], cat: W
           const dx = d.to.x - d.from.x;
           const dy = d.to.y - d.from.y;
           if (dx || dy) c.heading = Math.atan2(dy, dx);
+          // A whole-tile step glides over the step duration; fractional moves (the sample) just smooth.
+          if (Math.abs(dx) + Math.abs(dy) >= 0.99 && Math.abs(dx) + Math.abs(dy) <= 2.01) c.step = { from: { ...d.from }, to: { ...d.to }, at: performance.now() };
           c.pos = { ...d.to };
           const last = c.trail[c.trail.length - 1];
           if (!last || last.x !== d.to.x || last.y !== d.to.y) {
@@ -222,6 +227,11 @@ export function applyDeltas(w: WorldView, tick: number, changes: Delta[], cat: W
         }
         break;
       }
+      case 'clock':
+        // The world clock was anchored or jumped: re-base the shown time on it.
+        w.clock.baseSeconds = d.seconds;
+        w.clock.baseTick = tick;
+        break;
       case 'vocalize':
         fx.noises.push({ id: d.id, notes: d.notes, pos: { ...d.pos } });
         break;

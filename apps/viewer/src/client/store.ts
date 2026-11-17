@@ -39,6 +39,9 @@ export class ViewerStore {
   private session: string | undefined;
   private dirty = false;
   private spend = 0;
+  /** Effective ticks per real second (paces movement glides) and whether in-world time is wall-clock time. */
+  ticksPerRealSecond = 5;
+  realtime = false;
 
   constructor(readonly conn: WorldConnection) {
     conn.subscribe((m) => this.onMessage(m));
@@ -198,6 +201,11 @@ export class ViewerStore {
         this.status = m.status;
         this.statusDetail = m.detail ?? '';
         break;
+      case 'pace':
+        this.ticksPerRealSecond = m.ticksPerRealSecond;
+        this.realtime = m.realtime;
+        if (this.world) this.world.clock.realtime = m.realtime;
+        break;
       case 'spend':
         this.spend = m.spendTodayAud;
         if (this.world) this.world.spendTodayAud = m.spendTodayAud;
@@ -207,6 +215,7 @@ export class ViewerStore {
         const cat = this.catalog;
         this.world = viewFromState(m.state as WorldStateView, cat, cat?.ticksPerRealSecond ?? cat?.ticksPerSecond ?? 10);
         this.world.spendTodayAud = this.spend;
+        this.world.clock.realtime = this.realtime;
         this.session = m.sessionId;
         this.mode = m.sessionId ? 'replay' : 'live';
         if (!m.sessionId) this.playing = true;

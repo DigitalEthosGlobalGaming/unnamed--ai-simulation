@@ -33,7 +33,7 @@ export class RealConnection implements WorldConnection {
   private poll: number | undefined;
   private generation = 0;
   /** The server only sends ticks that changed something; between them the viewer's clock is paced locally. */
-  private pace = { live: { tick: 0, at: 0 }, replay: { tick: 0, at: 0 }, timeScale: 1, paused: false };
+  private pace = { live: { tick: 0, at: 0 }, replay: { tick: 0, at: 0 }, timeScale: 1, paused: false, effective: null as number | null };
   private paceTimer: number | undefined;
 
   constructor(opts: RealOptions) {
@@ -107,7 +107,14 @@ export class RealConnection implements WorldConnection {
       if (w.status) {
         this.pace.timeScale = w.status.timeScale;
         this.pace.paused = w.status.paused;
-        if (w.status.tick > this.liveTick) this.markLive(w.status.tick);
+        const st = w.status as typeof w.status & { effectiveTicksPerRealSecond?: number; clockMode?: string };
+        this.pace.effective = st.effectiveTicksPerRealSecond ?? null;
+        this.emit({ type: 'pace', realtime: st.clockMode === 'realtime', ticksPerRealSecond: this.rate() });
+        if (w.status.tick > this.liveTick) {
+          this.markLive(w.status.tick);
+          // Bring the shown clock up to the server's tick too (quiet worlds send few deltas).
+          if (!this.sessionId && this.worldId) this.emit({ type: 'deltas', worldId: this.worldId, tick: w.status.tick, changes: [] });
+        }
         this.emit({ type: 'spend', spendTodayAud: w.status.costAudToday });
       }
     } catch {
@@ -116,7 +123,8 @@ export class RealConnection implements WorldConnection {
   }
 
   private rate(): number {
-    return (this.cat?.ticksPerRealSecond ?? this.cat?.ticksPerSecond ?? 5) * this.pace.timeScale;
+    // The server's effective rate (it may idle slower when nobody watches); else the configured rate × time scale.
+    return this.pace.effective ?? (this.cat?.ticksPerRealSecond ?? this.cat?.ticksPerSecond ?? 5) * this.pace.timeScale;
   }
 
   private markLive(tick: number) {

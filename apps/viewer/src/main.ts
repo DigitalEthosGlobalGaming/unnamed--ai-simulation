@@ -329,7 +329,7 @@ function render() {
     return;
   }
   const ck = clockOf(w.clock.tick, w.clock);
-  $('ct-clock').textContent = `Day ${ck.day} · ${ck.time}${sample ? ' · simulated' : ''}`;
+  $('ct-clock').textContent = `${ck.date || `Day ${ck.day}`} · ${ck.time}${sample ? ' · simulated' : ''}`;
   $('crumb').textContent = w.name;
   $('ct-world').textContent = w.name;
   document.title = `${w.name} — Unnamed AI Simulation`;
@@ -380,7 +380,7 @@ function titleBlock(name: string, ck: ReturnType<typeof clockOf>, tick: number, 
     <div class="tb-cell tb-project"><span class="tb-k">Project</span><span class="tb-v">Unnamed AI Simulation</span></div>
     <div class="tb-cell tb-sheet"><span class="tb-k">Sheet · day</span><span class="tb-v tb-big">${ck.day}</span></div>
     <div class="tb-cell"><span class="tb-k">World</span><span class="tb-v">${esc(name)}</span></div>
-    <div class="tb-cell"><span class="tb-k">In-world time</span><span class="tb-v tb-time">${ck.time} <span class="tod">${tod}</span></span></div>
+    <div class="tb-cell"><span class="tb-k">In-world time</span><span class="tb-v tb-time">${ck.date ? `${ck.date} · ` : ''}${ck.time} <span class="tod">${tod}</span></span></div>
     <div class="tb-cell"><span class="tb-k">Tick</span><span class="tb-v">${fmtTick(tick)}</span></div>
     <div class="tb-cell"><span class="tb-k">Scale</span><span class="tb-v" data-tb="scale">${scene.scaleText()}</span></div>
     <div class="tb-cell"><span class="tb-k">Thinking today</span><span class="tb-v">${fmtAud(spend)} of ${fmtAud(cap)}</span></div>

@@ -4,27 +4,41 @@ const nf = new Intl.NumberFormat('en-AU');
 
 export const fmtTick = (tick: number) => nf.format(tick);
 
-type Clock = Pick<WorldClock, 'secondsPerTick' | 'dayLengthSeconds' | 'startSecond'>;
+type Clock = Pick<WorldClock, 'secondsPerTick' | 'dayLengthSeconds' | 'baseSeconds' | 'baseTick'> & { realtime?: boolean };
+
+const secondsAt = (tick: number, c: Clock) => c.baseSeconds + (tick - c.baseTick) * c.secondsPerTick;
+/** The world's first day (absolute day index at tick 0); sheets count from it. */
+const firstDay = (c: Clock) => Math.floor(secondsAt(0, c) / c.dayLengthSeconds);
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
- * In-world time at a tick, from the world's own clock: seconds = startSecond + tick × secondsPerTick.
- * `day` is the server's day index plus one (sheet 1 is the first day). Daylight is 06:00–18:00.
+ * In-world time at a tick: seconds = baseSeconds + (tick − baseTick) × secondsPerTick, re-based on
+ * every `clock` delta. `day` counts sheets from the world's first day (sheet 1). In a real-time
+ * world the seconds are local wall-clock time since the epoch, read with UTC getters, and `date`
+ * is the local date. Daylight is 06:00–18:00.
  */
 export function clockOf(tick: number, clock: Clock) {
-  const seconds = clock.startSecond + tick * clock.secondsPerTick;
-  const day = Math.floor(seconds / clock.dayLengthSeconds) + 1;
-  const frac = (seconds % clock.dayLengthSeconds) / clock.dayLengthSeconds;
+  const seconds = secondsAt(tick, clock);
+  const dayLen = clock.dayLengthSeconds;
+  const day = Math.floor(seconds / dayLen) - firstDay(clock) + 1;
+  const frac = (((seconds % dayLen) + dayLen) % dayLen) / dayLen;
   const mins = Math.floor(frac * 24 * 60);
   const hh = String(Math.floor(mins / 60)).padStart(2, '0');
   const mm = String(mins % 60).padStart(2, '0');
   const hour = frac * 24;
-  return { day, time: `${hh}:${mm}`, daylight: hour >= 6 && hour < 18 };
+  let date = '';
+  if (clock.realtime) {
+    const d = new Date(seconds * 1000);
+    date = `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+  }
+  return { day, time: `${hh}:${mm}`, date, daylight: hour >= 6 && hour < 18 };
 }
 
 export const ticksPerDay = (clock: Clock) => clock.dayLengthSeconds / clock.secondsPerTick;
 
 /** First tick of sheet `day` (1-based); may be negative for the first day. */
-export const dayStartTick = (day: number, clock: Clock) => ((day - 1) * clock.dayLengthSeconds - clock.startSecond) / clock.secondsPerTick;
+export const dayStartTick = (day: number, clock: Clock) =>
+  clock.baseTick + ((firstDay(clock) + day - 1) * clock.dayLengthSeconds - clock.baseSeconds) / clock.secondsPerTick;
 
 /** AUD to three significant figures (sub-cent model calls stay legible); whole cents from A$1. */
 export function fmtAud(aud: number | null): string {

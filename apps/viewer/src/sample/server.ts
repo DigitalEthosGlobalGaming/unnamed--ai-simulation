@@ -226,6 +226,10 @@ export class SampleServer implements WorldConnection {
     this.emitSpend(s);
   }
 
+  private emitPace() {
+    this.emit({ type: 'pace', realtime: false, ticksPerRealSecond: TICKS_PER_SECOND });
+  }
+
   private emitSpend(s: SimState) {
     this.emit({ type: 'spend', spendTodayAud: s.spendDay === dayOf(s.tick) ? s.spendTodayAud : 0 });
   }
@@ -234,6 +238,7 @@ export class SampleServer implements WorldConnection {
     this.setStatus('connecting');
     window.setTimeout(() => {
       this.setStatus('live');
+      this.emitPace();
       this.sendSnapshot(this.live);
       this.start();
       if (this.opts.disconnectAfterMs !== undefined) {

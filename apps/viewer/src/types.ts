@@ -20,8 +20,13 @@ export interface WorldClock {
   ticksPerSecond: number;
   secondsPerTick: number;
   dayLengthSeconds: number;
-  /** In-world second at tick 0. */
-  startSecond: number;
+  /** In-world time anchor: seconds = baseSeconds + (tick − baseTick) × secondsPerTick. */
+  baseSeconds: number;
+  baseTick: number;
+  /** Ticks per tile step, to pace movement between `moved` deltas. */
+  moveTicksPerTile: number;
+  /** Real-time worlds: in-world time is local wall-clock time (seconds since the epoch, read in UTC). */
+  realtime: boolean;
 }
 
 /** Terrain as the plan draws it; derived from the grid's terrain keys and properties. */
@@ -78,6 +83,8 @@ export interface CharacterView {
   beliefs: Belief[];
   alerts: Alert[];
   trail: Vec2[];
+  /** The last whole-tile step and when it arrived (performance.now()), to draw it gliding. */
+  step?: { from: Vec2; to: Vec2; at: number };
   sightRange: number;
   hearingRange: number;
   visitor: boolean;
@@ -101,7 +108,9 @@ export type ConnectionStatus = 'connecting' | 'live' | 'disconnected';
 export type ViewerMessage =
   | ServerMessage
   | { type: 'status'; status: ConnectionStatus; detail?: string }
-  | { type: 'spend'; spendTodayAud: number };
+  | { type: 'spend'; spendTodayAud: number }
+  /** World status the viewer paces itself by (`WorldStatus.clockMode`, effective tick rate). */
+  | { type: 'pace'; realtime: boolean; ticksPerRealSecond: number };
 
 /** A belief change on the timeline (from `beliefs` deltas). */
 export interface BeliefMark {
