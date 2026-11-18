@@ -1,6 +1,6 @@
 # Iteration 2: thinking budget, sleep and living objects
 
-Status: **In progress**: Stage 1 built (17 Nov 2026); Stage 2 started 18 Nov 2026 against the [schema 2 contract](../architecture/objects.md). Design: the spec's [Thinking budget, sleep and living objects](../../Unnamed%20AI%20Simulation%20—%20Spec.md#thinking-budget-sleep-and-living-objects-iteration-2) section and decisions 42–53.
+Status: **Built, awaiting the owner's try-out** (18 Nov 2026): all four stages built and checked; the owner tries them in the real app before this is marked Done. Contracts: [schema 2](../architecture/objects.md), [prompt templates](../architecture/prompts.md). Design: the spec's [Thinking budget, sleep and living objects](../../Unnamed%20AI%20Simulation%20—%20Spec.md#thinking-budget-sleep-and-living-objects-iteration-2) section and decisions 42–53.
 
 **Goal:** make the robot worth watching. Its battery becomes its thinking budget, sleep becomes how it recharges and grows, objects come alive with state and products, and its thoughts show on the map.
 
@@ -67,12 +67,14 @@ Owner: backend (templates, API) and viewer (Prompts page).
 
 Owner: viewer.
 
-- [ ] Thought callouts on the map: current reason as a short blueprint note, noise notes as it vocalises, "consolidating…" with a memory count while asleep; respects reduced motion; readable on phones.
-- [ ] Inspector: character sheet (locked lines marked), edit history by night, goal, habits.
-- [ ] Battery shown as a thinking budget (A$ equivalent on hover), sleep pressure and fog shown with the needs.
-- [ ] Brain feed shows the thinking-depth choice and template version.
-- [ ] Object cards show state values, products ready to harvest and growth over time.
-- [ ] Impeccable finish review and screenshots, desktop and phone.
+- [x] Thought callouts on the map: current reason as a short blueprint note, noise notes as it vocalises, "consolidating…" with a memory count while asleep; respects reduced motion; readable on phones.
+- [x] Inspector: character sheet (locked lines marked), edit history by night, goal, habits.
+- [x] Battery shown as a thinking budget (A$ equivalent on hover), sleep pressure and fog shown with the needs.
+- [x] Brain feed shows the thinking-depth choice and template version.
+- [x] Object cards show state values, products ready to harvest and growth over time.
+- [x] Impeccable finish review and screenshots, desktop and phone.
+
+- [x] Backend support: the data was already there (`action.reason`, `vocalize` and `sleepWork` deltas for callouts; sheet lines with `locked`, `sheetHistory`, goal and habits from `/memories` and the `sheet`/`habits` deltas; `depth` and `template` on feed entries). New: `GET /worlds/:id/objects/:oid/history` for an object's growth line ([server-and-api.md](../architecture/server-and-api.md#rest-endpoints)).
 
 **Done when:** a new viewer can tell within a minute what the robot is thinking, how much thinking it has left, and what it has learned.
 
@@ -93,3 +95,4 @@ Owner: viewer.
 - **Stage 1, choosing to sleep.** The first Stage 1 eval had Laya never choosing sleep (0/9): the decision model doesn't see the character sheet, so "sleep here" meant nothing to it. Sleep options now say what sleep does ("go to sleep here (recharges me, settles my memories)"), the state has a `sleepiness` word next to `head` (fog), a tired robot is less keen on everything else, and pressure ≥ 0.8 makes sleep an obvious choice as a safety net (the eval's `dusk-full-stm` sits at 0.81, where Laya still picked play over sleep). Naps don't pay for sleep work (no consolidation with an empty STM; one sheet step per in-world day).
 - **Stage 2.** Built as [objects.md](../architecture/objects.md) says, with the details in its [As built](../architecture/objects.md#as-built) section (rule `remove`, product timers on the entity, `objectView`/`catchUp` deltas, a `seed` tag for planting, the tuning). The archive step and the fresh world are scripts plus a world-file flag; the owner runs them on the live database. `worlds/garden2.yaml` ships as the default world, so a restart also creates `garden2` at day 0.
 - **Stage 3.** Built as [prompts.md](../architecture/prompts.md) says, with the details in its [As built](../architecture/prompts.md#as-built) section; the sheet sleep prompt gained the safety line ([D39](../decisions.md#deviations-from-the-spec)). First use (18 Nov, scratch server, Llama 3.1 8B, 2 runs per situation, A$0.0021 in all): a `plan` v2 asking for short plans that use what it holds and keep set-up steps together passed 12/16 runs against v1's 11/16 and made shorter plans, but the target chain didn't move: at the fountain with an empty can both versions drop the can first (0/2). The option reads "fill the fountain", which sounds like filling the fountain, so the next try is the option label rather than the template. The repo default stays v1.
+- **Stage 3 follow-up, option wording.** An option whose verb needs something held now names it, read from the schema-2 verb (`requires.holding` and which `changeState` targets it has): "fill the watering-can at the fountain" (only the held item changes) and "water the plant with the watering-can" (both change). Live, 3 runs each (A$0.0004): `empty-can-at-fountain` still 0/3 on the first step, but `fill` moved from 3rd–5th place to 2nd in every plan, with reasons like "I want to fill the watering-can"; the model still puts `drop` first, which is the top option because untried options tie and the held item's options come first (nearest). `dry-plant-full-can` and `flower-ready` stay 3/3. Then the tie-break: `drop` ranks as if 5 tiles further and options that use the held thing as if 5 tiles nearer (ranking only; [mind.md](../architecture/mind.md#candidates)), so "fill the watering-can at the fountain" is now the first option and "drop" comes after the fountain's verbs. Live, 3 runs each (A$0.0012, [report](../benchmarks/evals/2026-11-18-3.md)): `empty-can-at-fountain` 0/3 → **3/3** (fill first every time), `dry-plant-full-can`, `flower-ready`, `holding-ball` and `pickup-loop-2026-11-17` stay 3/3. The plan model mostly keeps the listed order, so the order did more than the wording.

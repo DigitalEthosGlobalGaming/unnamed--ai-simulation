@@ -53,7 +53,8 @@ export interface MindView {
 }
 
 export type { Depth, SleepWork } from '../types.ts';
-import type { SleepWork } from '../types.ts';
+import type { SelfView, SleepWork } from '../types.ts';
+export type { SelfView };
 
 export interface CurrentAction {
   verb: string;
@@ -104,4 +105,5 @@ export type Change =
   | { kind: 'object'; id: string; pos: Vec2; state: Record<string, Json>; heldBy?: string }
   | { kind: 'spawn'; entity: Entity & { createdBy?: { entityId: string; tick: number } } }
   | { kind: 'despawn'; id: string }
+  | { kind: 'self'; id: string; self: SelfView }
   | { kind: 'spend'; spendTodayAud: number };

@@ -104,6 +104,37 @@ const sampleShots = [
     steps: [{ js: () => document.querySelector('#set-batteryPlanAbove')?.scrollIntoView({ block: 'start' }) }, { type: { sel: '#set-batteryTopUp', value: '0.25' } }, { js: () => document.querySelector('#set-batteryTopUp').dispatchEvent(new Event('change', { bubbles: true })), wait: 900 }],
   },
   { name: 'desktop-depth-popover', vp: [1440, 900], q: 'select=rb-03', steps: [{ click: '.fe-row .tier-btn' }] },
+  // Iteration 2 Stage 4: thoughts, the sheet, history.
+  { name: 'desktop-thought', vp: [1440, 900], q: 'select=rb-02' },
+  { name: 'desktop-thought-asleep', vp: [1440, 900], q: 'select=rb-01&at=40180' },
+  { name: 'desktop-sheet', vp: [1440, 900], q: 'select=rb-01', click: '#tab-sheet' },
+  { name: 'desktop-plant-history', vp: [1440, 900], q: 'open=obj:obj-plant-1', wait: 4500 },
+  { name: 'mobile-thought', vp: [390, 844], q: 'select=rb-02&drawer=peek', mobile: true },
+  { name: 'mobile-sheet', vp: [390, 844], q: 'select=rb-01&drawer=full', mobile: true, click: '#tab-sheet' },
+  { name: 'mobile-sheet-nights', vp: [390, 844], q: 'select=rb-01&drawer=full', mobile: true, click: '#tab-sheet', steps: [{ js: () => document.querySelector('.sh-nights')?.scrollIntoView({ block: 'center' }) }] },
+  {
+    name: 'desktop-thought-unselected',
+    vp: [1440, 900],
+    q: '',
+    // wait for a robot to have a new thought, then capture inside its ~7 s window
+    steps: [
+      {
+        js: () =>
+          new Promise((done) => {
+            const t = setInterval(() => {
+              const tt = window.__uas.scene.thoughtT;
+              if (tt?.visible && tt.alpha === 1) {
+                clearInterval(t);
+                setTimeout(done, 400);
+              }
+            }, 150);
+            setTimeout(() => (clearInterval(t), done()), 60000);
+          }),
+      },
+    ],
+  },
+  { name: 'desktop-depth-popover-gut', vp: [1440, 900], q: 'select=rb-02', steps: [{ js: () => [...document.querySelectorAll('.fe-row .tier-btn')].find((b) => /gut|mixed/i.test(b.textContent))?.click(), wait: 500 }] },
+  { name: 'mobile-plant-history', vp: [390, 844], q: 'open=obj:obj-plant-1', mobile: true, wait: 4500 },
   // Iteration 2 Stage 3: the Prompts page.
   { name: 'desktop-prompts-preview', vp: [1440, 900], q: 'as=admin&page=prompts&template=plan', wait: 3000, steps: [{ click: '#pr-tab-preview', wait: 900 }] },
   { name: 'desktop-prompts-diff', vp: [1440, 900], q: 'as=admin&page=prompts&template=plan', wait: 3000, steps: [{ click: '#pr-tab-diff', wait: 600 }] },

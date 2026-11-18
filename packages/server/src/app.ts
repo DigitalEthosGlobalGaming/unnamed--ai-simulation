@@ -289,6 +289,17 @@ export function createApp(opts: AppOptions): App {
     return summary(await startWorld(config, { initialState: at.snapshot(), parent: { worldId: parent.config.id, forkTick: Number(body.tick) } }));
   }));
 
+  // ---- an object's state over time (e.g. a plant's growth line on its card)
+  app.get('/worlds/:id/objects/:oid/history', need('spectator'), route(async (req) => {
+    const w = world(req);
+    const oid = String(req.params.oid);
+    const now = await w.call<{ tick: number; secondsPerTick: number; state: Record<string, unknown> } | null>({ method: 'objectState', objectId: oid });
+    if (!now) throw new HttpError(404, `no object ${oid}`);
+    const maxPoints = Math.min(1000, Math.max(2, Number(req.query.maxPoints ?? 96) || 96));
+    const since = req.query.sinceTick !== undefined && Number.isFinite(Number(req.query.sinceTick)) ? Number(req.query.sinceTick) : Math.max(0, now.tick - Math.round((7 * 86_400) / now.secondsPerTick));
+    return objectHistory(reads, w.config.id, oid, now, since, req.query.keys ? String(req.query.keys).split(',').filter(Boolean) : undefined, maxPoints);
+  }));
+
   // ---- object definitions (schema 2): every pack object and enabled catalogue item
   app.get('/objects/defs', need('spectator'), route(() => {
     const { registry } = loadPacks(listPacks().map((p) => p.name));
@@ -419,7 +430,10 @@ export function createApp(opts: AppOptions): App {
     async close() {
       hub.close();
       await supervisor.stopAll();
-      await new Promise<void>((r) => server.close(() => r()));
+      // Keep-alive sockets (fetch keeps them open) would hold close() until they time out.
+      const closed = new Promise<void>((r) => server.close(() => r()));
+      server.closeAllConnections();
+      await closed;
     },
   };
 }
@@ -439,4 +453,46 @@ function modelInfo(cfg: unknown): { id: string; adapter: string; model?: string;
       const provider = local ? (adapter.startsWith('fake') ? 'offline' : 'ollama') : m.model?.includes('/') ? m.model.split('/')[0] : undefined;
       return { id, adapter, ...(m.model && { model: m.model }), ...(provider && { provider }), local };
     });
+}
+
+/**
+ * Numeric state of one object from `sinceTick` to now: a point at `sinceTick` (the values then,
+ * from the last change before it), one per tick that changed a requested key, and one now.
+ * Evenly thinned to `maxPoints`, keeping the first and last.
+ */
+export function objectHistory(
+  reads: SqliteReadModels,
+  worldId: string,
+  id: string,
+  now: { tick: number; state: Record<string, unknown> },
+  since: number,
+  wanted: string[] | undefined,
+  maxPoints: number,
+): { keys: string[]; points: { tick: number; values: Record<string, number> }[] } {
+  const numeric = (o: Record<string, unknown>) => Object.entries(o).filter((e): e is [string, number] => typeof e[1] === 'number');
+  const keys = wanted ?? numeric(now.state).map(([k]) => k);
+  const want = new Set(keys);
+  const pick = (o: Record<string, unknown>) => Object.fromEntries(numeric(o).filter(([k]) => want.has(k)).map(([k, v]) => [k, Math.round(v * 1e6) / 1e6]));
+  // The values at `since`: the newest change of each key before it.
+  const start: Record<string, number> = {};
+  for (const ch of reads.stateChanges(worldId, id, since, true, 5000)) {
+    for (const [k, v] of Object.entries(pick(ch.set))) if (!(k in start)) start[k] = v;
+    if (keys.every((k) => k in start)) break;
+  }
+  const points: { tick: number; values: Record<string, number> }[] = [];
+  let cur = { ...start };
+  if (Object.keys(cur).length) points.push({ tick: since, values: { ...cur } });
+  for (const ch of reads.stateChanges(worldId, id, since)) {
+    if (ch.tick > now.tick) break;
+    const set = pick(ch.set);
+    if (!Object.keys(set).length) continue;
+    cur = { ...cur, ...set };
+    if (points.at(-1)?.tick === ch.tick) points.at(-1)!.values = { ...cur };
+    else points.push({ tick: ch.tick, values: { ...cur } });
+  }
+  const last = pick(now.state);
+  if (Object.keys(last).length && points.at(-1)?.tick !== now.tick) points.push({ tick: now.tick, values: last });
+  if (points.length <= maxPoints) return { keys, points };
+  const step = (points.length - 1) / (maxPoints - 1);
+  return { keys, points: Array.from({ length: maxPoints }, (_, i) => points[Math.round(i * step)]!) };
 }

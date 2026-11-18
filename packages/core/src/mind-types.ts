@@ -125,6 +125,8 @@ export interface Candidate {
   actions: Action[];
   /** 'verb:objectType' or 'verb:self'. */
   key: string;
+  /** It uses what the character holds (the verb needs it, e.g. filling a held can at the fountain). */
+  usesHeld?: true;
 }
 
 export interface PendingJob {

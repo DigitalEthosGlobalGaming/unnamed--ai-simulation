@@ -495,6 +495,7 @@ export class FeedView {
     const cost = run.some((x) => x.usage) ? `${opts.run ? 'total ' : ''}${fmtAud(aud)}${bat ? ` · −${fmtPct(bat)} battery` : ''}` : 'free';
     this.byKey.set(k, e);
     const mixed = new Set(run.map((x) => x.tier)).size > 1;
+    const tpl = (e as FeedEntry & { template?: { id: string; version: number } }).template;
     if (opts.run) this.runs.set(k, run);
     const rev =
       opts.rev === false
@@ -502,7 +503,7 @@ export class FeedView {
         : `<button type="button" class="rev-btn" data-action="rev" data-key="${k}" data-feed="rev" aria-pressed="${on}" aria-label="Revision ${n}${warn ? ', needs attention' : ''}: show on the plan and timeline">${deltaSvg(warn, on)}<span>${n}</span></button>`;
     return `${rev}
       <span class="fe-time">${opts.time}</span>
-      <button type="button" class="tier-btn tier-${mixed ? 'mixed' : e.tier}" data-feed="tier" data-key="${k}" aria-expanded="false" aria-controls="tier-pop" aria-label="${mixed ? 'Mixed tiers' : `${depthOf(e).depth ? `${DEPTH_SHORT[depthOf(e).depth!]}, ` : ''}${TIER_LABEL[e.tier]}`}${e.modelId && !mixed ? `, ${esc(e.modelId)}` : ''}: model and cost details">${tierBars(e.tier)}<span>${mixed ? 'Mixed' : depthOf(e).depth ? DEPTH_SHORT[depthOf(e).depth!] : TIER_SHORT[e.tier]}</span></button>
+      <button type="button" class="tier-btn tier-${mixed ? 'mixed' : e.tier}" data-feed="tier" data-key="${k}" aria-expanded="false" aria-controls="tier-pop" aria-label="${mixed ? 'Mixed tiers' : `${depthOf(e).depth ? `${DEPTH_SHORT[depthOf(e).depth!]}, ` : ''}${TIER_LABEL[e.tier]}`}${e.modelId && !mixed ? `, ${esc(e.modelId)}` : ''}: model and cost details">${tierBars(e.tier)}<span>${mixed ? 'Mixed' : depthOf(e).depth ? DEPTH_SHORT[depthOf(e).depth!] : TIER_SHORT[e.tier]}</span>${!mixed && tpl ? `<span class="fe-tpl">${esc(tpl.id)}@${tpl.version}</span>` : ''}</button>
       <span class="fe-cost">${cost}</span>`;
   }
 
@@ -609,6 +610,9 @@ class TierPopover {
   attach(root: HTMLElement) {
     const btn = (e: Event) => (e.target as HTMLElement).closest<HTMLElement>('[data-feed="tier"]');
     document.addEventListener('pointermove', () => (this.hoverMuted = false), { passive: true });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') this.hoverMuted = false;
+    });
     root.addEventListener('mouseover', (e) => {
       const b = btn(e);
       if (b && !this.pinned && !this.hoverMuted) this.show(b, false);
@@ -619,7 +623,8 @@ class TierPopover {
     });
     root.addEventListener('focusin', (e) => {
       const b = btn(e);
-      if (b && !this.quiet && b.matches(':focus-visible') && !this.pinned) this.show(b, false);
+      // after Escape, a focus restored by a list re-render must not reopen it (until a key or the pointer moves on)
+      if (b && !this.quiet && !this.hoverMuted && b.matches(':focus-visible') && !this.pinned) this.show(b, false);
     });
     root.addEventListener('focusout', (e) => {
       const b = btn(e);

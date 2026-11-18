@@ -1,4 +1,4 @@
-import { manhattan, perceivedType, type ArchetypeDef, type Candidate, type Character, type MindState, type Rng } from '@uas/core';
+import { manhattan, perceivedType, type AnyEntity, type ArchetypeDef, type Candidate, type Character, type MindState, type Rng } from '@uas/core';
 import type { World } from '@uas/sim';
 
 const MAX_CANDIDATES = 12;
@@ -18,6 +18,29 @@ export function carrying(world: World, c: Character): { id: string; type: string
 export function setAside(world: World, m: MindState, key: string): boolean {
   const f = m.failures?.[key];
   return !!f && f.n >= 2 && (world.tick - f.tick) * world.state.config.secondsPerTick < FAILURE_COOLDOWN_SECONDS;
+}
+
+/**
+ * What an option says it does. A verb that needs something in the grippers (`requires.holding`)
+ * and that the robot can do with what it holds names the held thing too: "fill the watering-can
+ * at the fountain" when only the held item changes, "water the plant with the watering-can" when
+ * both do. Otherwise "<verb> the <object>". Read from the schema-2 definition, so it is generic.
+ */
+export function verbPhrase(world: World, c: Character, entity: Readonly<AnyEntity> | undefined, type: string, verb: string, mine: boolean): string {
+  return heldUse(world, c, entity, type, verb, mine)?.phrase ?? `${verb} the ${type}`;
+}
+
+/** The phrase for a verb that uses what the character holds, or undefined if it doesn't. */
+function heldUse(world: World, c: Character, entity: Readonly<AnyEntity> | undefined, type: string, verb: string, mine: boolean): { phrase: string } | undefined {
+  const v2 = !mine && entity?.kind === 'object' ? world.registry.objects.get(entity.type)?.def2?.verbs[verb] : undefined;
+  const need = v2?.requires?.holding;
+  if (!v2 || !need) return undefined;
+  const held = world.entities().find((e) => e.heldBy === c.id && e.id !== entity!.id);
+  if (!held || (need.type && held.type !== need.type) || (need.tag && !(held.kind === 'object' && held.tags.includes(need.tag)))) return undefined;
+  const onHeld = v2.effects.some((e) => (e.block === 'changeState' || e.block === 'consume') && e.target === 'held');
+  const onSelf = v2.effects.some((e) => (e.block === 'changeState' && e.target !== 'held') || e.block === 'harvest' || (e.block === 'consume' && e.target === 'self'));
+  const what = perceivedType(held);
+  return { phrase: onHeld && !onSelf ? `${verb} the ${what} at the ${type}` : `${verb} the ${type} with the ${what}` };
 }
 
 /** Bounded candidate list: affordances of objects this mind knows about, nearest first, plus built-ins. */
@@ -47,8 +70,10 @@ export function buildCandidates(world: World, c: Character, m: MindState): Candi
         { verb, targetId: k.id, reason: '' },
       ];
       // Sleep says what it does (the locked sheet line), since a decision model doesn't see the sheet.
-      const label = verb === 'rest' ? `go to sleep at the ${k.type} (${SLEEP_DOES}; ${d} tiles away)` : `${verb} the ${k.type} (${mine ? 'carrying it' : `${d} tiles away`})`;
-      out.push({ id: `c${out.length}`, label, actions, key: `${verb}:${k.type}` });
+      const use = verb === 'rest' ? undefined : heldUse(world, c, entity, k.type, verb, mine);
+      const label =
+        verb === 'rest' ? `go to sleep at the ${k.type} (${SLEEP_DOES}; ${d} tiles away)` : `${use?.phrase ?? `${verb} the ${k.type}`} (${mine ? 'carrying it' : `${d} tiles away`})`;
+      out.push({ id: `c${out.length}`, label, actions, key: `${verb}:${k.type}`, ...(use && { usesHeld: true as const }) });
     }
   }
   const explore = exploreTarget(world, c);
@@ -148,8 +173,24 @@ function scoreAwake(c: Character, m: MindState, arch: ArchetypeDef, cands: Candi
 }
 
 /** Pick the best, exploring among the top few at `exploreRate`. */
+/**
+ * How far "put down what I hold" ranks behind options it otherwise ties with. Untried options all
+ * score the same apart from travel (0.004 a tile), and the held thing is always 0 tiles away, so
+ * without this `drop` beat every untried use of what it holds (e.g. filling the can at the
+ * fountain, 2 tiles away). `drop` ranks as if 5 tiles further and an option that uses the held
+ * thing (`usesHeld`) as if 5 tiles nearer: near-ties go to using what it holds, and a real reason
+ * (a belief, a need) still wins. Ranking only: values are unchanged.
+ */
+export const DROP_TIE = 0.02;
+const rankValue = (s: Pick<Scored, 'value' | 'candidate'>) => s.value - (s.candidate.key.startsWith('drop:') ? DROP_TIE : 0) + (s.candidate.usesHeld ? DROP_TIE : 0);
+
+/** Best first (with the `drop` tie-break above), then list order (nearest first). */
+export function byValue(a: Pick<Scored, 'value' | 'candidate'>, b: Pick<Scored, 'value' | 'candidate'>): number {
+  return rankValue(b) - rankValue(a) || (a.candidate.id < b.candidate.id ? -1 : 1);
+}
+
 export function choose(scored: Scored[], rng: Rng, exploreRate: number): Scored | undefined {
-  const ranked = [...scored].sort((a, b) => b.value - a.value || (a.candidate.id < b.candidate.id ? -1 : 1));
+  const ranked = [...scored].sort(byValue);
   if (ranked.length === 0) return undefined;
   // Explore among the top few, but never into sleep it doesn't need (a nap recharges nothing).
   const explorable = ranked.slice(0, Math.min(4, ranked.length)).filter((s) => !(s.candidate.key.startsWith('rest:') && s.value < 0));

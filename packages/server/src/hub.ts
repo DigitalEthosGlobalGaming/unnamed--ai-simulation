@@ -177,7 +177,9 @@ export class Hub {
 
   close() {
     for (const id of [...this.sessions.keys()]) this.closeSession(id);
-    for (const ws of this.subs.keys()) ws.close();
+    // terminate, not close: a close handshake waits for the client, which may never answer.
+    for (const ws of this.wss.clients) ws.terminate();
+    for (const ws of this.subs.keys()) ws.terminate();
     this.wss.close();
   }
 }

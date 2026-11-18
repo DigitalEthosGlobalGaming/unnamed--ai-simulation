@@ -18,6 +18,7 @@ import type {
   MindView,
   NeedKey,
   SleepWork,
+  SelfView,
   Tier,
   TriggerKind,
   Usage,
@@ -92,6 +93,8 @@ export interface RobotState {
   heard: { notes: string[]; from: string } | null;
   beliefs: Belief[];
   experience: Record<string, Experience>;
+  /** Iteration 2: the character sheet, its nightly history, goal and habits. */
+  self: SelfView;
   boredom: Record<string, number>;
   alerts: Alert[];
   trail: Vec2[];
@@ -152,6 +155,16 @@ export function createSim(seed: number, scenario: Scenario): SimState {
     heard: null,
     beliefs: [],
     experience: {},
+    self: {
+      sheet: [
+        { text: 'I am a small robot who lives in a garden.', locked: true, source: 'authored' },
+        { text: 'Sleeping recharges me and settles my memories.', locked: true, source: 'authored' },
+        { text: 'I like finding out what things do.', locked: false, source: 'authored' },
+      ],
+      history: [],
+      goal: null,
+      habits: [],
+    },
     boredom: {},
     alerts: [],
     trail: [],
@@ -568,7 +581,6 @@ function decide(s: SimState, r: RobotState, trigger: TriggerKind, out: StepOutpu
 
   const reasonFor = (c: Candidate) => {
     if (fallback) return `${c.reason} (model timed out; autopilot took over)`;
-    if (tier === 'llm') return `${c.reason} (unsure, asked for a plan)`;
     return c.reason;
   };
 
@@ -593,7 +605,7 @@ function decide(s: SimState, r: RobotState, trigger: TriggerKind, out: StepOutpu
   r.queue = plan.map((c, i) => ({
     verb: c.verb,
     ...(c.target ? { targetId: c.target.id } : {}),
-    reason: c.reason,
+    reason: reasonFor(c),
     ...(c.notes ? { notes: c.notes } : {}),
     feedIdx: i,
   }));
@@ -672,6 +684,45 @@ function reflect(s: SimState, r: RobotState, out: StepOutput) {
     energyCost,
   });
   r.reflectedDay = day;
+  rewriteSelf(s, r, out);
+}
+
+const HABIT_NAME = (key: string) => {
+  const [verb, type] = key.split(':');
+  if (!type || verb === 'vocalize') return 'by day I call out to the others';
+  const what = type === 'robot' ? 'call the others' : `${verb} ${type === 'fountain' || type === 'piano' || type === 'ball' || type === 'plant' ? 'the ' : 'at the '}${(type ?? '').replace(/-/g, ' ')}`;
+  return type === 'robot' ? `by day I ${what}` : `by day I ${what}`;
+};
+
+/** Sample stand-in for the nightly sheet rewrite and habit detection (one small step a night). */
+function rewriteSelf(s: SimState, r: RobotState, out: StepOutput) {
+  const day = dayOf(s.tick) - 1; // 0-based, like the server's
+  const me = r.self;
+  me.habits = Object.entries(r.experience)
+    .filter(([k, e]) => !k.startsWith('scan') && !k.includes(':night') && e.days.length >= 2 && e.good >= e.bad)
+    .sort((a, b) => b[1].days.length - a[1].days.length)
+    .slice(0, 4)
+    .map(([k, e]) => ({ key: `${k.split(':').slice(0, 2).join(':')}@day`, name: HABIT_NAME(k), days: e.days.map((d) => d - 1), since: e.days[0]! - 1 }));
+  const self = me.sheet.filter((l) => !l.locked);
+  const best = Object.entries(r.experience).filter(([k]) => !k.startsWith('scan')).sort((a, b) => b[1].good - a[1].good)[0];
+  const n = me.history.length;
+  let edit: SelfView['history'][number];
+  if (n === 0 && best) {
+    const line = `${HABIT_NAME(best[0]).replace(/^by day I /, '').replace(/^./, (c) => c.toUpperCase())} makes my day better.`;
+    me.sheet.push({ text: line, locked: false, source: 'self', seenDays: best[1].days.map((d) => d - 1) });
+    edit = { day, tick: s.tick, op: 'add', after: line, by: 'model', why: 'it went well on more than one day' };
+  } else if (n === 1) {
+    const goal = r.id === 'rb-02' ? 'Learn what every note on the piano sounds like.' : 'Grow a flower of my own.';
+    edit = { day, tick: s.tick, op: 'goal', after: goal, by: 'model', why: 'something I keep coming back to' };
+    me.goal = goal;
+  } else if (n === 2 && self.length) {
+    const was = self[0]!.text;
+    const now = 'I like finding out what things do, and trying them twice.';
+    self[0]!.text = now;
+    edit = { day, tick: s.tick, op: 'reword', before: was, after: now, by: 'model', why: 'once was often not enough to tell' };
+  } else edit = { day, tick: s.tick, op: 'none', by: 'model', why: 'nothing new enough to change' };
+  me.history.push(edit);
+  out.changes.push({ kind: 'self', id: r.id, self: structuredClone(me) });
 }
 
 function addSpend(s: SimState, aud: number, out: StepOutput) {

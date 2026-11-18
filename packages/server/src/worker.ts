@@ -105,6 +105,11 @@ port.on('message', (msg: ToWorker) => {
       case 'removeMail':
         value = rt.removeMail(msg.mailId, msg.userId);
         break;
+      case 'objectState': {
+        const e = rt.world.entity(msg.objectId);
+        value = e?.kind === 'object' ? { tick: rt.world.tick, secondsPerTick: rt.world.state.config.secondsPerTick, state: e.state } : null;
+        break;
+      }
       case 'prompts':
         value = rt.prompts();
         break;

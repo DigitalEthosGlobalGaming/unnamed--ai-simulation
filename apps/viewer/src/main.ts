@@ -203,6 +203,8 @@ function setDrawer(d: Drawer) {
   handle.setAttribute('aria-expanded', String(d === 'full'));
   $('handle-icon').innerHTML = d === 'full' ? icons.chevronDown() : icons.chevronUp();
   handle.setAttribute('aria-label', d === 'full' ? 'Collapse inspector' : d === 'peek' ? 'Expand inspector' : 'Show inspector');
+  // On a phone with the drawer open, the inspector shows the gauges: the plan's callout keeps to name and action.
+  scene.calloutMinimal = phoneMq.matches && d !== 'closed';
   layoutInsets();
 }
 $('handle').addEventListener('click', () => setDrawer(drawer === 'closed' ? 'peek' : drawer === 'peek' ? 'full' : 'closed'));
@@ -403,7 +405,7 @@ function render() {
     timeline.update();
     if (selChanged && phoneMq.matches) requestAnimationFrame(layoutInsets);
     const sel = store.character(store.selectedId);
-    $('handle-text').textContent = sel ? `${sel.name} · ${sel.mind.asleep ? 'standby' : sel.action?.verb ?? 'idle'}` : w ? `${w.characters.length} robots · brain feed` : 'Inspector';
+    $('handle-text').textContent = panel.openViewTitle ? panel.openViewTitle : sel ? `${sel.name} · ${sel.mind.asleep ? 'asleep' : sel.action?.verb ?? 'idle'}` : w ? `${w.characters.length} robots · brain feed` : 'Inspector';
   }
   if (!w) {
     showMessage(store.status === 'disconnected' ? disconnectedHtml() : `<p class="msg-title">Connecting…</p><p>${sample ? 'Starting the offline sample world.' : 'Loading the world, its packs and the latest snapshot from the server.'}</p>`);
@@ -464,7 +466,7 @@ function titleBlock(name: string, ck: ReturnType<typeof clockOf>, tick: number, 
     <div class="tb-cell"><span class="tb-k">In-world time</span><span class="tb-v tb-time">${ck.date ? `${ck.date} · ` : ''}${ck.time} <span class="tod">${tod}</span></span></div>
     <div class="tb-cell"><span class="tb-k">Tick</span><span class="tb-v">${fmtTick(tick)}</span></div>
     <div class="tb-cell"><span class="tb-k">Scale</span><span class="tb-v" data-tb="scale">${scene.scaleText()}</span></div>
-    <div class="tb-cell"><span class="tb-k">Thinking today</span><span class="tb-v">${fmtAud(spend)} of ${fmtAud(cap)}</span></div>
+    <div class="tb-cell"><span class="tb-k">Thinking today</span><span class="tb-v">${cap ? `${fmtAud(spend)} of ${fmtAud(cap)}` : `${fmtAud(spend)} · no paid models`}</span></div>
     <div class="tb-cell"><span class="tb-k">Data</span><span class="tb-v">${sample ? 'Simulated sample' : 'Live server'}</span></div>`;
 }
 

@@ -4,7 +4,7 @@
  */
 import { UasClient, type WorldStream } from '@uas/client';
 import { RestPrompts } from './prompts.ts';
-import type { ObjectDef, PromptsApi, VisitorApi, AccountApi, Belief, BeliefMark, ConnectionStatus, FeedEntry, ViewerMessage, WorldCatalog, WorldConnection } from '../types.ts';
+import type { ObjectDef, ObjectHistory, PromptsApi, VisitorApi, AccountApi, Belief, BeliefMark, ConnectionStatus, FeedEntry, ViewerMessage, WorldCatalog, WorldConnection } from '../types.ts';
 import { RestAccount } from './account.ts';
 import { RestVisitors } from './visitors.ts';
 
@@ -234,6 +234,17 @@ export class RealConnection implements WorldConnection {
     const rows = await this.api.feed(this.worldId, characterId, limit, beforeTick);
     // A server without the cursor answers with the newest entries instead: treat that as "no paging".
     return rows.some((e) => e.tick >= beforeTick) ? [] : rows;
+  }
+
+  async objectHistory(objectId: string, keys: string[], sinceTick?: number, maxPoints = 96): Promise<ObjectHistory | null> {
+    if (!this.worldId) return null;
+    const q = new URLSearchParams({ keys: keys.join(','), maxPoints: String(maxPoints), ...(sinceTick !== undefined && { sinceTick: String(sinceTick) }) });
+    const res = await fetch(`${this.base}/worlds/${encodeURIComponent(this.worldId)}/objects/${encodeURIComponent(objectId)}/history?${q}`, {
+      credentials: 'include',
+      ...(this.apiKey && { headers: { authorization: `Bearer ${this.apiKey}` } }),
+    });
+    if (!res.ok) return null; // a server without history: the card just leaves it out
+    return (await res.json()) as ObjectHistory;
   }
 
   async objectDefs(): Promise<ObjectDef[]> {

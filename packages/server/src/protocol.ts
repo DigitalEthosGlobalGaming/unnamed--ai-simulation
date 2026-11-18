@@ -29,6 +29,8 @@ export type WorkerMethod =
   | { method: 'postMail'; text: unknown; by: Sender }
   | { method: 'removeMail'; mailId: string; userId?: string }
   | { method: 'prompts' }
+  /** One object's current state (for its history), or null. */
+  | { method: 'objectState'; objectId: string }
   /** One metered model call for a prompt test: through the world's gateway, counted towards its daily cap. */
   | { method: 'modelCall'; model: string; request: JobRequest; as: 'decide' | 'plan' }
   | { method: 'shutdown' };

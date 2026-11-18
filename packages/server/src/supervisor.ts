@@ -15,6 +15,9 @@ export class WorldHandle extends EventEmitter<{ deltas: [tick: number, changes: 
   private nextId = 1;
   private readonly calls = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
   readonly ready: Promise<void>;
+  /** Resolves when the worker thread has exited (for any reason). */
+  readonly exited: Promise<number>;
+  private gone = false;
 
   constructor(init: WorkerInit, log: (m: string) => void) {
     super();
@@ -49,20 +52,38 @@ export class WorldHandle extends EventEmitter<{ deltas: [tick: number, changes: 
       });
     });
     this.worker.on('error', (e: Error) => log(`[${init.config.id}] worker error: ${e.message}`));
+    // Listening from the start: a worker that exits before stop() looks for it is still seen.
+    this.exited = new Promise((resolve) =>
+      this.worker.once('exit', (code: number) => {
+        // Calls that will never be answered fail instead of hanging their callers.
+        this.gone = true;
+        for (const c of this.calls.values()) c.reject(new Error(`world ${init.config.id} stopped`));
+        this.calls.clear();
+        resolve(code);
+      }),
+    );
   }
 
   call<T = unknown>(m: WorkerMethod): Promise<T> {
     const id = this.nextId++;
     return new Promise<T>((resolve, reject) => {
+      if (this.gone) return reject(new Error(`world ${this.config.id} stopped`));
       this.calls.set(id, { resolve: resolve as (v: unknown) => void, reject });
       const msg = { type: 'call' as const, id, ...m } as ToWorker;
       this.worker.postMessage(msg);
     });
   }
 
-  async stop(): Promise<void> {
-    await this.call({ method: 'shutdown' });
-    await new Promise((r) => this.worker.once('exit', r));
+  /**
+   * Ask the worker to snapshot and exit; bounded: a worker that doesn't answer or exit within
+   * `timeoutMs` (stuck, or already gone) is terminated, so shutdown and test teardown never hang.
+   */
+  async stop(timeoutMs = 5000): Promise<void> {
+    const timeout = (ms: number) => new Promise<'timeout'>((r) => setTimeout(() => r('timeout'), ms).unref());
+    const asked = this.call({ method: 'shutdown' }).catch(() => undefined);
+    const done = await Promise.race([asked.then(() => this.exited), this.exited, timeout(timeoutMs)]);
+    if (done === 'timeout') await this.worker.terminate();
+    await this.exited;
   }
 }
 

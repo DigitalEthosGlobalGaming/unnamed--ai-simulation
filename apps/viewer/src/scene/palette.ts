@@ -9,5 +9,8 @@ export const C = {
   focus: 0xfff3c4, // focus / placement preview (the --focus token)
 };
 
+/** Running text (a robot's thought, a reason): Atkinson Hyperlegible Next, as in the HTML. */
+export const FONT_TEXT = '"Atkinson Hyperlegible Next", system-ui, sans-serif';
+
 /** Drafting lettering: Overpass (OFL 1.1), a Highway Gothic / DIN-lineage monoline close to ISO 3098 type B. */
 export const FONT_DRAFT = '"Draft Dot", "Overpass", sans-serif';

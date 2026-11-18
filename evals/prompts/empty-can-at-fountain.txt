@@ -37,19 +37,19 @@ I notice:
 - a mailbox, 5 tiles east
 - it is light
 Options:
-c0: drop the watering-can (carrying it)
+c0: fill the watering-can at the fountain (2 tiles away)
 c1: rinse the fountain (2 tiles away)
 c2: splash the fountain (2 tiles away)
-c3: fill the fountain (2 tiles away)
-c4: scan the fountain (2 tiles away)
+c3: scan the fountain (2 tiles away)
+c4: drop the watering-can (carrying it)
 c5: read the mailbox (5 tiles away)
 
 Trigger: action-finished. Which action next?
 ## thinking: think (unfamiliar)
 ## options
-c0: drop the watering-can (carrying it)  [drop:watering-can] -> drop can
+c0: fill the watering-can at the fountain (2 tiles away)  [fill:fountain] -> moveTo fountain, fill fountain
 c1: rinse the fountain (2 tiles away)  [rinse:fountain] -> moveTo fountain, rinse fountain
 c2: splash the fountain (2 tiles away)  [splash:fountain] -> moveTo fountain, splash fountain
-c3: fill the fountain (2 tiles away)  [fill:fountain] -> moveTo fountain, fill fountain
-c4: scan the fountain (2 tiles away)  [scan:fountain] -> scan fountain
+c3: scan the fountain (2 tiles away)  [scan:fountain] -> scan fountain
+c4: drop the watering-can (carrying it)  [drop:watering-can] -> drop can
 c5: read the mailbox (5 tiles away)  [read:mailbox] -> moveTo mailbox, read mailbox

@@ -23,7 +23,7 @@ import {
   type Usage,
 } from '@uas/core';
 import type { SimPlugin, World } from '@uas/sim';
-import { buildCandidates, carrying, choose, confident, score } from './autopilot.ts';
+import { buildCandidates, byValue, carrying, choose, confident, score } from './autopilot.ts';
 import { mindConfigOf, type MindConfig } from './config.ts';
 import { admit, hearsay, recall, updateBelief } from './memory.ts';
 import { band, clamp, computeMood, feltWord, round3, updateNeeds } from './needs.ts';
@@ -893,7 +893,7 @@ export class MindSystem implements SimPlugin {
    */
   private habitPick(m: MindState, scored: ReturnType<typeof score>, isNight: boolean) {
     const when = isNight ? 'night' : 'day';
-    const ranked = [...scored].sort((a, b) => b.value - a.value || (a.candidate.id < b.candidate.id ? -1 : 1));
+    const ranked = [...scored].sort(byValue);
     const top = ranked.filter((x) => x.value >= (ranked[0]?.value ?? 0) - 0.1);
     for (const h of m.habits ?? []) {
       if (!h.key.endsWith(`@${when}`)) continue;
@@ -1261,7 +1261,7 @@ function roundAll(v: Record<string, number>): Record<string, number> {
 
 /** The most relevant options for a decision model: top by utility, plus the best untried one for curiosity. */
 function modelOptions(scored: ReturnType<typeof score>): Candidate[] {
-  const ranked = [...scored].sort((a, b) => b.value - a.value || (a.candidate.id < b.candidate.id ? -1 : 1));
+  const ranked = [...scored].sort(byValue);
   const pick = ranked.slice(0, MAX_MODEL_OPTIONS);
   const untried = ranked.find((s) => !s.believed);
   if (untried && !pick.includes(untried)) pick[pick.length - 1] = untried;

@@ -2,7 +2,7 @@
  * Inspector panel (desktop right column; phone pull-up drawer). Standard
  * HTML controls only. Updated in place so focus and scroll survive ticks.
  */
-import type { CharacterView } from '../types.ts';
+import type { CharacterView, SheetEditView } from '../types.ts';
 import type { ViewerStore } from '../client/store.ts';
 import { clockOf, esc, fmtAud, fmtPct, pct, TIER_LABEL, TRIGGER_LABEL } from './format.ts';
 import { icons } from './icons.ts';
@@ -14,7 +14,7 @@ import { durationText, phrase } from './format.ts';
 import { FeedView } from './feed.ts';
 
 
-type Tab = 'feed' | 'beliefs' | 'settings';
+type Tab = 'feed' | 'beliefs' | 'sheet' | 'settings';
 
 export class Panel {
   private mode: 'overview' | 'robot' | 'view' | null = null;
@@ -91,6 +91,7 @@ export class Panel {
     }
     for (const p of this.root.querySelectorAll<HTMLElement>('[role="tabpanel"]')) p.hidden = p.dataset['tab'] !== tab;
     this.lastBeliefKey = null;
+    this.lastSheetKey = null;
     this.update();
   }
 
@@ -108,6 +109,10 @@ export class Panel {
     </section>`;
     this.root.querySelector('[data-ref="view-slot"]')!.append(el);
     this.root.querySelector<HTMLElement>('[data-action="close-view"]')?.focus();
+  }
+
+  get openViewTitle(): string | null {
+    return this.view ? (this.root.querySelector('#view-h')?.textContent ?? null) : null;
   }
 
   get openView(): string | null {
@@ -145,7 +150,7 @@ export class Panel {
   /* ------------------------------------------------------- overview */
 
   private buildOverview() {
-    if (this.tab === 'beliefs') this.tab = 'feed';
+    if (this.tab === 'beliefs' || this.tab === 'sheet') this.tab = 'feed';
     // An archived world is read only: no visitor actions, no settings.
     this.builtArchived = this.store.archived;
     this.builtAdmin = JSON.stringify(this.adminLinks);
@@ -223,7 +228,7 @@ export class Panel {
     const s = this.store;
     const w = s.world!;
     const spend = this.root.querySelector<HTMLElement>('[data-ref="spend"]')!;
-    spend.textContent = `Thinking today ${fmtAud(w.spendTodayAud)} of ${fmtAud(w.capAud)} cap`;
+    spend.textContent = w.capAud ? `Spent on thinking today ${fmtAud(w.spendTodayAud)} of the ${fmtAud(w.capAud)} cap` : `Spent on thinking today ${fmtAud(w.spendTodayAud)} · no paid models`;
     const list = this.root.querySelector<HTMLElement>('[data-ref="robots"]')!;
     const key = w.characters.map((c) => c.id).join(',');
     if (key !== this.lastRobotsKey) {
@@ -322,7 +327,7 @@ export class Panel {
 
   private doing(c: CharacterView): string {
     if (c.mind.asleep && c.mind.sleepWork) return 'Asleep';
-    if (c.mind.asleep) return c.action ? `Standby · ${phrase(this.store, c.action.verb, c.action.targetId)}` : 'Standby';
+    if (c.mind.asleep) return 'Asleep';
     if (!c.action) return 'Idle';
     return cap(phrase(this.store, c.action.verb, c.action.targetId));
   }
@@ -337,6 +342,7 @@ export class Panel {
     this.mode = 'robot';
     this.robotId = c.id;
     this.lastBeliefKey = null;
+    this.lastSheetKey = null;
     // Gauges and their low marks come from the archetype (needs) and the world's energy floor (battery).
     const gauges = this.gaugeList(c)
       .map((g) => {
@@ -344,7 +350,7 @@ export class Panel {
         // The battery is the thinking budget: its A$ worth shows on hover and keyboard focus.
         return `
       <div class="gauge${g.high ? ' is-rising' : ''}" role="meter" aria-label="${g.label}${bat ? ', thinking budget' : ''}" aria-valuemin="0" aria-valuemax="100" data-key="${g.key}"${bat ? ' tabindex="0" aria-describedby="bat-tip"' : ''}>
-        <span class="gauge-label">${g.label}${bat ? '<span class="gauge-sub">thinking</span>' : ''}</span>
+        <span class="gauge-label">${g.label}${bat ? '<span class="gauge-sub" data-ref="bat-left">thinking left</span>' : ''}</span>
         <span class="gauge-ticks" aria-hidden="true">${'<i></i>'.repeat(20)}<b class="gauge-low" style="left:${(g.high ?? g.low) * 100}%"></b></span>
         <span class="gauge-value"></span>
         ${bat ? '<span class="gauge-tip" id="bat-tip" role="tooltip"></span>' : ''}
@@ -371,13 +377,15 @@ export class Panel {
         <div class="tabs" role="tablist" aria-label="${esc(c.name)} details">
           <button type="button" role="tab" class="tab" id="tab-feed" data-action="tab" data-tab="feed" aria-controls="tp-feed" aria-selected="${this.tab === 'feed'}" tabindex="${this.tab === 'feed' ? 0 : -1}">Brain feed</button>
           <button type="button" role="tab" class="tab" id="tab-beliefs" data-action="tab" data-tab="beliefs" aria-controls="tp-beliefs" aria-selected="${this.tab === 'beliefs'}" tabindex="${this.tab === 'beliefs' ? 0 : -1}">Beliefs <span class="count" data-ref="bcount"></span></button>
+          <button type="button" role="tab" class="tab" id="tab-sheet" data-action="tab" data-tab="sheet" aria-controls="tp-sheet" aria-selected="${this.tab === 'sheet'}" tabindex="${this.tab === 'sheet' ? 0 : -1}">Sheet</button>
           <p class="section-meta tab-meta" data-ref="spendBot"></p>
         </div>
         <div role="tabpanel" id="tp-feed" aria-labelledby="tab-feed" data-tab="feed" ${this.tab === 'feed' ? '' : 'hidden'}>
           <div data-ref="feed-slot"></div>
         </div>
+        <div role="tabpanel" id="tp-sheet" aria-labelledby="tab-sheet" data-tab="sheet" data-ref="sheet" ${this.tab === 'sheet' ? '' : 'hidden'}></div>
         <div role="tabpanel" id="tp-beliefs" aria-labelledby="tab-beliefs" data-tab="beliefs" ${this.tab === 'beliefs' ? '' : 'hidden'}>
-          <p class="belief-note">Learned from experience, not told. Beliefs can be wrong and only change while the robot is in standby.</p>
+          <p class="belief-note">Learned from experience, not told. Beliefs can be wrong and only change while the robot sleeps.</p>
           <table class="schedule belief-schedule">
             <caption class="sr-only">Belief schedule: what this robot believes, how firmly, and the last day experience supported it</caption>
             <thead><tr><th scope="col">Mark</th><th scope="col">Belief</th><th scope="col" class="c-num">Firm</th><th scope="col" class="c-hide-phone c-num">Support</th><th scope="col">Last support</th></tr></thead>
@@ -391,7 +399,7 @@ export class Panel {
     const s = this.store;
     const w = s.world!;
     const q = (r: string) => this.root.querySelector<HTMLElement>(`[data-ref="${r}"]`)!;
-    q('mood').textContent = `${cap(c.mind.mood)}${c.mind.asleep ? ' · standby' : ''}`;
+    q('mood').textContent = `${cap(c.mind.mood)}${c.mind.asleep ? ' · asleep' : ''}`;
     for (const g of this.gaugeList(c)) {
       const el = this.root.querySelector<HTMLElement>(`.gauge[data-key="${g.key}"]`);
       if (!el) {
@@ -409,6 +417,9 @@ export class Panel {
           extra += `, about ${fmtAud(left)} of thinking left`;
           const tip = el.querySelector<HTMLElement>('.gauge-tip');
           if (tip) tip.textContent = `≈ ${fmtAud(left)} of thinking left · a full battery is ${fmtAud(1 / per)}`;
+          // What's left, in money, right under the label (the tip adds what a full battery is worth).
+          const sub = el.querySelector<HTMLElement>('[data-ref="bat-left"]');
+          if (sub) sub.textContent = `≈ ${fmtAud(left)} left`;
         }
       }
       el.setAttribute('aria-valuetext', `${pct(v)}${extra}`);
@@ -420,10 +431,22 @@ export class Panel {
     const last = [...s.feed].reverse().find((e) => e.characterId === c.id && e.actions[0]?.verb !== 'reflect');
     q('action').textContent = this.doing(c);
     this.updateSleep(c, q('sleep'));
-    q('reason').textContent = c.action?.reason ? `“${cap(c.action.reason.replace(/\.$/, ''))}.”` : '';
+    // Asleep, the waking reason is stale: the sleep steps below say what it's doing.
+    q('reason').textContent = c.action?.reason && !(c.mind.asleep && c.mind.sleepWork) ? `“${cap(c.action.reason.replace(/\.$/, ''))}.”` : '';
     if (last) {
       const ck = clockOf(last.tick, w.clock);
-      q('meta').textContent = `Decided ${ck.time} by ${TIER_LABEL[last.tier]}${last.modelId ? ` (${last.modelId})` : ''}${last.confidence !== undefined ? `, confidence ${last.confidence.toFixed(2)}` : ''} · trigger: ${TRIGGER_LABEL[last.trigger] ?? last.trigger}`;
+      // How hard it chose to think, which model answered, and with which prompt template.
+      const x = last as typeof last & { depth?: 'habit' | 'gut' | 'think'; template?: { id: string; version: number } };
+      const depth = x.depth ? { habit: 'By habit', gut: 'Gut call', think: 'Thought it through' }[x.depth] : null;
+      q('meta').textContent = [
+        `Decided ${ck.time}`,
+        depth,
+        `${TIER_LABEL[last.tier]}${last.modelId ? ` (${last.modelId})` : ''}${last.confidence !== undefined && last.tier === 'decision' ? `, confidence ${last.confidence.toFixed(2)}` : ''}`,
+        x.template ? `prompt ${x.template.id}@${x.template.version}` : null,
+        `trigger: ${TRIGGER_LABEL[last.trigger] ?? last.trigger}`,
+      ]
+        .filter(Boolean)
+        .join(' · ');
     } else q('meta').textContent = '';
     const alerts = q('alerts');
     const ak = c.alerts.map((a) => a.text).join('|');
@@ -450,9 +473,10 @@ export class Panel {
         aud += e.usage?.costAud ?? 0;
         energy += e.energyCost ?? 0;
       }
-    q('spendBot').textContent = `Today ${fmtAud(aud)} · ${fmtPct(energy)} battery`;
+    q('spendBot').textContent = `Spent today ${fmtAud(aud)}, ${fmtPct(energy)} of a battery`;
     q('bcount').textContent = String(c.beliefs.length);
     if (this.tab === 'feed') this.updateFeed(c.id);
+    else if (this.tab === 'sheet') this.updateSheet(c);
     else this.updateBeliefs(c);
   }
 
@@ -470,7 +494,7 @@ export class Panel {
     el.hidden = !w;
     if (!w) return;
     const steps: { id: string; text: string }[] = [
-      { id: 'consolidating', text: w.step === 'consolidating' && w.total ? `Settling memories ${w.done ?? 0} of ${w.total}` : 'Settling memories' },
+      { id: 'consolidating', text: w.step === 'consolidating' && w.total ? `Consolidating ${w.done ?? 0} of ${w.total} memories` : 'Consolidating memories' },
       { id: 'habits', text: 'Finding habits' },
       { id: 'sheet', text: 'Rewriting its character sheet' },
       ...(w.step === 'refine' ? [{ id: 'refine', text: 'Reviewing the day' }] : []),
@@ -485,13 +509,69 @@ export class Panel {
       .join('');
   }
 
+  private lastSheetKey: string | null = null;
+
+  /** Who it is: goal, the character sheet (locked core marked), habits, and what each night changed. */
+  private updateSheet(c: CharacterView) {
+    const host = this.root.querySelector<HTMLElement>('[data-ref="sheet"]');
+    if (!host) return;
+    const me = c.self;
+    const key = JSON.stringify(me ?? null);
+    if (key === this.lastSheetKey && host.childElementCount) return;
+    this.lastSheetKey = key;
+    if (!me) {
+      host.innerHTML = `<p class="belief-note">This world doesn’t report a character sheet yet.</p>`;
+      return;
+    }
+    const days = (d: number[]) => {
+      if (!d.length) return '';
+      const s = [...d].sort((a, b) => a - b);
+      return s.length > 3 ? `days ${s[0]! + 1}–${s[s.length - 1]! + 1} (${s.length})` : `day${s.length > 1 ? 's' : ''} ${s.map((x) => x + 1).join(', ')}`;
+    };
+    const q = (t?: string) => (t ? `“${esc(t)}”` : '');
+    const edit = (h: SheetEditView) => {
+      switch (h.op) {
+        case 'add':
+          return `Added ${q(h.after)}`;
+        case 'reword':
+          return `Reworded ${q(h.before)} <span class="sh-arrow">→</span> ${q(h.after)}`;
+        case 'remove':
+          return `Removed ${q(h.before)}`;
+        case 'goal':
+          return h.before ? `New goal: ${q(h.after)} <span class="sub">(was ${q(h.before)})</span>` : `Chose a goal: ${q(h.after)}`;
+        default:
+          return 'Kept the sheet as it was';
+      }
+    };
+    const nights = [...me.history].reverse();
+    host.innerHTML = `
+      <p class="belief-note">Who it thinks it is. The locked core is given; the rest it writes itself, one small step each night.</p>
+      <div class="sh-goal"><span class="sh-k">Goal</span><span class="sh-v">${me.goal ? esc(me.goal) : '<span class="nil">No goal chosen yet.</span>'}</span></div>
+      ${nights.length ? `<p class="sh-last"><span class="sh-k">Last night</span> ${edit(nights[0]!)}</p>` : ''}
+      <h3 class="draft-h sh-h">Character sheet</h3>
+      <ul class="sh-lines">${me.sheet
+        .map((l) => {
+          // Whose words: given (locked core, or given and open to change), or written or reworded by itself on a night.
+          const made = [...me.history].reverse().find((h) => h.after === l.text && (h.op === 'add' || h.op === 'reword'));
+          const tag = l.locked
+            ? '<span class="state-chip">locked</span>'
+            : `<span class="sub">${made ? `${made.op === 'add' ? 'written' : 'reworded'} by itself · night ${made.day + 1}` : l.source === 'self' ? 'written by itself' : 'given, can change'}${l.seenDays?.length ? ` · seen ${days(l.seenDays)}` : ''}</span>`;
+          return `<li class="${l.locked ? 'is-locked' : ''}"><span class="sh-text">${esc(l.text)}</span><span class="sh-meta">${tag}</span></li>`;
+        })
+        .join('')}</ul>
+      <h3 class="draft-h sh-h">Habits <span class="h-note">free decisions it has settled into</span></h3>
+      ${me.habits.length ? `<ul class="sh-lines">${me.habits.map((h) => `<li><span class="sh-text">${esc(h.name.charAt(0).toUpperCase() + h.name.slice(1))}</span><span class="sh-meta"><span class="sub">seen ${days(h.days)} · since day ${h.since + 1}</span></span></li>`).join('')}</ul>` : '<p class="hint">None yet. A pattern repeated over several days becomes a habit.</p>'}
+      <h3 class="draft-h sh-h">Nights</h3>
+      ${nights.length ? `<ol class="sh-nights">${nights.map((h) => `<li><p class="sh-night">Night after day ${h.day + 1}${h.by === 'code' ? ' <span class="sub">· no model</span>' : ''}</p><p class="sh-edit">${edit(h)}</p>${h.why ? `<p class="sh-why">${esc(h.why.charAt(0).toUpperCase() + h.why.slice(1))}.</p>` : ''}</li>`).join('')}</ol>` : '<p class="hint">No nights yet.</p>'}`;
+  }
+
   private updateBeliefs(c: CharacterView) {
     const key = c.beliefs.map((b) => `${b.key}${b.firmness}${b.text}`).join('|');
     if (key === this.lastBeliefKey) return;
     this.lastBeliefKey = key;
     const list = this.root.querySelector<HTMLElement>('[data-ref="beliefs"]')!;
     if (!c.beliefs.length) {
-      list.innerHTML = `<tr class="empty-row"><td colspan="5"><strong>No beliefs yet.</strong> ${esc(c.name)} forms beliefs while in standby, from what happened during the day.</td></tr>`;
+      list.innerHTML = `<tr class="empty-row"><td colspan="5"><strong>No beliefs yet.</strong> ${esc(c.name)} forms beliefs while it sleeps, from what happened during the day.</td></tr>`;
       return;
     }
     list.innerHTML = [...c.beliefs]

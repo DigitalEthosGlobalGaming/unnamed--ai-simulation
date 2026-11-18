@@ -10,11 +10,11 @@ import type { AccountApi, VisitorApi, BeliefMark, ConnectionStatus, ViewerMessag
 import { SampleAccount } from './account.ts';
 import { SampleVisitors } from './visitors.ts';
 import { terrainAt } from './map.ts';
-import { cloneState, createSim, dayOf, step, SECONDS_PER_TICK, TICKS_PER_SECOND, type RobotState, type Scenario, type SimState, type StepOutput } from './sim.ts';
+import { cloneState, createSim, dayOf, step, SECONDS_PER_TICK, TICKS_PER_DAY, TICKS_PER_SECOND, type RobotState, type Scenario, type SimState, type StepOutput } from './sim.ts';
 import { OBJECT_VERBS } from './map.ts';
 import { DEF, DEFS, extrasOf, type LivingEntity } from './garden.ts';
 import { SamplePrompts } from './prompts.ts';
-import type { ObjectDef, PromptsApi } from '../types.ts';
+import type { ObjectDef, ObjectHistory, PromptsApi } from '../types.ts';
 import type { Change } from './types.ts';
 
 const SNAPSHOT_EVERY = 200;
@@ -92,7 +92,7 @@ export function stateOf(s: SimState): WorldStateView {
       energy: r.energy,
       queue: [],
       ...(r.current && { current: { action: { verb: r.current.verb, ...(r.current.targetId && { targetId: r.current.targetId }), reason: r.current.reason }, startedTick: r.current.startedTick } }),
-      mind: { mood: { valence: r.valence, arousal: r.arousal, word: moodWord(r), bias: 0 }, beliefs: r.beliefs.map(toCoreBelief), sleep: r.asleep ? 'asleep' : 'awake', sleepPressure: r.pressure, fog: r.fog, ...(r.work && { sleepWork: { ...r.work } }) },
+      mind: { mood: { valence: r.valence, arousal: r.arousal, word: moodWord(r), bias: 0 }, beliefs: r.beliefs.map(toCoreBelief), sleep: r.asleep ? 'asleep' : 'awake', sheet: r.self.sheet, sheetHistory: r.self.history, goal: r.self.goal, habits: r.self.habits, sleepPressure: r.pressure, fog: r.fog, ...(r.work && { sleepWork: { ...r.work } }) },
     } as never;
   }
   return {
@@ -186,6 +186,12 @@ function deltasOf(s: SimState, out: StepOutput, prev: Map<string, { x: number; y
           const x = extrasOf(o);
           d.push({ kind: 'objectView', id: c.id, appearance: x.appearance ?? [], products: x.products ?? [] } as unknown as Delta);
         }
+        break;
+      }
+      case 'self': {
+        const edit = c.self.history[c.self.history.length - 1];
+        if (edit) d.push({ kind: 'sheet', id: c.id, sheet: c.self.sheet, ...(c.self.goal && { goal: c.self.goal }), edit } as Delta);
+        d.push({ kind: 'habits', id: c.id, habits: c.self.habits } as Delta);
         break;
       }
       case 'spawn':
@@ -348,6 +354,16 @@ export class SampleServer implements WorldConnection {
       this.feedIndex.set(`${e.tick}:${e.characterId}`, e);
     }
     for (const c of out.changes) if (c.kind === 'belief') this.marks.push({ tick: out.tick, characterId: c.id });
+    // Object state over time, for the card's history (the real server reads its stored deltas).
+    for (const c of out.changes) {
+      if (c.kind !== 'object') continue;
+      const nums = Object.fromEntries(Object.entries(c.state).filter((e): e is [string, number] => typeof e[1] === 'number'));
+      if (!Object.keys(nums).length) continue;
+      const h = this.objHistory.get(c.id) ?? [];
+      h.push({ tick: out.tick, values: nums });
+      if (h.length > 400) h.splice(0, h.length - 400);
+      this.objHistory.set(c.id, h);
+    }
     for (const u of out.statusUpdates) {
       const e = this.feedIndex.get(`${u.tick}:${u.characterId}`);
       const a = e?.actions[u.idx];
@@ -369,6 +385,18 @@ export class SampleServer implements WorldConnection {
   async feedBefore(beforeTick: number, limit: number, characterId?: string): Promise<FeedEntry[]> {
     const rows = this.feed.filter((e) => e.tick < beforeTick && (!characterId || e.characterId === characterId));
     return rows.slice(-limit);
+  }
+
+  private objHistory = new Map<string, { tick: number; values: Record<string, number> }[]>();
+
+  async objectHistory(objectId: string, keys: string[], sinceTick?: number, maxPoints = 96): Promise<ObjectHistory | null> {
+    const since = sinceTick ?? this.live.tick - 7 * TICKS_PER_DAY;
+    let pts = (this.objHistory.get(objectId) ?? []).filter((p) => p.tick >= since).map((p) => ({ tick: p.tick, values: Object.fromEntries(keys.filter((k) => k in p.values).map((k) => [k, p.values[k]!])) }));
+    if (pts.length > maxPoints) {
+      const step = pts.length / maxPoints;
+      pts = Array.from({ length: maxPoints }, (_, i) => pts[Math.floor(i * step)]!);
+    }
+    return { keys, points: pts };
   }
 
   async objectDefs(): Promise<ObjectDef[]> {

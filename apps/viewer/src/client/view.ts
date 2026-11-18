@@ -5,6 +5,10 @@
  */
 import type { Character, WorldObject } from '@uas/client';
 import type {
+  HabitView,
+  SelfView,
+  SheetEditView,
+  SheetLineView,
   MindView,
   SleepWork,
   Alert,
@@ -90,6 +94,19 @@ function iter2Mind(m: Record<string, unknown> | undefined): Partial<MindView> {
   return out;
 }
 
+/** The sheet, its history, the goal and habits (iteration 2), when the snapshot has them. */
+function selfOf(m: Record<string, unknown> | undefined): { self?: SelfView } {
+  if (!m || !Array.isArray(m['sheet'])) return {};
+  return {
+    self: {
+      sheet: (m['sheet'] as SheetLineView[]).map((l) => ({ ...l })),
+      history: Array.isArray(m['sheetHistory']) ? (m['sheetHistory'] as SheetEditView[]).map((h) => ({ ...h })) : [],
+      goal: typeof m['goal'] === 'string' ? (m['goal'] as string) : null,
+      habits: Array.isArray(m['habits']) ? (m['habits'] as HabitView[]).map((h) => ({ ...h, days: [...h.days] })) : [],
+    },
+  };
+}
+
 function characterView(e: Character, cat: WorldCatalog | null): CharacterView {
   const arch = archetypeOf(cat, e.type);
   const m = e.mind;
@@ -112,6 +129,7 @@ function characterView(e: Character, cat: WorldCatalog | null): CharacterView {
     },
     action: e.current ? { verb: e.current.action.verb, ...(e.current.action.targetId && { targetId: e.current.action.targetId }), reason: e.current.action.reason, startedTick: e.current.startedTick } : null,
     beliefs: m?.beliefs ? m.beliefs.map((b) => ({ ...b })) : [],
+    ...selfOf(m as unknown as Record<string, unknown> | undefined),
     alerts: [],
     trail: [],
     sightRange: arch?.sightRange ?? 6,
@@ -282,6 +300,23 @@ export function applyDeltas(w: WorldView, tick: number, changes: Delta[], cat: W
           c.mind.sleepPressure = d.sleepPressure;
           c.mind.fog = d.fog;
         }
+        break;
+      }
+      case 'sheet': {
+        // One step of the nightly sheet rewrite (or a goal change): the new sheet, goal and the edit.
+        const c = ch(d.id);
+        if (c) {
+          const s = c.self ?? { sheet: [], history: [], goal: null, habits: [] };
+          s.sheet = d.sheet.map((l) => ({ ...l }));
+          if (d.goal !== undefined) s.goal = d.goal;
+          if (!s.history.some((h) => h.tick === d.edit.tick && h.op === d.edit.op)) s.history.push({ ...d.edit });
+          c.self = s;
+        }
+        break;
+      }
+      case 'habits': {
+        const c = ch(d.id);
+        if (c) c.self = { ...(c.self ?? { sheet: [], history: [], goal: null }), habits: d.habits.map((h) => ({ ...h, days: [...h.days] })) };
         break;
       }
       case 'sleepWork': {

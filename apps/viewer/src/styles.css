@@ -770,7 +770,7 @@ a {
 }
 .gauge {
   display: grid;
-  grid-template-columns: 78px minmax(0, 1fr) 44px;
+  grid-template-columns: 104px minmax(0, 1fr) 44px;
   align-items: center;
   gap: var(--space-3);
 }
@@ -2697,7 +2697,7 @@ a {
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--ink-3);
-  text-transform: lowercase;
+  white-space: nowrap;
 }
 .gauge[tabindex='0'] {
   cursor: help;
@@ -3363,4 +3363,160 @@ pre.pr-code.is-locked {
   font-weight: 400;
   letter-spacing: 0;
   color: var(--ink-2);
+}
+
+/* ------------------------------------------------------- iteration 2, Stage 4 */
+.sparks {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+.spark {
+  margin: 0;
+}
+.spark figcaption {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: 2px;
+}
+.spark figcaption .sub,
+.spark-axis {
+  font-family: var(--font-draft);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+.spark svg {
+  display: block;
+  overflow: visible;
+}
+.spark-base {
+  stroke: var(--ink-2);
+  stroke-width: 1;
+}
+.spark-top {
+  stroke: var(--rule);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.spark-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.75;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.spark-axis {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0 0;
+}
+/* the character sheet */
+.sh-goal {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1.5px solid var(--ink);
+}
+.sh-k {
+  flex: none;
+  font-family: var(--font-draft);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.sh-v {
+  font-family: var(--font-draft);
+  font-weight: 600;
+  font-size: 1.125rem;
+  letter-spacing: 0.01em;
+}
+.sh-h {
+  margin-top: var(--space-4);
+  font-size: 0.9375rem;
+}
+.sh-lines {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sh-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.sh-lines li.is-locked .sh-text {
+  color: var(--ink-2);
+}
+.sh-meta {
+  flex: none;
+  text-align: right;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+.sh-nights {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sh-nights li {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.sh-nights p {
+  margin: 0;
+}
+.sh-night {
+  font-family: var(--font-draft);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.sh-edit {
+  margin-top: 2px !important;
+}
+.sh-arrow {
+  color: var(--ink-3);
+}
+
+.fe-tpl {
+  margin-left: 2px;
+  padding-left: 6px;
+  border-left: 1px solid var(--rule-strong);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--ink-3);
+}
+@media (max-width: 719px) {
+  .fe-tpl {
+    display: none;
+  }
+}
+
+.sh-why {
+  margin-top: 2px !important;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+
+.sh-last {
+  margin: 0 0 var(--space-2);
+  font-size: 0.9375rem;
+}
+.sh-last .sh-k {
+  margin-right: var(--space-2);
 }

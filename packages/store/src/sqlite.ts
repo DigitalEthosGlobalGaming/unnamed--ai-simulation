@@ -170,6 +170,20 @@ export class SqliteReadModels {
       .map((r) => ({ tick: r.tick, changes: r.changes as Delta[] }));
   }
 
+  /**
+   * One entity's `state` deltas, oldest first: `{ tick, set }` for each tick that changed it, from
+   * `fromTick` (inclusive). With `before`, the newest changes before `fromTick` instead (newest first).
+   */
+  stateChanges(worldId: WorldId, id: string, fromTick: number, before = false, limit = 100_000): { tick: number; set: Record<string, unknown> }[] {
+    const rows = this.db.all<{ tick: number; v: string }>(sql`
+      SELECT d.tick AS tick, j.value AS v FROM deltas d, json_each(d.changes) j
+      WHERE d.world_id = ${worldId} AND ${before ? sql`d.tick < ${fromTick}` : sql`d.tick >= ${fromTick}`}
+        AND instr(d.changes, ${JSON.stringify(id)}) > 0
+        AND json_extract(j.value, '$.kind') = 'state' AND json_extract(j.value, '$.id') = ${id}
+      ORDER BY d.tick ${before ? sql`DESC` : sql`ASC`} LIMIT ${limit}`);
+    return rows.map((r) => ({ tick: r.tick, set: (JSON.parse(r.v) as { set: Record<string, unknown> }).set }));
+  }
+
   feed(worldId: WorldId, characterId: string | undefined, limit = 100, beforeTick = Number.MAX_SAFE_INTEGER): FeedEntry[] {
     const where = characterId
       ? and(eq(schema.feed.worldId, worldId), eq(schema.feed.characterId, characterId), lt(schema.feed.tick, beforeTick))

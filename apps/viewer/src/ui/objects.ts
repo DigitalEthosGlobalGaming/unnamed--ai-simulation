@@ -5,7 +5,7 @@
  */
 import type { ViewerStore } from '../client/store.ts';
 import { iconSvg } from '../icons/render.ts';
-import type { ObjectView } from '../types.ts';
+import type { ObjectHistory, ObjectView } from '../types.ts';
 import { clockOf, esc } from './format.ts';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -16,6 +16,24 @@ export function objectCard(store: ViewerStore, objectId: string): HTMLElement {
   const el = document.createElement('div');
   el.className = 'object-card';
   let last = '';
+  // State over time, fetched when the card opens and again (at most every 30 s) as the state moves.
+  let hist: ObjectHistory | null = null;
+  let histAt = -Infinity;
+  let histBusy = false;
+  const loadHistory = async (o: ObjectView) => {
+    const keys = Object.keys(o.stateSpec ?? store.objectDefs.get(o.type)?.state ?? {});
+    if (!keys.length || !store.conn.objectHistory || histBusy || performance.now() - histAt < 30_000) return;
+    histBusy = true;
+    histAt = performance.now();
+    try {
+      hist = await store.conn.objectHistory(o.id, keys, undefined, 96);
+    } catch {
+      hist = null;
+    }
+    histBusy = false;
+    last = '';
+    draw();
+  };
   const draw = () => {
     const w = store.world;
     const o = w?.objects.find((x) => x.id === objectId);
@@ -24,10 +42,11 @@ export function objectCard(store: ViewerStore, objectId: string): HTMLElement {
       last = 'gone';
       return;
     }
-    const key = JSON.stringify([o.state, o.appearance, o.products, o.heldBy, store.objectDefs.has(o.type)]);
+    void loadHistory(o);
+    const key = JSON.stringify([o.state, o.appearance, o.products, o.heldBy, store.objectDefs.has(o.type), hist?.points.length]);
     if (key === last) return;
     last = key;
-    el.innerHTML = html(store, o);
+    el.innerHTML = html(store, o, hist);
   };
   const off = store.on(() => {
     if (!el.isConnected && last) return off();
@@ -37,7 +56,53 @@ export function objectCard(store: ViewerStore, objectId: string): HTMLElement {
   return el;
 }
 
-function html(store: ViewerStore, o: ObjectView): string {
+/** One value over time as a small ruled line chart: range at the left, first and last time below. */
+function spark(store: ViewerStore, key: string, pts: { tick: number; v: number }[], min: number, max: number): string {
+  const w = 240;
+  const h = 40;
+  const t0 = pts[0]!.tick;
+  const t1 = pts[pts.length - 1]!.tick;
+  const span = Math.max(1, t1 - t0);
+  const y = (v: number) => (h - 2 - ((v - min) / Math.max(1e-9, max - min)) * (h - 4)).toFixed(1);
+  const x = (t: number) => (((t - t0) / span) * (w - 2) + 1).toFixed(1);
+  const line = pts.map((p) => `${x(p.tick)},${y(p.v)}`).join(' ');
+  const clock = store.world!.clock;
+  const when = (t: number) => {
+    const c = clockOf(t, clock);
+    return `day ${c.day} ${c.time}`;
+  };
+  const fmt = (v: number) => (max === 1 && min === 0 ? `${Math.round(v * 100)}%` : `${+v.toFixed(2)}`);
+  const lo = Math.min(...pts.map((p) => p.v));
+  const hi = Math.max(...pts.map((p) => p.v));
+  return `<figure class="spark">
+    <figcaption><span class="sv-k">${esc(cap(key))}</span> <span class="sub">${fmt(pts[0]!.v)} → ${fmt(pts[pts.length - 1]!.v)}</span></figcaption>
+    <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" role="img" aria-label="${esc(cap(key))} from ${fmt(pts[0]!.v)} to ${fmt(pts[pts.length - 1]!.v)} between ${when(t0)} and ${when(t1)}, lowest ${fmt(lo)}, highest ${fmt(hi)}">
+      <line x1="0" y1="${h - 1}" x2="${w}" y2="${h - 1}" class="spark-base"/>
+      <line x1="0" y1="1" x2="${w}" y2="1" class="spark-top"/>
+      <polyline points="${line}" class="spark-line"/>
+    </svg>
+    <p class="spark-axis sub"><span>${when(t0)}</span><span>${when(t1)}</span></p>
+  </figure>`;
+}
+
+function histHtml(store: ViewerStore, _o: ObjectView, hist: ObjectHistory | null, spec: Record<string, { min: number; max: number }>): string {
+  if (!hist) return '';
+  const charts = Object.keys(spec)
+    .map((k) => {
+      const pts = hist.points.filter((p) => typeof p.values[k] === 'number').map((p) => ({ tick: p.tick, v: p.values[k]! }));
+      // End at the value now, so the line and the State bar above agree.
+      const now = _o.state[k];
+      const tick = store.world?.clock.tick;
+      if (typeof now === 'number' && tick !== undefined && (!pts.length || pts[pts.length - 1]!.tick < tick)) pts.push({ tick, v: now });
+      return { k, pts };
+    })
+    .filter((x) => x.pts.length >= 2)
+    .map((x) => spark(store, x.k, x.pts, spec[x.k]!.min, spec[x.k]!.max))
+    .join('');
+  return charts ? `<section aria-labelledby="hist-h"><h3 id="hist-h" class="draft-h">Over time</h3><div class="sparks">${charts}</div></section>` : '';
+}
+
+function html(store: ViewerStore, o: ObjectView, hist: ObjectHistory | null = null): string {
   const w = store.world!;
   const def = store.objectDefs.get(o.type);
   const name = def?.name ?? store.objectLabel(o.type);
@@ -87,6 +152,7 @@ function html(store: ViewerStore, o: ObjectView): string {
     <section aria-labelledby="sees-h"><h3 id="sees-h" class="draft-h">What the robot sees</h3>${sees}</section>
     ${made}${held}
     ${rows ? `<section aria-labelledby="state-h"><h3 id="state-h" class="draft-h">State <span class="h-note">real values, hidden from the robot</span></h3><div class="state-values">${rows}</div></section>` : ''}
+    ${histHtml(store, o, hist, spec)}
     ${prods ? `<section aria-labelledby="prod-h"><h3 id="prod-h" class="draft-h">Products</h3><ul class="plain-list prods">${prods}</ul></section>` : ''}
     ${verbList.length ? `<section aria-labelledby="verbs-h"><h3 id="verbs-h" class="draft-h">Verbs</h3><p class="verb-chips">${verbList.map((v) => (idle.has(v) ? `<span class="verb-chip is-idle" title="Nothing ready yet">${esc(v)}<span class="sr-only"> (nothing ready yet)</span></span>` : `<span class="verb-chip">${esc(v)}</span>`)).join('')}</p></section>` : ''}`;
 }

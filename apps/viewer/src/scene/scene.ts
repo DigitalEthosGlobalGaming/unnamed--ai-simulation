@@ -7,7 +7,7 @@ import { Application, Container, Graphics, Text } from 'pixi.js';
 import type { CharacterView, ObjectView, Vec2, WorldView } from '../types.ts';
 import type { NoiseEvent, ViewerStore } from '../client/store.ts';
 import { NoisePlayer } from '../ui/audio.ts';
-import { C, FONT_DRAFT } from './palette.ts';
+import { C, FONT_DRAFT, FONT_TEXT } from './palette.ts';
 import { clockOf } from '../ui/format.ts';
 import type { VisitorStore } from '../client/visitors.ts';
 import { drawIcon } from '../icons/render.ts';
@@ -107,6 +107,8 @@ export class Scene {
   focusDrop: string | null = null;
   /** The object whose card is open: ringed, and the mast shows its signal range. */
   focusObject: string | null = null;
+  /** The inspector already shows the selected robot's gauges (phone drawer open): the callout keeps only name and action. */
+  calloutMinimal = false;
   onSelectObject: (objectId: string) => void = () => {};
   private objectPts: { id: string; x: number; y: number; r: number }[] = [];
   private hoverDrop: string | null = null;
@@ -1494,8 +1496,10 @@ export class Scene {
     // Red pen alerts (revision clouds) and the selected callout.
     this.hotspots = [];
     for (const c of world.characters) if (c.alerts.length) this.drawAlerts(g, c);
+    let calloutBox: { x: number; y: number; w: number; h: number } | null = null;
     if (sel) {
       const box = this.drawCallout(this.overG, sel);
+      calloutBox = box;
       // Never let a fragment of a label peek out beside the callout: hide anything it partly covers.
       const pad = { x: box.x - 2, y: box.y - 2, w: box.w + 4, h: box.h + 4 };
       for (const [k, l] of this.labels) {
@@ -1521,6 +1525,147 @@ export class Scene {
           break;
         }
       }
+    }
+    this.drawThought(this.overG, world, sel?.id ?? null, calloutBox, now);
+  }
+
+  /* ------------------------------------------------------------ thought note */
+
+  /** What a robot is thinking, in its own words: the current reason, or what sleep is doing. */
+  private thoughtOf(c: CharacterView): string | null {
+    if (c.mind.asleep) {
+      const w = c.mind.sleepWork;
+      if (!w) return 'asleep…';
+      if (w.step === 'consolidating') return w.total ? `consolidating ${w.done ?? 0} of ${w.total} memories…` : 'consolidating memories…';
+      return { habits: 'finding habits…', sheet: 'rewriting my sheet…', refine: 'reviewing the day…', done: 'resting…' }[w.step] ?? 'asleep…';
+    }
+    const r = c.action?.reason?.trim();
+    if (!r) return null;
+    const t = r.charAt(0).toUpperCase() + r.slice(1).replace(/\.$/, '');
+    const cut = t.length > 72 ? `${t.slice(0, 70).replace(/\s+\S*$/, '')}…` : t;
+    // keep the last two words together, so the closing quote never sits alone on a line
+    return `“${cut.replace(/\s+(\S+)$/, '\u00a0$1')}”`;
+  }
+
+  private thoughtSeen = new Map<string, { text: string; at: number }>();
+  private thoughtT: Text | null = null;
+  private static THOUGHT_SHOW_MS = 7000;
+  private static THOUGHT_FADE_MS = 1200;
+
+  /**
+   * One thought note on the plan: the selected robot's (always), else whoever last had a new
+   * thought, for a few seconds. A small dashed blueprint note on a leader, placed clear of the
+   * robots, the callout and labels; it fades out (or just goes, with reduced motion).
+   */
+  private drawThought(g: Graphics, world: WorldView, selId: string | null, avoid: { x: number; y: number; w: number; h: number } | null, now: number) {
+    for (const c of world.characters) {
+      const t = this.thoughtOf(c);
+      const seen = this.thoughtSeen.get(c.id);
+      if (t && seen?.text !== t) this.thoughtSeen.set(c.id, { text: t, at: seen ? now : now - Scene.THOUGHT_SHOW_MS }); // first sight isn't news
+      if (!t) this.thoughtSeen.delete(c.id);
+    }
+    let who: CharacterView | undefined = selId ? world.characters.find((c) => c.id === selId) : undefined;
+    if (!who) {
+      let best = -Infinity;
+      for (const c of world.characters) {
+        const s = this.thoughtSeen.get(c.id);
+        if (s && s.at > best) {
+          best = s.at;
+          who = c;
+        }
+      }
+    }
+    const seen = who ? this.thoughtSeen.get(who.id) : undefined;
+    const tt = this.thoughtT;
+    if (!who || !seen) {
+      if (tt) tt.visible = false;
+      return;
+    }
+    const age = now - seen.at;
+    let alpha = 1;
+    if (who.id !== selId) {
+      if (age > Scene.THOUGHT_SHOW_MS + Scene.THOUGHT_FADE_MS || (this.reduced.matches && age > Scene.THOUGHT_SHOW_MS)) {
+        if (tt) tt.visible = false;
+        return;
+      }
+      if (age > Scene.THOUGHT_SHOW_MS) alpha = 1 - (age - Scene.THOUGHT_SHOW_MS) / Scene.THOUGHT_FADE_MS;
+    }
+    const L = this.L!;
+    const ts = L.ts;
+    const maxW = L.compact ? 150 : 200;
+    let t = tt;
+    if (!t) {
+      t = new Text({ text: '', style: { fontFamily: FONT_TEXT, fontSize: 13, fill: C.ink, wordWrap: true, wordWrapWidth: maxW, lineHeight: 17 } });
+      this.thoughtT = t;
+      this.overText.addChild(t);
+    }
+    // Unselected, say whose thought it is (several robots can be doing the same thing).
+    const text = who.id === selId ? seen.text : `${who.name} · ${seen.text}`;
+    if (t.text !== text) t.text = text;
+    t.style.wordWrapWidth = maxW;
+    t.visible = true;
+    t.alpha = alpha;
+    const pad = 7;
+    const bw = Math.ceil(t.width) + pad * 2;
+    const bh = Math.ceil(t.height) + pad * 2 - 2;
+    const p = this.center(this.disp.get(who.id)!);
+    const off = ts * 0.75 + 10;
+    const cands = [
+      { x: p.x - bw / 2, y: p.y - off - bh },
+      { x: p.x + off * 0.6, y: p.y - off - bh },
+      { x: p.x - off * 0.6 - bw, y: p.y - off - bh },
+      { x: p.x + off, y: p.y - bh / 2 },
+      { x: p.x - off - bw, y: p.y - bh / 2 },
+      { x: p.x - bw / 2, y: p.y + off },
+      { x: p.x + off * 0.6, y: p.y + off },
+      { x: p.x - off * 0.6 - bw, y: p.y + off },
+    ];
+    const mr = this.mapRect;
+    const cost = (o: { x: number; y: number }) => {
+      const r = { x: o.x, y: o.y, w: bw, h: bh };
+      let n = o.x >= 8 && o.y >= this.insets.top + 6 && o.x + bw <= L.w - 8 && o.y + bh <= L.h - this.insets.bottom - 4 ? 0 : 200;
+      if (o.x < mr.x - 20 || o.y < mr.y - 20 || o.x + bw > mr.x + mr.w + 20 || o.y + bh > mr.y + mr.h + 20) n += 20;
+      if (avoid && overlap(r, avoid)) n += 1000; // never over the callout
+      // Never cover a robot (least of all the one being read).
+      for (const q of this.robotPts) if (q.x > r.x - ts * 0.45 && q.x < r.x + bw + ts * 0.45 && q.y > r.y - ts * 0.45 && q.y < r.y + bh + ts * 0.45) n += q.id === who!.id ? 400 : 60;
+      for (const q of this.reserved) if (overlap(r, q)) n += 100;
+      // Labels and symbols already on the plan: a note over them hides the drawing.
+      for (const b of this.placed) if (overlap(r, { x: b.x - b.w / 2, y: b.y - (b.h ?? 14) / 2, w: b.w, h: b.h ?? 14 })) n += 30;
+      // Walls through the text are hard to read: sample the box on a grid.
+      for (let yy = o.y + 4; yy <= o.y + bh - 4; yy += Math.max(8, (bh - 8) / 2)) if (this.labelOnWall(o.x + bw / 2, yy, bw)) n += 40;
+      // and keep clear of the owner's own name tag
+      const own = this.labels.get(`rb-${who!.id}`) ?? this.labels.get('rb-group');
+      if (own?.used && own.t.visible) {
+        const tb = { x: own.t.x - own.t.anchor.x * own.t.width, y: own.t.y - own.t.anchor.y * own.t.height, w: own.t.width, h: own.t.height };
+        if (overlap(r, tb)) n += 80;
+      }
+      return n;
+    };
+    const box = cands.map((o) => ({ o, n: cost(o) })).sort((a, b) => a.n - b.n)[0]!.o;
+    // Leader from the note's nearest edge to just outside the robot, ending in a small open ring.
+    const ex = Math.max(box.x, Math.min(p.x, box.x + bw));
+    const ey = Math.max(box.y, Math.min(p.y, box.y + bh));
+    const dx = ex - p.x;
+    const dy = ey - p.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const sx = p.x + (dx / d) * ts * 0.5;
+    const sy = p.y + (dy / d) * ts * 0.5;
+    g.moveTo(sx, sy).lineTo(ex, ey).stroke({ width: 1, color: C.ink2, alpha });
+    g.circle(sx, sy, 2.5).stroke({ width: 1, color: C.ink2, alpha });
+    g.rect(box.x, box.y, bw, bh).fill({ color: C.sheet, alpha: 0.94 * alpha });
+    // dashed frame: a thought is provisional, not a fact on the drawing
+    for (const [x1, y1, x2, y2] of [[box.x, box.y, box.x + bw, box.y], [box.x + bw, box.y, box.x + bw, box.y + bh], [box.x + bw, box.y + bh, box.x, box.y + bh], [box.x, box.y + bh, box.x, box.y]] as const) dash(g, x1, y1, x2, y2, 4, 3);
+    g.stroke({ width: 1.25, color: C.ink, alpha });
+    t.x = box.x + pad;
+    t.y = box.y + pad - 1;
+    this.placed.push({ x: box.x + bw / 2, y: box.y + bh / 2, w: bw, h: bh });
+    // Like the callout: a label the note partly covers is hidden, never left as a fragment.
+    const r = { x: box.x - 2, y: box.y - 2, w: bw + 4, h: bh + 4 };
+    for (const [k, l] of this.labels) {
+      if (!l.used || !l.t.visible || l.t.parent !== this.textLayer) continue;
+      if (k === `rb-${who.id}` || (k === 'rb-group' && l.t.text.includes(who.name))) continue; // never hide whose thought it is
+      const tb = { x: l.t.x - l.t.anchor.x * l.t.width, y: l.t.y - l.t.anchor.y * l.t.height, w: l.t.width, h: l.t.height };
+      if (overlap(tb, r)) l.used = false;
     }
   }
 
@@ -1634,7 +1779,7 @@ export class Scene {
     }
     // name + current verb (robots in the parked group are named by its shared tag)
     if (this.groupLabelled.has(c.id)) return;
-    const verb = c.mind.asleep ? 'STANDBY' : c.action ? c.action.verb.toUpperCase() : 'IDLE';
+    const verb = c.mind.asleep ? 'ASLEEP' : c.action ? c.action.verb.toUpperCase() : 'IDLE';
     // Zoomed in, phones also get the current verb; at fit they show the name only.
     const txt = L.compact && ts < 30 ? c.name : `${c.name} · ${verb}`;
     const size = L.compact ? 12 : 13;
@@ -1762,8 +1907,26 @@ export class Scene {
     g.poly(tri).stroke({ width: 1.5, color: C.red });
     const tx = right ? nx + tr * 2 + 6 : nx - 6;
     let wMax = 0;
+    // Keep the red-pen note inside the plan frame: wrap each alert at the room left on its side.
+    const mr = this.mapRect;
+    const room = Math.max(120, right ? Math.min(L.w - 8, mr.x + mr.w + 40) - tx : tx - Math.max(8, mr.x - 40));
+    const per = Math.max(12, Math.floor(room / 8.6));
+    const wrapped: string[] = [];
+    lines.forEach((full, k) => {
+      const txt = k === 0 && rev ? `${rev} · ${full}` : full;
+      let cur = '';
+      for (const word of txt.split(' ')) {
+        if (cur && (cur + ' ' + word).length > per) {
+          wrapped.push(cur);
+          cur = word;
+        } else cur = cur ? `${cur} ${word}` : word;
+      }
+      if (cur) wrapped.push(cur);
+    });
+    lines.length = 0;
+    lines.push(...wrapped);
     lines.forEach((txt, i) => {
-      const t = this.label(`alert-${c.id}-${i}`, i === 0 && rev ? `${rev} · ${txt}` : txt, tx, ny + 5 + i * 16, {
+      const t = this.label(`alert-${c.id}-${i}`, txt, tx, ny + 5 + i * 16, {
         size: 13,
         color: C.red,
         weight: '700',
@@ -1786,7 +1949,7 @@ export class Scene {
     const bw = compact ? 178 : 196;
     const rowH = compact ? 18 : 17;
     // Battery and needs, then (iteration 2) sleep pressure and fog, which read worse as they rise.
-    const gauges: [string, number, number, boolean][] = [
+    const gauges: [string, number, number, boolean][] = this.calloutMinimal ? [] : [
       ['BAT', c.mind.energy, 0.2, false],
       ['COOL', c.mind.needs['cool'] ?? 0, 0.25, false],
       ['SIG', c.mind.needs['signal'] ?? 0, 0.3, false],
@@ -1794,7 +1957,8 @@ export class Scene {
       ...(c.mind.sleepPressure !== undefined ? ([['SLEEP', c.mind.sleepPressure, 0.85, true]] as [string, number, number, boolean][]) : []),
       ...(c.mind.fog !== undefined ? ([['FOG', c.mind.fog, 0.8, true]] as [string, number, number, boolean][]) : []),
     ];
-    const bh = (compact ? 10 : 14) + rowH * (gauges.length + 1) + (compact ? 0 : rowH);
+    const withAction = !compact || this.calloutMinimal;
+    const bh = (compact ? 10 : 14) + rowH * (gauges.length + 1) + (withAction ? rowH : 0);
     const off = ts * 1.1 + 10;
     const mr = this.mapRect;
     const options = [
@@ -1852,12 +2016,12 @@ export class Scene {
       this.label(`co-v-${name}`, `${Math.round(v * 100)}%`, box.x + bw - padX, y, { size: 12, weight: '600', anchorX: 1, bg: false, color: col, top: true });
       y += rowH;
     }
-    if (!compact) {
+    if (withAction) {
       const work = c.mind.sleepWork;
       const a = c.mind.asleep
         ? work
-          ? `ASLEEP · ${SLEEP_STEP_TAG[work.step]}${work.step === 'consolidating' && work.total ? ` ${work.done ?? 0}/${work.total}` : ''}`
-          : 'STANDBY · DOCKED'
+          ? `${work.step === 'done' ? 'ASLEEP · ' : ''}${SLEEP_STEP_TAG[work.step]}${work.step === 'consolidating' && work.total ? ` ${work.done ?? 0}/${work.total}` : ''}`
+          : 'ASLEEP'
         : c.action ? `${c.action.verb.toUpperCase()}${c.action.targetId ? ` · ${this.store.nameOf(c.action.targetId).toUpperCase()}` : ''}` : 'IDLE';
       g.moveTo(box.x, y - rowH * 0.25).lineTo(box.x + bw, y - rowH * 0.25).stroke({ width: 1, color: C.ink2, alpha: 0.6 });
       this.label('co-action', a, box.x + padX, y + 3, { size: 12, weight: '700', anchorX: 0, bg: false, spacing: 0.6, top: true });
@@ -1868,7 +2032,7 @@ export class Scene {
 
 /* ------------------------------------------------------------ helpers */
 
-const SLEEP_STEP_TAG: Record<string, string> = { consolidating: 'MEMORIES', habits: 'HABITS', sheet: 'SHEET', refine: 'REVIEW', done: 'RESTING' };
+const SLEEP_STEP_TAG: Record<string, string> = { consolidating: 'CONSOLIDATING', habits: 'HABITS', sheet: 'SHEET', refine: 'REVIEW', done: 'RESTING' };
 
 function colName(i: number) {
   return String.fromCharCode(65 + i);

@@ -55,6 +55,11 @@ export interface ObjectView {
   createdBy?: { entityId: string; tick: number };
 }
 
+export interface ObjectHistory {
+  keys: string[];
+  points: { tick: number; values: Record<string, number> }[];
+}
+
 export interface ProductSlot {
   slot: string;
   item: string;
@@ -108,6 +113,36 @@ export interface MindView {
   sleepWork?: SleepWork;
 }
 
+/** The character sheet (iteration 2): locked core lines and self-written ones. */
+export interface SheetLineView {
+  text: string;
+  locked: boolean;
+  source: 'authored' | 'self';
+  seenDays?: number[];
+}
+/** One sheet rewrite (one per sleep), oldest first. */
+export interface SheetEditView {
+  day: number;
+  tick: number;
+  op: 'add' | 'reword' | 'remove' | 'goal' | 'none';
+  before?: string;
+  after?: string;
+  by: 'model' | 'code';
+  why?: string;
+}
+export interface HabitView {
+  key: string;
+  name: string;
+  days: number[];
+  since: number;
+}
+export interface SelfView {
+  sheet: SheetLineView[];
+  history: SheetEditView[];
+  goal: string | null;
+  habits: HabitView[];
+}
+
 export type SleepStep = 'consolidating' | 'habits' | 'sheet' | 'refine' | 'done';
 export interface SleepWork {
   step: SleepStep;
@@ -143,6 +178,8 @@ export interface CharacterView {
   mind: MindView;
   action: CurrentAction | null;
   beliefs: Belief[];
+  /** Character sheet, its history, goal and habits, when the world reports them. */
+  self?: SelfView;
   alerts: Alert[];
   trail: Vec2[];
   /** The last whole-tile step and when it arrived (performance.now()), to draw it gliding. */
@@ -192,6 +229,8 @@ export interface WorldConnection {
   feedTrimmed?(): number;
   /** Schema-2 object definitions (`GET /objects/defs`); [] when the server has none yet. */
   objectDefs?(): Promise<ObjectDef[]>;
+  /** An object's state over time (`GET /worlds/:id/objects/:oid/history`), oldest first; null when the server can't say. */
+  objectHistory?(objectId: string, keys: string[], sinceTick?: number, maxPoints?: number): Promise<ObjectHistory | null>;
   /** Where beliefs changed, for the timeline markers. */
   beliefMarks(): BeliefMark[];
   /** Earliest and latest ticks, for the scale bar. */

@@ -5,7 +5,7 @@ Each iteration is a planned slice of work: what it changes, the stages it lands 
 | Iteration | Theme | Status |
 | --- | --- | --- |
 | [1](iteration-01-first-slice.md) | First playable slice: one robot, the garden, models, viewer, visitors | Done |
-| [2](iteration-02-robot-redesign.md) | Thinking budget, sleep and living objects | In progress (Stage 1 built; Stage 2 backend built) |
+| [2](iteration-02-robot-redesign.md) | Thinking budget, sleep and living objects | Built, awaiting try-out (all four stages) |
 
 ## How to use an iteration page
 

@@ -111,10 +111,11 @@ Live messages carry no `sessionId`; replay messages always do.
 
 ### `FeedEntry`
 
-`{ tick, characterId, trigger, tier, depth?, depthWhy?, modelId?, confidence?, actions: [{ verb, targetId?, reason, status, result? }], usage?, energyCost?, notes?, reason?, escalated? }`
+`{ tick, characterId, trigger, tier, depth?, depthWhy?, template?, system?, modelId?, confidence?, actions: [{ verb, targetId?, reason, status, result? }], usage?, energyCost?, notes?, reason?, escalated? }`
 
 - Each step's `status` starts `queued` and is updated as it resolves: `done` (with `result`, the observation), `failed` (it started but didn't work; `result` is why), `rejected` (invalid when its turn came; `result` is why), or `superseded` (a newer decision replaced it before it ran). Live updates arrive as `feedStep { worldId, sessionId?, characterId, feedTick, step, status, result? }` messages on the feed channel (and `feedStep` deltas in the store): update `actions[step]` of the entry with that `characterId` and `tick === feedTick`. `GET /feed` returns entries already updated.
 - `depth` (`habit`, `gut` or `think`) and `depthWhy` record how hard the robot chose to think (decision 44): habit is free (autopilot or a named habit), gut is the decision model, think is the plan model. Carry-on and fallback entries have none.
+- `template: { id, version }` is the prompt template that rendered a model decision (`plan@3`). `system` is an admin note with no actions, e.g. `prompt template plan@2 activated` ([prompts.md](architecture/prompts.md)).
 - `escalated: { from, confidence }` marks a decision the decision model (`from`) was unsure about, answered by a stronger model or a text-model plan. Plans (tier `llm`) carry no `confidence`.
 
 - `tier: 'carry-on'` marks the later steps of a model plan that run without a new call.
@@ -145,7 +146,8 @@ A note `chirp-E` means the `chirp` noise played at E. Play the notes of a chain 
 | `PATCH /worlds/:id/entities/:eid` | admin | body `{ pos?, state?, needs?, energy? }` |
 | `DELETE /worlds/:id/entities/:eid` | admin | removes the entity |
 | `GET /worlds/:id/characters/:cid/mind` | spectator | `MindView` (needs, energy, mood, sleep, open items, queue, pending jobs) |
-| `GET /worlds/:id/characters/:cid/memories` | spectator | `{ stm, ltm, beliefs, sheet }` |
+| `GET /worlds/:id/characters/:cid/memories` | spectator | `{ stm, ltm, beliefs, sheet, sheetHistory, goal, habits }`; sheet lines carry `locked`, and `sheetHistory` is one edit per night |
+| `GET /worlds/:id/objects/:oid/history?keys=&sinceTick=&maxPoints=` | spectator | `{ keys, points: [{ tick, values }] }`: an object's numeric state over time (e.g. a plant's growth line), oldest first. A point at `sinceTick` (default 7 in-world days back) with the values then (absent if nothing changed before it), one per change, and one now; thinned evenly to `maxPoints` (default 96, at most 1,000). `keys` defaults to every numeric state key; unknown keys are left out of `values`. 404 for an unknown object |
 | `GET /worlds/:id/characters/:cid/diary?day=` | spectator | `{ day, entries: [{ tick, text }] }` |
 | `POST /worlds/:id/characters/:cid/poke` | admin | raises an `admin-poke` trigger |
 | `GET /catalog`, `GET /catalog/templates`, `POST /catalog/validate`, `PUT` / `DELETE /catalog/:itemId` | spectator / admin | the airdrop catalogue ([visitors.md](architecture/visitors.md#rest)) |

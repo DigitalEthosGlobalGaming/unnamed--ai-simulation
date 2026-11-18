@@ -37,19 +37,19 @@ I notice:
 - a seed, 5 tiles south-east
 - it is light
 Options:
-c0: water the plant (2 tiles away)
-c1: drop the watering-can (carrying it)
-c2: inspect the plant (2 tiles away)
-c3: pick the plant (2 tiles away)
-c4: gather the plant (2 tiles away)
-c5: plant the garden-bed (1 tiles away)
+c0: water the plant with the watering-can (2 tiles away)
+c1: inspect the plant (2 tiles away)
+c2: pick the plant (2 tiles away)
+c3: gather the plant (2 tiles away)
+c4: plant the garden-bed (1 tiles away)
+c5: drop the watering-can (carrying it)
 
 Trigger: action-finished. Which action next?
 ## thinking: gut (familiar)
 ## options
-c0: water the plant (2 tiles away)  [water:plant] -> moveTo plant, water plant
-c1: drop the watering-can (carrying it)  [drop:watering-can] -> drop can
-c2: inspect the plant (2 tiles away)  [inspect:plant] -> moveTo plant, inspect plant
-c3: pick the plant (2 tiles away)  [pick:plant] -> moveTo plant, pick plant
-c4: gather the plant (2 tiles away)  [gather:plant] -> moveTo plant, gather plant
-c5: plant the garden-bed (1 tiles away)  [plant:garden-bed] -> plant bed
+c0: water the plant with the watering-can (2 tiles away)  [water:plant] -> moveTo plant, water plant
+c1: inspect the plant (2 tiles away)  [inspect:plant] -> moveTo plant, inspect plant
+c2: pick the plant (2 tiles away)  [pick:plant] -> moveTo plant, pick plant
+c3: gather the plant (2 tiles away)  [gather:plant] -> moveTo plant, gather plant
+c4: plant the garden-bed (1 tiles away)  [plant:garden-bed] -> plant bed
+c5: drop the watering-can (carrying it)  [drop:watering-can] -> drop can
