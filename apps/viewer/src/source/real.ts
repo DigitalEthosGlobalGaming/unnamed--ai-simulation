@@ -97,7 +97,8 @@ export class RealConnection implements WorldConnection {
       if (!this.worldId) {
         const worlds = await this.api.worlds();
         if (!worlds.length) throw new Error('the server runs no worlds');
-        this.worldId = worlds[0]!.id;
+        // Prefer a live world; archived ones open only when asked for with ?world=.
+        this.worldId = (worlds.find((w) => !w.archived) ?? worlds[0]!).id;
       }
       const id = this.worldId;
       this.cat = await this.api.catalog(id);
