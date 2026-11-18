@@ -1,6 +1,6 @@
 # Iteration 2: thinking budget, sleep and living objects
 
-Status: **In progress**: Stage 1 built (17 Nov 2026). Design: the spec's [Thinking budget, sleep and living objects](../../Unnamed%20AI%20Simulation%20—%20Spec.md#thinking-budget-sleep-and-living-objects-iteration-2) section and decisions 42–53.
+Status: **In progress**: Stage 1 built (17 Nov 2026); Stage 2 started 18 Nov 2026 against the [schema 2 contract](../architecture/objects.md). Design: the spec's [Thinking budget, sleep and living objects](../../Unnamed%20AI%20Simulation%20—%20Spec.md#thinking-budget-sleep-and-living-objects-iteration-2) section and decisions 42–53.
 
 **Goal:** make the robot worth watching. Its battery becomes its thinking budget, sleep becomes how it recharges and grows, objects come alive with state and products, and its thoughts show on the map.
 
