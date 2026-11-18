@@ -1,7 +1,7 @@
 # The first-slice world: one robot, six objects, the 24 x 16 garden.
 # ${VAR} and ${VAR:-default} are read from the environment.
 id: garden
-archived: true   # read-only: no ticking, inputs refused (npm run world:archive)
+archived: true
 name: The Garden
 seed: 2026
 packs: [basic]
