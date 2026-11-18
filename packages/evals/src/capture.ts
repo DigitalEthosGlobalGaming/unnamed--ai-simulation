@@ -1,4 +1,5 @@
 import type { Character } from '@uas/core';
+import { TEMPLATE_IDS, activeBody, activeTemplatesOf } from '@uas/mind';
 import type { WorldState } from '@uas/sim';
 import { parseSituation, type CheckSpec, type Situation } from './situation.ts';
 
@@ -48,6 +49,8 @@ export function captureSituation(state: WorldState, meta: CaptureMeta): Situatio
     job: 'decide',
     trigger: 'action-finished',
     snapshot,
+    // The template versions active then (the snapshot carries their text in `ext.prompts`).
+    templates: Object.fromEntries(TEMPLATE_IDS.map((id) => [id, activeBody(activeTemplatesOf(state.ext), id).version])),
     checks: suggested,
   });
 }

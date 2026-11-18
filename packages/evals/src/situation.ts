@@ -20,7 +20,7 @@ import {
   type Registry,
   type ThinkingDepth,
 } from '@uas/core';
-import { MindSystem, beliefText, fogOf, freezePrefix, pressureOf } from '@uas/mind';
+import { MindSystem, activeTemplatesOf, beliefText, fogOf, freezePrefix, pressureOf, type ActiveTemplates } from '@uas/mind';
 import { renderPrompt } from '@uas/models';
 import { World, type WorldState } from '@uas/sim';
 import { basicPack, garden2Grid } from '@uas/pack-basic';
@@ -134,6 +134,8 @@ export const SituationSchema = z
     /** Captured: the world state at that moment, without `config.grid` (rebuilt from `map`). */
     snapshot: z.record(z.string(), z.unknown()).optional(),
     map: z.string().default('basic:garden-2'),
+    /** Captured situations: the template versions active in the world at that moment. */
+    templates: z.record(z.string(), z.union([z.number(), z.string()])).optional(),
     checks: z.array(CheckSpecSchema).default([]),
   })
   .refine((s) => (s.snapshot ? !s.world && !s.character : !!s.world && !!s.character), { message: 'either `snapshot` (captured) or `world` and `character` (hand-written)' });
@@ -333,15 +335,28 @@ export interface SituationRequest {
   candidates: Candidate[];
   /** How hard the brain would choose to think here (habit, gut or think), and why. */
   thinking: { depth: ThinkingDepth; why: string };
+  /** The prompt template and version that rendered it. */
+  template: { id: string; version: number | string };
   built: Built;
 }
 
 /** The model request the brain would send at this moment, through the current builder. */
-export function situationRequest(s: Situation): SituationRequest {
+/**
+ * The model request the brain would send at this moment, through the current builder. `active`
+ * overrides the world's prompt templates (preview and test of a draft or stored version);
+ * `template` forces which decision template renders (default: by the brain's depth, or the job).
+ */
+export function situationRequest(s: Situation, opts: { active?: ActiveTemplates; template?: 'decide' | 'plan' } = {}): SituationRequest {
   const built = buildSituation(s);
-  const req = built.minds.decisionRequest(built.world, built.character, s.trigger, { perceive: !s.snapshot });
-  const { candidates, thinking, ...request } = req;
-  return { request, candidates, thinking, built };
+  if (opts.active) {
+    built.world.state.ext.prompts = { ...((built.world.state.ext.prompts as Record<string, Json>) ?? {}), ...(opts.active as unknown as Record<string, Json>) };
+    const arch = built.world.archetype(built.character.type)!;
+    freezePrefix(built.world.registry, arch, built.character.mind!, built.world.tick, built.minds.ticksPerDay(built.world), built.world.day, activeTemplatesOf(built.world.state.ext));
+  }
+  const template = opts.template ?? (s.job === 'plan' ? 'plan' : undefined);
+  const req = built.minds.decisionRequest(built.world, built.character, s.trigger, { perceive: !s.snapshot, ...(template && { template }) });
+  const { candidates, thinking, template: tpl, ...request } = req;
+  return { request, candidates, thinking, template: tpl, built };
 }
 
 /** The prompt exactly as a model would get it (system, user, options), for golden snapshots. */

@@ -115,17 +115,17 @@ export const DEFS: ObjectDef[] = [
       { slot: 'seeds', item: 'seed', when: { growth: { gte: 1 } }, everyHours: 24, max: 3, verb: 'gather', reset: { growth: 0.6 } },
     ],
     appearance: {
-      water: [
-        { lt: 0.15, text: 'the soil is cracked and dry' },
-        { lt: 0.5, text: 'the soil looks dry' },
-        { text: 'the soil is damp' },
-      ],
       growth: [
         { lt: 0.1, text: 'a bare patch of soil' },
         { lt: 0.4, text: 'a small green shoot' },
         { lt: 0.7, text: 'a leafy plant' },
         { lt: 1, text: 'a plant with a flower bud' },
         { text: 'a plant in full flower' },
+      ],
+      water: [
+        { lt: 0.15, text: 'the soil is cracked and dry' },
+        { lt: 0.5, text: 'the soil looks dry' },
+        { text: 'the soil is damp' },
       ],
     },
   },

@@ -50,8 +50,9 @@ describe('POST /worlds/:id/characters/:cid/situation', () => {
 
   it('captures a past tick by replay', async () => {
     const res = await post('/worlds/sg/characters/robot/situation', 'adm', { tick: 25 });
-    const { situation } = (await res.json()) as { situation: { source: { tick: number }; id: string } };
+    const { situation } = (await res.json()) as { situation: { source: { tick: number }; id: string; templates?: Record<string, number> } };
     expect(situation.source.tick).toBe(25);
+    expect(situation.templates).toEqual({ decide: 1, plan: 1, consolidate: 1, sheet: 1, mail: 1 });
     expect(existsSync(join(dir, `${situation.id}.json`))).toBe(true);
   });
 

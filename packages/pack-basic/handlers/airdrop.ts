@@ -16,6 +16,9 @@ export const airdropNoise: EffectHandler = ({ params }) => {
   return { ok: true, noise: notes, needDeltas: { curiosity: 0.02 }, observation: typeof params.observation === 'string' ? params.observation : 'it made a noise' };
 };
 
+/** The `mail` template's version 1 (packages/mind/templates/mail.json; a test checks they match). */
+export const MAIL_LINE = 'a note from a stranger: {{note}}';
+
 /**
  * `read` at the mailbox: the oldest waiting message, one per read, as a quoted note from a
  * stranger. The robot is never told what the flag means; an empty box just has nothing in it.
@@ -23,5 +26,8 @@ export const airdropNoise: EffectHandler = ({ params }) => {
 export const mailRead: EffectHandler = ({ world }) => {
   const mail = world.mailPeek();
   if (!mail) return { ok: true, observation: 'the mailbox was empty' };
-  return { ok: true, takeMail: true, needDeltas: { curiosity: 0.03, signal: 0.05 }, observation: `a note from a stranger: ${quoteNote(mail.text)}` };
+  // The `mail` template frames the note; the note itself is always quoted by code.
+  const line = world.promptPart('mail', 'line') ?? MAIL_LINE;
+  const note = quoteNote(mail.text);
+  return { ok: true, takeMail: true, needDeltas: { curiosity: 0.03, signal: 0.05 }, observation: line.replace(/\{\{\s*note\s*\}\}/, () => note) };
 };

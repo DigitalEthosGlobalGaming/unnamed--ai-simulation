@@ -218,7 +218,7 @@ Where the code settled a detail the contract left open (all messaged to the view
 - **Engine form.** Schema-2 definitions are validated (`validateObjectDef2` in [`objects.ts`](../../packages/core/src/objects.ts)) and compiled: every verb runs the engine's own `core.blocks` handler with its requirements and effects; `portable` adds `core.pickup`/`core.drop`; each product slot adds its verb (`range` 1, 3 s). The sim runs them in [`world.ts`](../../packages/sim/src/world.ts) (`runBlocks`, `runRules`, `nearbyNeeds`, `refreshViews`).
 - **Failures.** A failed *requirement* shows the verb's `fail` text; an *effect* that can't happen says why ("no room", "your grippers are full", "there is nothing to pick yet"). Either way nothing is applied.
 - **Rules** may also say `remove: true` (with `when`): the flower is removed once `fresh` reaches 0. Rules start counting at a world's first tick under this code, so a world doesn't "catch up" from before it had rules.
-- **Product timers** live on the entity (`products[].hours`), not in state; the view adds `nextInHours`.
+- **Product timers** live on the entity (`products[].hours`), not in state; the view adds `nextInHours`, left out while the slot is full or its `when` doesn't hold (it isn't filling).
 - **Deltas:** `{ kind: 'objectView', id, appearance, products }` whenever either changes; `{ kind: 'catchUp', seconds, periods, capped }` after a clock jump.
 - **`consume`** on an object with a `uses` value removes it at the start of the next tick once `uses` reaches 0 (so the mind still sees what it used); without `uses`, straight away.
 - **`GET /objects/defs`** entries carry `source: 'pack' | 'catalog'`.

@@ -25,6 +25,9 @@ export class Panel {
   onOpenObject: (objectId: string) => void = () => {};
   private lastObjectsKey: string | null = null;
   private builtArchived = false;
+  /** Admin pages, shown in the drawer on phones (the top bar has no room for them there). */
+  adminLinks: { catalogue?: string; prompts?: string } | null = null;
+  private builtAdmin = '';
   onFocusDrop: (dropId: string | null) => void = () => {};
   onOpenAirdrop: () => void = () => {};
   onOpenMail: () => void = () => {};
@@ -134,7 +137,7 @@ export class Panel {
       if (this.mode !== 'robot' || this.robotId !== sel.id) this.buildRobot(sel);
       this.updateRobot(sel);
     } else {
-      if (this.mode !== 'overview' || this.builtArchived !== this.store.archived) this.buildOverview();
+      if (this.mode !== 'overview' || this.builtArchived !== this.store.archived || this.builtAdmin !== JSON.stringify(this.adminLinks)) this.buildOverview();
       this.updateOverview();
     }
   }
@@ -145,6 +148,7 @@ export class Panel {
     if (this.tab === 'beliefs') this.tab = 'feed';
     // An archived world is read only: no visitor actions, no settings.
     this.builtArchived = this.store.archived;
+    this.builtAdmin = JSON.stringify(this.adminLinks);
     if (this.builtArchived && this.tab === 'settings') this.tab = 'feed';
     this.mode = 'overview';
     this.robotId = null;
@@ -167,6 +171,10 @@ export class Panel {
           <button type="button" class="btn" data-action="open-airdrop">${icons.airdrop()}<span>Airdrop</span></button>
           <button type="button" class="btn" data-action="open-mail">${icons.mail()}<span>Mailbox</span><span class="btn-count" data-ref="drawer-mail-count" hidden></span></button>
         </div>` : ''}
+        ${this.adminLinks ? `<nav class="admin-links" aria-label="Admin">
+          ${this.adminLinks.catalogue ? `<a class="btn ghost" data-nav href="${esc(this.adminLinks.catalogue)}">${icons.catalogue()}<span>Catalogue</span></a>` : ''}
+          ${this.adminLinks.prompts ? `<a class="btn ghost" data-nav href="${esc(this.adminLinks.prompts)}">${icons.prompts()}<span>Prompts</span></a>` : ''}
+        </nav>` : ''}
       </section>
       <section class="pane-section" aria-labelledby="items-h" data-ref="items-section" hidden>
         <div class="section-head">
@@ -273,8 +281,8 @@ export class Panel {
       .map((o) => {
         const def = s.objectDefs.get(o.type);
         const ready = (o.products ?? []).filter((p) => p.ready > 0).map((p) => `${p.ready} ${s.objectDefs.get(p.item)?.name.toLowerCase() ?? p.item} · ${p.verb}`);
-        // Most telling text last in definition order (a plant's growth band), else the first.
-        const looks = o.appearance?.length ? o.appearance[o.appearance.length - 1]! : (def?.description ?? '');
+        // The first appearance text is the most telling in definition order (a plant's growth band).
+        const looks = o.appearance?.length ? o.appearance[0]! : (def?.description ?? '');
         return `<tr>
           <th scope="row"><button type="button" class="mark-btn" data-action="open-object" data-id="${esc(o.id)}">${def?.icon ? iconSvg(def.icon, 20) : ''}<span>${esc(s.objectLabel(o.type))}</span></button></th>
           <td>${looks ? esc(looks.charAt(0).toUpperCase() + looks.slice(1)) : '<span class="nil">—</span>'}</td>

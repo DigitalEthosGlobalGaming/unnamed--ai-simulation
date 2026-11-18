@@ -3,13 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "dependencies": {
     "@uas/core": "0.1.0",
-    "@uas/sim": "0.1.0",
     "@uas/mind": "0.1.0",
     "@uas/models": "0.1.0",
     "@uas/pack-basic": "0.1.0",
+    "@uas/sim": "0.1.0",
+    "@uas/store": "0.1.0",
     "zod": "^4.6.0"
   }
 }

@@ -55,11 +55,11 @@ Owner: backend (viewer: object state on the card, products, planting).
 
 Owner: backend (templates, API) and viewer (Prompts page).
 
-- [ ] Five templates (decision state, plan, sleep consolidation/reflection, sheet rewrite, mail framing) with documented `{{variables}}` and a code-appended locked safety block.
-- [ ] Server-wide versioned storage; per-world active version; feed entries record the template version.
-- [ ] API: list, get, draft, validate (unknown variables), preview against a saved situation, test against the eval situations (cost shown first), activate, roll back.
-- [ ] Prompts admin page: template list, editor with variable list, live preview, diff against active, Test, Activate, Roll back.
-- [ ] Golden prompts follow the active version; the free prompt check still runs in `npm run check`.
+- [x] Five templates (decision state, plan, sleep consolidation/reflection, sheet rewrite, mail framing) with documented `{{variables}}` and a code-appended locked safety block.
+- [x] Server-wide versioned storage; per-world active version; feed entries record the template version.
+- [x] API: list, get, draft, validate (unknown variables), preview against a saved situation, test against the eval situations (cost shown first), activate, roll back.
+- [x] Prompts admin page: template list, editor with variable list, live preview, diff against active, Test, Activate, Roll back. (Viewer, against the contract and the sample source; check on the real server once the API lands. The brain feed's detail box shows `template@version`.)
+- [x] Golden prompts follow the active version; the free prompt check still runs in `npm run check`.
 
 **Done when:** an admin can edit the plan prompt, preview it, test it against the situations, activate it, see new feed entries use it, and roll it back.
 
@@ -92,3 +92,4 @@ Owner: viewer.
 - **Stage 1, top-up** is a one-shot `batteryTopUp` World setting (logged as `admin.edit` per robot), so the generic settings UI renders it.
 - **Stage 1, choosing to sleep.** The first Stage 1 eval had Laya never choosing sleep (0/9): the decision model doesn't see the character sheet, so "sleep here" meant nothing to it. Sleep options now say what sleep does ("go to sleep here (recharges me, settles my memories)"), the state has a `sleepiness` word next to `head` (fog), a tired robot is less keen on everything else, and pressure ≥ 0.8 makes sleep an obvious choice as a safety net (the eval's `dusk-full-stm` sits at 0.81, where Laya still picked play over sleep). Naps don't pay for sleep work (no consolidation with an empty STM; one sheet step per in-world day).
 - **Stage 2.** Built as [objects.md](../architecture/objects.md) says, with the details in its [As built](../architecture/objects.md#as-built) section (rule `remove`, product timers on the entity, `objectView`/`catchUp` deltas, a `seed` tag for planting, the tuning). The archive step and the fresh world are scripts plus a world-file flag; the owner runs them on the live database. `worlds/garden2.yaml` ships as the default world, so a restart also creates `garden2` at day 0.
+- **Stage 3.** Built as [prompts.md](../architecture/prompts.md) says, with the details in its [As built](../architecture/prompts.md#as-built) section; the sheet sleep prompt gained the safety line ([D39](../decisions.md#deviations-from-the-spec)). First use (18 Nov, scratch server, Llama 3.1 8B, 2 runs per situation, A$0.0021 in all): a `plan` v2 asking for short plans that use what it holds and keep set-up steps together passed 12/16 runs against v1's 11/16 and made shorter plans, but the target chain didn't move: at the fountain with an empty can both versions drop the can first (0/2). The option reads "fill the fountain", which sounds like filling the fountain, so the next try is the option label rather than the template. The repo default stays v1.

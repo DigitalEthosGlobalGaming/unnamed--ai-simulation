@@ -309,15 +309,20 @@ export class ModelGateway {
 
   /**
    * Call one configured model directly, as the chains would (same adapter request, same plan
-   * instruction), with no routing, escalation or budget checks: for evals. `as: 'plan'` sends a
-   * decide request to a text model as a plan. The usage is priced but not recorded in the meter.
+   * instruction), with no routing or escalation: for evals and prompt tests. `as: 'plan'` sends a
+   * decide request to a text model as a plan. With `meter`, the cap is checked and usage recorded.
    */
-  async callModel(name: string, req: JobRequest, as: 'decide' | 'plan', timeoutMs = 60_000): Promise<{ answer: Record<string, Json>; usage: Usage }> {
+  async callModel(name: string, req: JobRequest, as: 'decide' | 'plan', timeoutMs = 60_000, opts: { meter?: boolean } = {}): Promise<{ answer: Record<string, Json>; usage: Usage }> {
     const m = this.models.get(name);
     if (!m) throw new Error(`no model ${name} in the config`);
     if (m.unavailable) throw new Error(`${name}: ${m.unavailable}`);
+    // Prompt tests run through a world's gateway and count towards its daily cap.
+    if (opts.meter && m.paid && this.meter.spentTodayAud() >= this.config.dailyCapAud) throw new Error('the daily A$ cap is reached');
     const signal = AbortSignal.timeout(timeoutMs);
-    return as === 'plan' ? this.callPlan(m, req, signal) : this.call(m, req, signal);
+    const r = as === 'plan' ? await this.callPlan(m, req, signal) : await this.call(m, req, signal);
+    // Recorded as its own job, so a world's usage shows what prompt tests spent.
+    if (opts.meter) this.meter.record('promptTest', r.usage, r.usage.costAud * this.config.energyPerAud);
+    return r;
   }
 
   private decisionOf(m: Built): DecisionModel {
@@ -333,7 +338,8 @@ export class ModelGateway {
       const r = await this.decisionOf(m).score({ context: req.context, question: req.question, signal });
       return { answer: { value: r.value, confidence: r.confidence }, usage: r.usage };
     }
-    const input = req.input === undefined ? '' : `\nInput: ${JSON.stringify(req.input)}`;
+    // Sleep templates render their input as text already; anything else is JSON.
+    const input = req.input === undefined ? '' : `\nInput: ${typeof req.input === 'string' ? req.input : JSON.stringify(req.input)}`;
     const schema = req.job === 'consolidate' ? ConsolidateSchema : req.job === 'sheet' ? SheetSchema : ReflectSchema;
     const r = await m.chat!.generate({ context: req.context, instruction: req.question + input, schema, maxOutputTokens: req.job === 'sheet' ? 200 : 600, signal });
     return { answer: r.object as Record<string, Json>, usage: r.usage };

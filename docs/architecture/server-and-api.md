@@ -113,6 +113,10 @@ Auth: `Authorization: Bearer <key>` or `x-api-key: <key>`. An unknown key gets 4
 | `GET /worlds/:id/deltas?fromTick=&toTick=&kinds=` | spectator | Stored deltas per tick; `kinds` filters by delta kind |
 | `POST /worlds/:id/seek` | spectator | `{ tick }`; opens a replay session, returns `{ sessionId, tick, state }` (waiting mail text blanked for non-admins) |
 | `POST /worlds/:id/fork` | admin | `{ tick, id?, config? }`; starts a fork ([events-and-replay.md](events-and-replay.md#forking)) |
+| `GET /prompts` … `GET /prompts/tests/:testId` | admin | Prompt templates: list, get, versions, validate, preview against a saved situation, paid tests (estimate first, one at a time, metered to a world as job `promptTest`); see [prompts.md](prompts.md#api-admin-only) |
+| `GET /worlds/:id/prompts` | admin | `{ active, history }`: the world's active template versions and its activations (with its fork parent's) |
+| `POST /worlds/:id/prompts/:tid/activate` | admin | `{ version }` → `{ active }`; `prompts.activate` input. 404 unknown version, 409 archived |
+| `POST /worlds/:id/prompts/:tid/rollback` | admin | → `{ active }`; activates the previously active version; 409 if there is none |
 | `GET /packs` | admin | Packs this server can load: name, version, licence, content hash, maps |
 | `POST /packs` | admin | Always 501: packs are registered in code ([`catalog.ts`](../../packages/server/src/catalog.ts)) |
 | `GET /packs/:name/sounds/:file` | anyone | Always 404: the robot pack has no recorded sounds |

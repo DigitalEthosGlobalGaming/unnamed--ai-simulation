@@ -187,7 +187,7 @@ Wants (from need thresholds), unfinished actions (from rejections) and questions
 
 ## Prompts
 
-`buildPrompt` ([`prompt.ts`](../../packages/mind/src/prompt.ts)) fills `PromptParts` in a fixed order. The first three parts are the cached prefix.
+`buildPrompt` ([`prompt.ts`](../../packages/mind/src/prompt.ts)) fills `PromptParts` in a fixed order by rendering the world's active **prompt template** (`decide` for gut decisions, `plan` when it thinks it through; [prompts.md](prompts.md)). Code pre-renders every variable (lists, numbering, quoting) and appends the locked safety block to `rules`. The first three parts are the cached prefix: `freezePrefix` renders them at spawn, wake-up and template activation into `mind.prefix`, plus `mind.planPrefix` when the active plan template differs from decide. The sleep jobs render the `consolidate` and `sheet` templates, and the mailbox frames a note with the `mail` template. Each job records the template it used (`PendingJob.template`), and its feed entry carries `template: { id, version }`. The table shows version 1, the repo default.
 
 | Part | Content | Changes |
 | --- | --- | --- |

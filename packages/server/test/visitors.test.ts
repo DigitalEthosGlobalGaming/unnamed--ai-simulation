@@ -18,8 +18,9 @@ const world = (id = 'vgarden') =>
     ticksPerRealSecond: 50,
     idleTicksPerRealSecond: 50,
     mind: { brain: 'autopilot' },
+    // No robot: these tests are about the REST surface, and a robot would read the mail
+    // (taking messages out of the queue) whenever its autopilot wandered to the mailbox.
     entities: [
-      { id: 'robot', type: 'robot', pos: [10, 10] },
       { id: 'pad', type: 'solarPad', pos: [8, 8] },
       { id: 'mailbox', type: 'mailbox', pos: [17, 8] },
     ],
@@ -43,7 +44,7 @@ const admin = () => new UasClient(base, ADMIN);
 const ada = () => new UasClient(base, ADA);
 const bob = () => new UasClient(base, BOB);
 const anon = () => new UasClient(base);
-const settle = () => new Promise((r) => setTimeout(r, 400)); // a few ticks, with room for a loaded machine
+const settle = () => new Promise((r) => setTimeout(r, 150));
 
 describe('visitors: catalogue, airdrops and the mailbox (REST)', () => {
   it('serves the seeded catalogue; templates, validation and edits are admin-only', async () => {

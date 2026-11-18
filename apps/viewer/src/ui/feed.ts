@@ -510,6 +510,10 @@ export class FeedView {
     const s = this.store;
     const w = s.world!;
     const e = r.entries[0]!;
+    // A system line (e.g. "prompt template plan@2 activated"): an admin action, not a decision.
+    const sys = (e as FeedEntry & { system?: string }).system;
+    if (sys && !e.actions.length)
+      return `<li class="fe-row fe-system" data-entry="${keyOf(e)}" data-newest="${keyOf(e)}"><p class="fe-meta"><span class="fe-time">${clockOf(e.tick, w.clock).time}</span><span class="fe-sys">${esc(cap(sys))}</span></p></li>`;
     const n = r.entries.length;
     const warn = this.bad(e);
     const lit = r.entries.some((x) => keyOf(x) === s.highlight);
@@ -563,6 +567,7 @@ class TierPopover {
   private owner: HTMLElement | null = null;
   private pinned = false;
   private quiet = false;
+  private hoverMuted = false;
   private hideTimer: number | undefined;
 
   constructor(
@@ -589,6 +594,8 @@ class TierPopover {
         this.quiet = true;
         o.focus();
         this.quiet = false;
+        // A list re-render under a still pointer fires mouseover again: ignore hover until it moves.
+        this.hoverMuted = true;
         e.stopPropagation();
       }
     });
@@ -601,9 +608,10 @@ class TierPopover {
 
   attach(root: HTMLElement) {
     const btn = (e: Event) => (e.target as HTMLElement).closest<HTMLElement>('[data-feed="tier"]');
+    document.addEventListener('pointermove', () => (this.hoverMuted = false), { passive: true });
     root.addEventListener('mouseover', (e) => {
       const b = btn(e);
-      if (b && !this.pinned) this.show(b, false);
+      if (b && !this.pinned && !this.hoverMuted) this.show(b, false);
     });
     root.addEventListener('mouseout', (e) => {
       const b = btn(e);
@@ -719,6 +727,11 @@ class TierPopover {
         : []),
       ['Tier', `<strong>${TIER_LABEL[e.tier]}</strong>. ${TIER_MEANS[e.tier]}`],
       ['Model', model],
+      ...((): [string, string][] => {
+        // The prompt template and version that made this call (iteration 2, Stage 3).
+        const tp = (e as FeedEntry & { template?: { id: string; version: number } }).template;
+        return tp ? [['Prompt', `<span class="mono">${esc(tp.id)}@${tp.version}</span>`]] : [];
+      })(),
       ...(provider ? ([['Provider', provider]] as [string, string][]) : []),
       ['Confidence', conf],
     );

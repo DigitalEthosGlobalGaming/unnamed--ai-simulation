@@ -13,7 +13,8 @@ import { terrainAt } from './map.ts';
 import { cloneState, createSim, dayOf, step, SECONDS_PER_TICK, TICKS_PER_SECOND, type RobotState, type Scenario, type SimState, type StepOutput } from './sim.ts';
 import { OBJECT_VERBS } from './map.ts';
 import { DEF, DEFS, extrasOf, type LivingEntity } from './garden.ts';
-import type { ObjectDef } from '../types.ts';
+import { SamplePrompts } from './prompts.ts';
+import type { ObjectDef, PromptsApi } from '../types.ts';
 import type { Change } from './types.ts';
 
 const SNAPSHOT_EVERY = 200;
@@ -223,6 +224,7 @@ export class SampleServer implements WorldConnection {
   private opts: SampleOptions;
   readonly account: AccountApi;
   readonly visitors: VisitorApi;
+  readonly prompts: PromptsApi;
   private sampleVisitors: SampleVisitors;
 
   constructor(opts: SampleOptions) {
@@ -244,6 +246,7 @@ export class SampleServer implements WorldConnection {
       feedTickNear: (t) => this.feed.find((e) => e.tick >= t)?.tick ?? t,
     });
     this.visitors = this.sampleVisitors;
+    this.prompts = new SamplePrompts({ role: () => account.role(), username: () => account.username(), tick: () => this.live.tick });
   }
 
   catalog(): WorldCatalog {

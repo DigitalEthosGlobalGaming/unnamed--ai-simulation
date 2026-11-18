@@ -3,7 +3,8 @@
  * replay through a server replay session (replay.open / seek / play / pause / replay.close).
  */
 import { UasClient, type WorldStream } from '@uas/client';
-import type { ObjectDef, VisitorApi, AccountApi, Belief, BeliefMark, ConnectionStatus, FeedEntry, ViewerMessage, WorldCatalog, WorldConnection } from '../types.ts';
+import { RestPrompts } from './prompts.ts';
+import type { ObjectDef, PromptsApi, VisitorApi, AccountApi, Belief, BeliefMark, ConnectionStatus, FeedEntry, ViewerMessage, WorldCatalog, WorldConnection } from '../types.ts';
 import { RestAccount } from './account.ts';
 import { RestVisitors } from './visitors.ts';
 
@@ -44,6 +45,7 @@ export class RealConnection implements WorldConnection {
 
   readonly account: AccountApi;
   readonly visitors: VisitorApi;
+  readonly prompts: PromptsApi;
 
   constructor(opts: RealOptions) {
     const base = opts.baseUrl.startsWith('http') ? opts.baseUrl : `${location.origin}${opts.baseUrl}`;
@@ -53,6 +55,7 @@ export class RealConnection implements WorldConnection {
     this.worldId = opts.worldId;
     const rest = new RestAccount(base, () => this.worldId, opts.apiKey);
     this.visitors = new RestVisitors(base, () => this.worldId, opts.apiKey);
+    this.prompts = new RestPrompts(base, () => this.worldId, opts.apiKey);
     // A settings change can alter pacing and the cap: re-read the world's status right after.
     this.account = {
       me: () => rest.me(),

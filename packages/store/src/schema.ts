@@ -134,6 +134,20 @@ export const mail = sqliteTable(
   (t) => [primaryKey({ columns: [t.worldId, t.mailId] })],
 );
 
+/** Prompt template versions (server-wide, immutable; docs/architecture/prompts.md). */
+export const promptVersions = sqliteTable(
+  'prompt_versions',
+  {
+    templateId: text('template_id').notNull(),
+    version: integer('version').notNull(),
+    body: text('body', { mode: 'json' }).notNull(),
+    note: text('note').notNull(),
+    createdAt: text('created_at').notNull(),
+    createdBy: text('created_by').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.templateId, t.version] })],
+);
+
 /** Server-wide flags, e.g. that the catalogue was seeded once. */
 export const serverMeta = sqliteTable('server_meta', {
   key: text('key').primaryKey(),
@@ -156,6 +170,7 @@ CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL,
 CREATE TABLE IF NOT EXISTS api_keys (key_hash TEXT PRIMARY KEY, role TEXT NOT NULL, world_id TEXT);
 CREATE TABLE IF NOT EXISTS catalog_items (id TEXT PRIMARY KEY, item TEXT NOT NULL, disabled INTEGER NOT NULL, updated_at TEXT NOT NULL, updated_by TEXT);
 CREATE TABLE IF NOT EXISTS mail (world_id TEXT NOT NULL, mail_id TEXT NOT NULL, text TEXT NOT NULL, username TEXT NOT NULL, admin INTEGER NOT NULL, user_key TEXT NOT NULL, posted_tick INTEGER NOT NULL, posted_at TEXT NOT NULL, status TEXT NOT NULL, status_tick INTEGER, reader_id TEXT, PRIMARY KEY (world_id, mail_id));
+CREATE TABLE IF NOT EXISTS prompt_versions (template_id TEXT NOT NULL, version INTEGER NOT NULL, body TEXT NOT NULL, note TEXT NOT NULL, created_at TEXT NOT NULL, created_by TEXT NOT NULL, PRIMARY KEY (template_id, version));
 CREATE TABLE IF NOT EXISTS server_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS usage_daily (world_id TEXT NOT NULL, day TEXT NOT NULL, model_id TEXT NOT NULL, job TEXT NOT NULL, calls INTEGER NOT NULL, input_tokens INTEGER NOT NULL, cached_input_tokens INTEGER NOT NULL, output_tokens INTEGER NOT NULL, cost_aud REAL NOT NULL, energy REAL NOT NULL, PRIMARY KEY (world_id, day, model_id, job));
 `;

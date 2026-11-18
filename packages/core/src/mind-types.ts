@@ -136,6 +136,8 @@ export interface PendingJob {
   candidates?: Candidate[];
   /** appraise / scoreMemory: the outcome draft they refine. */
   draftId?: string;
+  /** The prompt template and version it was rendered with (for the feed entry). */
+  template?: { id: string; version: number | string };
   /** decide: how hard it chose to think, and why (for the feed entry). */
   depth?: ThinkingDepth;
   depthWhy?: string;
@@ -177,6 +179,8 @@ export interface MindState {
   diaryToday: string[];
   /** The cached prompt prefix; rebuilt only at sleep or content reload. */
   prefix: { rules: string; sheet: string; beliefs: string; day: number };
+  /** The plan template's cached prefix, when it differs from the decision template's. */
+  planPrefix?: { rules: string; sheet: string; beliefs: string; day: number };
   energyFloorLatched: boolean;
   nextId: number;
   /** Felt words last tick, to detect threshold crossings. */
@@ -205,6 +209,8 @@ export interface MindState {
   sheetHistory?: SheetEdit[];
   /** Days each `verb:type@when` went well, for habit detection. */
   outcomeDays?: Record<string, number[]>;
+  /** What it picked up last, and whether it has used it since (pickup/drop loop guard). */
+  carried?: { id: EntityId; type: string; used: boolean };
   /** The latest queued feed entry's steps, so each can be marked when it resolves. */
   feedSteps?: { tick: number; steps: { verb: string; targetId?: string; open: boolean }[] };
 }

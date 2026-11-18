@@ -260,6 +260,12 @@ export class World implements WorldView {
     return this.registry.objects.get(e.type)?.verbs[verb];
   }
 
+  /** A part of the world's active prompt template (`prompts.activate`), if one was activated. */
+  promptPart(id: string, part: string): string | undefined {
+    const p = (this.state.ext.prompts as Record<string, { body?: { parts?: Record<string, string> } }> | undefined)?.[id];
+    return p?.body?.parts?.[part];
+  }
+
   mailPeek(): { mailId: string; text: string } | undefined {
     const m = this.state.mailbox?.queue[0];
     return m && { mailId: m.mailId, text: m.text };
@@ -404,6 +410,14 @@ export class World implements WorldView {
         box.queue.splice(i, 1);
         this.emit({ kind: 'mail', mailId: e.payload.mailId, status: 'deleted' });
         return this.mailboxChanged();
+      }
+      case 'prompts.activate': {
+        const p = e.payload;
+        if (!p?.templateId || !p.body?.parts) return reject('bad template activation');
+        const prompts = { ...((this.state.ext.prompts as Record<string, Json> | undefined) ?? {}) };
+        prompts[p.templateId] = { version: p.version, body: { parts: { ...p.body.parts } } } as unknown as Json;
+        this.state.ext.prompts = prompts;
+        return;
       }
       case 'pack.loaded':
         if (e.payload.packVersions !== this.registry.packVersions) return reject(`packs ${e.payload.packVersions} are not loaded`);
@@ -659,7 +673,7 @@ export class World implements WorldView {
       if (obj.stateSpec) {
         o.stateSpec = structuredClone(obj.stateSpec);
         if (obj.footprint) o.footprint = { ...obj.footprint };
-        o.products = (obj.products ?? []).map((p) => ({ slot: p.slot, item: p.item, ready: 0, max: p.max, verb: p.verb, hours: 0, nextInHours: p.everyHours }));
+        o.products = (obj.products ?? []).map((p) => ({ slot: p.slot, item: p.item, ready: 0, max: p.max, verb: p.verb, hours: 0, ...(checkCondition(p.when, o.state) && { nextInHours: p.everyHours }) }));
         o.appearance = obj.def2 ? appearanceOf(obj.def2, o.state) : [];
       }
       if (def.createdBy) o.createdBy = { ...def.createdBy };
@@ -933,7 +947,8 @@ export class World implements WorldView {
     for (const slot of prods) {
       const p = products.find((x) => x.slot === slot.slot);
       if (p) {
-        if (slot.ready >= slot.max) delete slot.nextInHours;
+        // No countdown while full, or while the slot's `when` doesn't hold (it isn't filling).
+        if (slot.ready >= slot.max || !checkCondition(p.when, st)) delete slot.nextInHours;
         else slot.nextInHours = Math.round(Math.max(0, p.everyHours - slot.hours) * 10) / 10;
       }
     }
@@ -1015,7 +1030,7 @@ export class World implements WorldView {
     if (typeof entity === 'string') return reject(entity);
     if (entity.kind === 'object') {
       entity.stateSpec = structuredClone(compiled.stateSpec ?? {});
-      entity.products = (compiled.products ?? []).map((x) => ({ slot: x.slot, item: x.item, ready: 0, max: x.max, verb: x.verb, hours: 0, nextInHours: x.everyHours }));
+      entity.products = (compiled.products ?? []).map((x) => ({ slot: x.slot, item: x.item, ready: 0, max: x.max, verb: x.verb, hours: 0, ...(checkCondition(x.when, entity.state) && { nextInHours: x.everyHours }) }));
       entity.appearance = appearanceOf(item, entity.state);
       this.emitView(entity);
     }

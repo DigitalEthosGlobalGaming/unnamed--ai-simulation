@@ -6,3 +6,5 @@ export { buildPrompt, freezePrefix, rulesText } from './prompt.ts';
 export { computeMood, feltWord, moodWord } from './needs.ts';
 export { SLEEP, allowedDepth, applySheetEdit, detectHabits, fogOf, fogWord, pressureOf } from './sleep.ts';
 export { consolidateQuestion, sheetQuestion } from './prompt.ts';
+export * from './templates.ts';
+export { prefixVariables } from './prompt.ts';

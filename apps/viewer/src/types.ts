@@ -205,6 +205,8 @@ export interface WorldConnection {
   reconnect(): void;
   /** Sign-in and world settings, when the source supports them. */
   account?: AccountApi;
+  /** Prompt templates (admin), when the source supports them. */
+  prompts?: PromptsApi;
   /** Catalogue, airdrops and the mailbox, when the source supports them. */
   visitors?: VisitorApi;
 }
@@ -372,4 +374,109 @@ export interface VisitorApi {
   mail(): Promise<MailView>;
   postMail(text: string): Promise<MailStatus>;
   deleteMail(mailId: string): Promise<void>;
+}
+
+/* ------------------------------------------------------------ prompt templates (docs/architecture/prompts.md) */
+
+export type PromptId = 'decide' | 'plan' | 'consolidate' | 'sheet' | 'mail' | (string & {});
+
+export interface PromptSummary {
+  id: PromptId;
+  name: string;
+  description: string;
+  parts: string[];
+  latestVersion: number;
+}
+
+export interface PromptVariable {
+  name: string;
+  description: string;
+  example: string;
+  scope: 'prefix' | 'call';
+  required: boolean;
+}
+
+export interface PromptVersionInfo {
+  version: number;
+  note: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface PromptTemplate extends Omit<PromptSummary, 'latestVersion'> {
+  variables: PromptVariable[];
+  safetyBlock: string;
+  versions: PromptVersionInfo[];
+  /** Which parts form the cached prefix (they may only use prefix variables). */
+  prefixParts?: string[];
+}
+
+export interface PromptBody {
+  parts: Record<string, string>;
+}
+
+export interface PromptVersion extends PromptVersionInfo {
+  body: PromptBody;
+}
+
+export interface PromptIssue {
+  part: string;
+  message: string;
+  /** Character offset in the part, when the problem has a place. */
+  index?: number;
+}
+
+export interface PromptValidation {
+  ok: boolean;
+  errors: PromptIssue[];
+  warnings: (PromptIssue | string)[];
+  tokens: number;
+}
+
+export interface PromptPreview {
+  parts: Record<string, string>;
+  safetyBlock: string;
+  tokens: number;
+}
+
+export interface PromptSituation {
+  id: string;
+  title: string;
+  templates: string[];
+}
+
+export type PromptSource = { body: PromptBody } | { version: number };
+
+export interface PromptTestEstimate {
+  estimate: { calls: number; aud: number; minutes: number };
+}
+
+export interface PromptTestStatus {
+  status: 'running' | 'done' | 'failed';
+  progress: { done: number; total: number };
+  aud: number;
+  error?: string;
+  results: { situation: string; passes: number; runs: number; errors?: number; checks: { name: string; pass: boolean; detail?: string }[] | string[]; baseline?: { passes: number; runs: number } }[];
+}
+
+export interface WorldPrompts {
+  active: Record<string, number>;
+  history: { tid: string; version: number; tick: number; at: string; by: string }[];
+}
+
+/** Admin-only prompt template API. */
+export interface PromptsApi {
+  list(): Promise<PromptSummary[]>;
+  get(tid: string): Promise<PromptTemplate>;
+  version(tid: string, v: number): Promise<PromptVersion>;
+  save(tid: string, body: PromptBody, note: string): Promise<{ version: number }>;
+  validate(tid: string, body: PromptBody): Promise<PromptValidation>;
+  preview(tid: string, src: PromptSource, situation: string): Promise<PromptPreview>;
+  situations(): Promise<PromptSituation[]>;
+  estimate(tid: string, src: PromptSource, situations?: string[]): Promise<PromptTestEstimate>;
+  startTest(tid: string, src: PromptSource, situations?: string[]): Promise<{ testId: string }>;
+  test(testId: string): Promise<PromptTestStatus>;
+  world(): Promise<WorldPrompts>;
+  activate(tid: string, version: number): Promise<{ active: Record<string, number> }>;
+  rollback(tid: string): Promise<{ active: Record<string, number> }>;
 }

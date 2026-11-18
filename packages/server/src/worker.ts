@@ -47,6 +47,14 @@ setInterval(() => {
 port.on('message', (msg: ToWorker) => {
   try {
     let value: unknown;
+    if (msg.method === 'modelCall') {
+      // Async: answered when the model replies (the tick loop keeps running meanwhile).
+      rt.gateway
+        .callModel(msg.model, msg.request, msg.as, 60_000, { meter: true })
+        .then((v) => send({ type: 'result', id: msg.id, ok: true, value: v }))
+        .catch((err: Error) => send({ type: 'result', id: msg.id, ok: false, error: err.message }));
+      return;
+    }
     switch (msg.method) {
       case 'submit':
         value = rt.submit(msg.type, msg.payload, msg.causedBy);
@@ -96,6 +104,9 @@ port.on('message', (msg: ToWorker) => {
         break;
       case 'removeMail':
         value = rt.removeMail(msg.mailId, msg.userId);
+        break;
+      case 'prompts':
+        value = rt.prompts();
         break;
       case 'shutdown':
         clearTimeout(timer);

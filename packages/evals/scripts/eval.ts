@@ -4,11 +4,12 @@
  *   npm run eval                                   # every situation, 3 samples, the garden's decide and plan models
  *   npm run eval -- --only holding-ball,signal-low # by id (comma-separated)
  *   npm run eval -- --tag battery --samples 5      # by tag
- *   npm run eval -- --decide localDm --plan planner          # other entries from garden.yaml's models
+ *   npm run eval -- --decide localDm --plan planner          # other entries from garden2.yaml's models
  *   npm run eval -- --decide gateway:typesafe-ai/jev         # any AI Gateway model id
  *   npm run eval -- --update-prompts               # rewrite golden prompts (no model calls)
  *   npm run eval -- --dry                          # build every prompt and check the situations, no calls
  *   npm run eval -- --decide-rpm 4                 # pace decision calls (hosted Laya allows 5 a minute per team)
+ *   npm run eval -- --template plan@3 --db data/uas.db   # a stored prompt template version (read-only) instead of the default
  *
  * Reports go to docs/benchmarks/evals/<date>.{md,json}. AI_GATEWAY_API_KEY comes from .env and is never printed.
  */
@@ -24,12 +25,13 @@ import {
   SITUATIONS_DIR,
   loadSituations,
   promptText,
-  runChecks,
+  runSituation,
   situationRequest,
   validateChecks,
-  type Answer,
-  type Situation,
+  type SituationOut,
 } from '../src/index.ts';
+import { DEFAULT_TEMPLATES, TEMPLATE_IDS, type ActiveTemplates, type TemplateId } from '@uas/mind';
+import { readPromptVersion } from '@uas/store';
 
 const args = process.argv.slice(2);
 const flag = (f: string) => args.includes(f);
@@ -69,13 +71,40 @@ if (situations.length === 0) {
   console.error('no situations match');
   process.exit(2);
 }
+// ---- `--template plan@3 --db …`: a stored version (version 1 is the repo default, no database needed)
+let override: { active: ActiveTemplates; label: string } | undefined;
+const tplSpec = opt('--template');
+if (tplSpec) {
+  const m = /^([a-z]+)@(\d+)$/.exec(tplSpec);
+  if (!m || !TEMPLATE_IDS.includes(m[1] as TemplateId)) {
+    console.error(`--template takes <id>@<version> with id one of ${TEMPLATE_IDS.join(', ')}`);
+    process.exit(2);
+  }
+  const id = m[1] as TemplateId;
+  const version = Number(m[2]);
+  let body = version === 1 ? DEFAULT_TEMPLATES[id] : undefined;
+  if (!body) {
+    const dbPath = opt('--db');
+    if (!dbPath) {
+      console.error('--template with a version above 1 needs --db <path to the server database>');
+      process.exit(2);
+    }
+    body = readPromptVersion(dbPath, id, version)?.body;
+    if (!body) {
+      console.error(`no version ${version} of ${id} in ${dbPath}`);
+      process.exit(2);
+    }
+  }
+  override = { active: { [id]: { version, body } }, label: `${id}@${version}` };
+}
+
 if (flag('--dry')) {
-  for (const s of situations) console.log(`${s.id}: ${situationRequest(s).candidates.length} options, ${s.checks.filter((c) => !c.todo).length} checks`);
+  for (const s of situations) console.log(`${s.id}: ${situationRequest(s, override ? { active: override.active } : {}).candidates.length} options, ${s.checks.filter((c) => !c.todo).length} checks`);
   process.exit(0);
 }
 
 // ---- models: the garden's config (env substituted), plus `gateway:<id>` overrides
-const world = loadWorldYaml(readFileSync(join(REPO_ROOT, 'worlds/garden.yaml'), 'utf8'), process.env);
+const world = loadWorldYaml(readFileSync(join(REPO_ROOT, 'worlds/garden2.yaml'), 'utf8'), process.env);
 const raw = structuredClone(world.models) as { models: Record<string, ModelDef & Record<string, unknown>>; jobs: Record<string, (string | { use: string })[]> };
 const first = (job: string) => {
   const e = raw.jobs[job]?.[0];
@@ -85,7 +114,7 @@ const key = process.env.AI_GATEWAY_API_KEY ?? '';
 function resolveModel(spec: string | undefined, as: 'decide' | 'plan'): string {
   const name = spec ?? first(as)!;
   if (!name.startsWith('gateway:')) {
-    if (!raw.models[name]) throw new Error(`no model ${name} in worlds/garden.yaml (or use gateway:<model id>)`);
+    if (!raw.models[name]) throw new Error(`no model ${name} in worlds/garden2.yaml (or use gateway:<model id>)`);
     return name;
   }
   const id = name.slice('gateway:'.length);
@@ -129,65 +158,21 @@ async function call(model: string, req: Parameters<ModelGateway['callModel']>[1]
 }
 
 // ---- run
-interface SampleOut {
-  choices: string[];
-  reasons?: Record<string, string>;
-  confidence?: number;
-  ms: number;
-  costAud: number;
-  error?: string;
-  checks: Record<string, boolean | undefined>;
-}
-interface SituationOut {
-  id: string;
-  title: string;
-  job: string;
-  model: string;
-  options: { id: string; label: string }[];
-  /** How hard the brain itself would choose to think here (code, before any model). */
-  thinking: { depth: string; why: string };
-  samples: SampleOut[];
-  checks: Record<string, { pass: number; applicable: number; minPassRate: number; ok: boolean }>;
-}
 const results: SituationOut[] = [];
 let totalCost = 0;
 for (const s of situations) {
-  const { request, candidates, thinking, built } = situationRequest(s);
-  // `auto` follows the brain: habit → its own top option (free), gut → decision model, think → plan model.
-  const route: 'decide' | 'plan' | 'habit' = s.job === 'auto' ? (thinking.depth === 'think' ? 'plan' : thinking.depth === 'gut' ? 'decide' : 'habit') : s.job;
-  const model = route === 'plan' ? planModel : route === 'decide' ? decideModel : 'habit (no model)';
-  const out: SampleOut[] = [];
-  for (let i = 0; i < samples; i++) {
-    const started = performance.now();
-    let answer: Answer | undefined;
-    let sample: Omit<SampleOut, 'checks'>;
-    try {
-      if (route === 'habit') {
-        answer = { choices: [candidates[0]!.id] };
-        out.push({ choices: answer.choices, ms: 0, costAud: 0, checks: runChecks({ situation: s, candidates, thinking, built, answer }) });
-        continue;
-      }
-      const r = await call(model, { ...request, jobId: `eval-${s.id}-${i}`, multi: { max: 3 } }, route);
-      const ids = Array.isArray(r.answer.choices) ? (r.answer.choices as { id: string }[]).map((c) => String(c.id)) : [];
-      const reasons = r.answer.reasons && typeof r.answer.reasons === 'object' ? (r.answer.reasons as Record<string, string>) : undefined;
-      answer = { choices: ids, ...(reasons && { reasons }) };
-      sample = { choices: ids, ...(reasons && { reasons }), ...(typeof r.answer.confidence === 'number' && { confidence: r.answer.confidence }), ms: Math.round(r.usage.latencyMs || performance.now() - started), costAud: r.usage.costAud };
-    } catch (e) {
-      sample = { choices: [], ms: Math.round(performance.now() - started), costAud: 0, error: (e as Error).message.replaceAll(key || '\u0000', '[key]').slice(0, 200) };
-    }
-    totalCost += sample.costAud;
-    out.push({ ...sample, checks: runChecks({ situation: s, candidates, thinking, built, answer }) });
-  }
-  const checks: SituationOut['checks'] = {};
-  for (const name of Object.keys(out[0]?.checks ?? {})) {
-    const spec = s.checks.find((c, i) => !c.todo && (name === c.check || name === `${c.check}#${i}`))!;
-    const vals = out.map((o) => o.checks[name]).filter((v): v is boolean => v !== undefined);
-    const pass = vals.filter(Boolean).length;
-    checks[name] = { pass, applicable: vals.length, minPassRate: spec.minPassRate, ok: vals.length === 0 || pass >= Math.round(spec.minPassRate * vals.length) /* 0.67 of 3 = 2 */ };
-  }
-  const line = Object.entries(checks).map(([n, c]) => `${c.ok ? 'ok' : 'FAIL'} ${n} ${c.pass}/${c.applicable}`).join(', ');
-  console.log(`${s.id} [${s.job === 'auto' ? `auto→${route}` : s.job}, ${model}]: ${line}`);
-  results.push({ id: s.id, title: s.title, job: s.job === 'auto' ? `auto→${route}` : s.job, model, options: candidates.map((c) => ({ id: c.id, label: c.label })), thinking, samples: out, checks });
+  const r = await runSituation(s, {
+    call,
+    decideModel,
+    planModel,
+    samples,
+    ...(override && { active: override.active }),
+    redact: (m) => m.replaceAll(key || '\u0000', '[key]'),
+    onSample: (aud) => (totalCost += aud),
+  });
+  const line = Object.entries(r.checks).map(([n, c]) => `${c.ok ? 'ok' : 'FAIL'} ${n} ${c.pass}/${c.applicable}`).join(', ');
+  console.log(`${s.id} [${r.job}, ${r.model}, ${r.template.id}@${r.template.version}]: ${line}`);
+  results.push(r);
 }
 
 // ---- report
@@ -226,6 +211,7 @@ const md = [
   '',
   `- Situations: ${results.length} from [\`evals/situations\`](../../../evals/situations), ${samples} sample(s) each`,
   `- Decide model: \`${label(decideModel)}\`; plan model: \`${label(planModel)}\``,
+  `- Prompt templates: ${override ? `\`${override.label}\` (others: version 1)` : 'version 1 (repo defaults)'}`,
   `- Passing every check: ${okCount}/${results.length} situations`,
   `- Cost: A$${totalCost.toFixed(6)} for ${all_ms.length} calls; latency p50 ${(p(0.5) / 1000).toFixed(2)} s, p95 ${(p(0.95) / 1000).toFixed(2)} s`,
   `- Previous run: ${previous ? `[\`${previousFile}\`](${previousFile!.replace(/\.json$/, '.md')})` : 'none'}`,
@@ -247,7 +233,7 @@ const md = [
   '## Answers',
   '',
   ...results.flatMap((r) => [
-    `### \`${r.id}\` (${r.job}): ${r.title}`,
+    `### \`${r.id}\` (${r.job}, ${r.template.id}@${r.template.version}): ${r.title}`,
     '',
     `Thinking (the brain's choice): ${r.thinking.depth} (${r.thinking.why}). Options: ${r.options.map((o) => `${o.id} ${o.label}`).join('; ')}`,
     '',
@@ -259,5 +245,5 @@ const md = [
   ]),
 ].join('\n');
 writeFileSync(join(REPORTS_DIR, `${stem}.md`), `${md}\n`);
-writeFileSync(join(REPORTS_DIR, `${stem}.json`), `${JSON.stringify({ file: stem, date, samples, decideModel: label(decideModel), planModel: label(planModel), totalCostAud: totalCost, results }, null, 1)}\n`);
+writeFileSync(join(REPORTS_DIR, `${stem}.json`), `${JSON.stringify({ file: stem, date, samples, decideModel: label(decideModel), planModel: label(planModel), ...(override && { template: override.label }), totalCostAud: totalCost, results }, null, 1)}\n`);
 console.log(`\n${okCount}/${results.length} situations pass every check. Total cost A$${totalCost.toFixed(6)}. Wrote ${relative(REPO_ROOT, join(REPORTS_DIR, `${stem}.md`))}`);

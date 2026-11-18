@@ -104,6 +104,30 @@ const sampleShots = [
     steps: [{ js: () => document.querySelector('#set-batteryPlanAbove')?.scrollIntoView({ block: 'start' }) }, { type: { sel: '#set-batteryTopUp', value: '0.25' } }, { js: () => document.querySelector('#set-batteryTopUp').dispatchEvent(new Event('change', { bubbles: true })), wait: 900 }],
   },
   { name: 'desktop-depth-popover', vp: [1440, 900], q: 'select=rb-03', steps: [{ click: '.fe-row .tier-btn' }] },
+  // Iteration 2 Stage 3: the Prompts page.
+  { name: 'desktop-prompts-preview', vp: [1440, 900], q: 'as=admin&page=prompts&template=plan', wait: 3000, steps: [{ click: '#pr-tab-preview', wait: 900 }] },
+  { name: 'desktop-prompts-diff', vp: [1440, 900], q: 'as=admin&page=prompts&template=plan', wait: 3000, steps: [{ click: '#pr-tab-diff', wait: 600 }] },
+  {
+    name: 'desktop-prompts-errors',
+    vp: [1440, 900],
+    q: 'as=admin&page=prompts&template=decide',
+    wait: 3000,
+    steps: [
+      { js: () => { const t = document.querySelector('textarea[data-part="sheet"]'); t.value += '\nRecent: {{recent}} and {{mood}}'; t.dispatchEvent(new Event('input', { bubbles: true })); }, wait: 300 },
+      { js: () => { const t = document.querySelector('textarea[data-part="question"]'); t.value = t.value.replace('{{question}}', '{{questoin}}'); t.dispatchEvent(new Event('input', { bubbles: true })); }, wait: 900 },
+    ],
+  },
+  {
+    name: 'desktop-prompts-test',
+    vp: [1440, 900],
+    q: 'as=admin&page=prompts&template=plan',
+    wait: 3000,
+    steps: [{ click: '#pr-tab-test', wait: 400 }, { click: '[data-act="estimate"]', wait: 600 }, { click: '[data-act="run-test"]', wait: 12500 }],
+  },
+  { name: 'desktop-prompts-estimate', vp: [1440, 900], q: 'as=admin&page=prompts&template=plan', wait: 3000, steps: [{ click: '#pr-tab-test', wait: 400 }, { click: '[data-act="estimate"]', wait: 600 }] },
+  { name: 'mobile-admin-topbar', vp: [390, 844], q: 'as=admin&drawer=full', mobile: true },
+  { name: 'mobile-prompts', vp: [390, 844], q: 'as=admin&page=prompts&template=plan', mobile: true, wait: 3000, steps: [{ click: '#pr-tab-diff', wait: 500 }] },
+  { name: 'mobile-prompts-activate', vp: [390, 844], q: 'as=admin&page=prompts&template=plan', mobile: true, wait: 3000, steps: [{ click: '.pr-world [data-act="ask-activate"]', wait: 500 }] },
   // Iteration 2 Stage 2: the new garden, object cards, archived worlds.
   { name: 'desktop-garden', vp: [1440, 900], q: 'view=11.5,2.5,2.6&open=obj:obj-plant-1', wait: 3800 },
   { name: 'desktop-plant-card', vp: [1440, 900], q: 'open=obj:obj-plant-1', wait: 3800 },

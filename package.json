@@ -22,7 +22,8 @@
     "eval": "node --env-file-if-exists=.env packages/evals/scripts/eval.ts",
     "eval:capture": "node --env-file-if-exists=.env packages/evals/scripts/capture.ts",
     "world:archive": "node packages/server/scripts/world.ts archive",
-    "world:new": "node packages/server/scripts/world.ts new"
+    "world:new": "node packages/server/scripts/world.ts new",
+    "prompts:export": "node packages/server/scripts/prompts-export.ts"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",

@@ -4,7 +4,7 @@ import type { Pos } from './grid.ts';
 import type { Action, AnyEntity, EntityDef } from './entities.ts';
 import type { Belief, Habit, Memory, MemoryId, SheetEdit, SheetLine, SleepPhase } from './mind-types.ts';
 
-export type JobName = 'decide' | 'route' | 'appraise' | 'scoreMemory' | 'vocalize' | 'plan' | 'reflect' | 'consolidate' | 'sheet' | 'embed';
+export type JobName = 'decide' | 'route' | 'appraise' | 'scoreMemory' | 'vocalize' | 'plan' | 'reflect' | 'consolidate' | 'sheet' | 'embed' | 'promptTest';
 
 /** How hard the robot chose to think: habit (free), gut (decision model) or think it through (plan model). */
 export type ThinkingDepth = 'habit' | 'gut' | 'think';
@@ -87,6 +87,16 @@ export interface ClockPayload {
   reason?: 'restart' | 'resume' | 'realign' | 'sync';
 }
 
+/** A prompt template version for this world (docs/architecture/prompts.md); the body travels with it so replays need no database. */
+export interface PromptsActivatePayload {
+  templateId: string;
+  version: number;
+  body: { parts: Record<string, string> };
+  /** Real time and admin of the activation (for the history; the sim ignores them). */
+  at?: string;
+  by?: string;
+}
+
 /** A world moved to new content pack versions (logged, so replays know where the change happened). */
 export interface PackLoadedPayload {
   packVersions: string;
@@ -151,6 +161,7 @@ export interface InputPayloads {
   'sim.config': SimConfigPayload;
   'settings.change': SettingsChangePayload;
   'pack.loaded': PackLoadedPayload;
+  'prompts.activate': PromptsActivatePayload;
   'airdrop.drop': AirdropDropPayload;
   'airdrop.remove': AirdropRemovePayload;
   'mail.post': MailPostPayload;
@@ -241,6 +252,10 @@ export interface FeedEntry {
   notes?: string[];
   /** Why a fallback happened, e.g. 'queued too long'. */
   reason?: string;
+  /** The prompt template and version the model saw. */
+  template?: { id: string; version: number | string };
+  /** A system note instead of a decision (e.g. a template was activated). */
+  system?: string;
   /** How hard it chose to think (absent for carry-on and fallbacks), and why. */
   depth?: ThinkingDepth;
   depthWhy?: string;

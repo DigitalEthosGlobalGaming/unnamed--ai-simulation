@@ -74,6 +74,9 @@ describe('schema-2 objects in the sim', () => {
 
   it('products fill on a timer while their condition holds; harvest puts one in the hands; reset applies', () => {
     const t = setup();
+    // A seedling isn't filling anything: no countdown until the slot's `when` holds.
+    t.run(HOUR + 1);
+    expect(t.obj('plant').products!.map((p) => p.nextInHours)).toEqual([undefined, undefined]);
     t.world.state.entities.plant!.state.growth = 1;
     t.world.state.entities.plant!.state.water = 1;
     t.run(23 * HOUR);

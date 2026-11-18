@@ -1,4 +1,4 @@
-import type { ObjectDef2, Delta, InputEvent, Pos, Sender } from '@uas/core';
+import type { ObjectDef2, Delta, InputEvent, JobRequest, Pos, Sender } from '@uas/core';
 import type { WorldState } from '@uas/sim';
 import type { WorldFile } from './config.ts';
 import type { WorldStatus } from './runtime.ts';
@@ -28,6 +28,9 @@ export type WorkerMethod =
   | { method: 'mail'; userKey?: string; admin: boolean }
   | { method: 'postMail'; text: unknown; by: Sender }
   | { method: 'removeMail'; mailId: string; userId?: string }
+  | { method: 'prompts' }
+  /** One metered model call for a prompt test: through the world's gateway, counted towards its daily cap. */
+  | { method: 'modelCall'; model: string; request: JobRequest; as: 'decide' | 'plan' }
   | { method: 'shutdown' };
 
 export type ToWorker = { type: 'call'; id: number } & WorkerMethod;

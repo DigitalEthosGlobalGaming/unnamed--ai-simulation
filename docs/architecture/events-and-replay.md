@@ -36,6 +36,7 @@ interface InputEvent<T> {
 | `mail.post` | `{ mailId, text, by, expiresAfterSeconds? }` | `POST /worlds/:id/mail` |
 | `mail.remove` | `{ mailId }` | `DELETE /worlds/:id/mail/:mailId` |
 | `pack.loaded` | `{ packVersions }` | world runtime on start, when the packs changed since the snapshot |
+| `prompts.activate` | `{ templateId, version, body, at?, by? }` (the version's full text, so replays and forks need no lookup) | `POST /worlds/:id/prompts/:tid/activate` and `…/rollback` ([prompts.md](prompts.md)) |
 
 `causedBy.userId` is a hash prefix of the API key, never the key itself. `by` on visitor inputs is `{ username, admin, userKey }`, where `userKey` is that same kind of hash. Non-admins get `mail.post` without its `text` from `GET /events`.
 
@@ -155,3 +156,4 @@ Schema: [`schema.ts`](../../packages/store/src/schema.ts) (Drizzle definitions p
 | `catalog_items` | server (`PUT`/`DELETE /catalog`, first-run seed) | `GET /catalog`, `POST /worlds/:id/airdrops` |
 | `mail` | runtime on `POST /mail`; statuses from `mail` deltas | `GET /worlds/:id/mail` |
 | `server_meta` | server (`catalogSeeded`) | the catalogue seed |
+| `prompt_versions` | server (`POST /prompts/:tid/versions`; version 1 of each template seeded from the repo) | the Prompts API, `npm run eval -- --template`, `npm run prompts:export` (read-only) |

@@ -45,6 +45,17 @@ export class SqliteInputLog implements InputLog {
       .map(rowToEvent);
   }
 
+  /** Every input of one type, oldest first (e.g. `prompts.activate` for the template history). */
+  ofType(worldId: WorldId, type: string): InputEvent[] {
+    return this.db
+      .select()
+      .from(schema.inputEvents)
+      .where(and(eq(schema.inputEvents.worldId, worldId), eq(schema.inputEvents.type, type)))
+      .orderBy(asc(schema.inputEvents.seq))
+      .all()
+      .map(rowToEvent);
+  }
+
   page(worldId: WorldId, fromSeq: number, limit: number): InputEvent[] {
     return this.db
       .select()

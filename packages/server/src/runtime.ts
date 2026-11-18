@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { cleanMailText, mailTextProblem, parseDurationSeconds, type ObjectDef2, type Character, type Delta, type InputEvent, type JobName, type Json, type Pos, type Sender, type TickDeltas } from '@uas/core';
-import { MindSystem, allowedDepth, mindConfigOf } from '@uas/mind';
+import { MindSystem, TEMPLATE_IDS, activeBody, activeTemplatesOf, allowedDepth, mindConfigOf, type TemplateId } from '@uas/mind';
 import { PERSISTED, SETTINGS_SCHEMA, SettingsPatchSchema, type SettingsPatch, type SettingsValues } from './settings.ts';
 import { ModelGateway, ModelHost, parseModelsConfig, type GatewayOptions, type QueueStats, type UsageRow } from '@uas/models';
 import { and, eq } from 'drizzle-orm';
@@ -267,6 +267,12 @@ export class WorldRuntime {
     } catch (e) {
       this.opts.log?.(`refine hook failed: ${(e as Error).message}`);
     }
+  }
+
+  /** The prompt template versions active in this world (version 1 unless a `prompts.activate` changed it). */
+  prompts(): Record<TemplateId, number | string> {
+    const active = activeTemplatesOf(this.world.state.ext);
+    return Object.fromEntries(TEMPLATE_IDS.map((id) => [id, activeBody(active, id).version])) as Record<TemplateId, number | string>;
   }
 
   /** Archived worlds don't tick and refuse every input. */

@@ -1,0 +1,8 @@
+{
+  "id": "mail",
+  "name": "Mail framing",
+  "description": "How a stranger's note is framed when the robot reads it (one line; the note is always quoted by code).",
+  "parts": {
+    "line": "a note from a stranger: {{note}}"
+  }
+}

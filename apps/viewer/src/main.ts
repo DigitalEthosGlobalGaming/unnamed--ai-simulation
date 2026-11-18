@@ -24,6 +24,7 @@ import { VisitorStore } from './client/visitors.ts';
 import { airdropFlow, itemCard, mailView, type VisitorUiHost } from './ui/visitors.ts';
 import { CataloguePage, withParam } from './ui/catalogue.ts';
 import { objectCard } from './ui/objects.ts';
+import { PromptsPage } from './ui/prompts.ts';
 
 /* Data source: the real server by default (via `@uas/client`; `?world=<id>`, `?key=<api key>`),
    or the offline sample with `?source=sample`.
@@ -54,6 +55,7 @@ app.innerHTML = `
         <button type="button" class="btn ghost" data-ref="drop-btn">${icons.airdrop()}<span class="btn-text">Airdrop</span></button>
         <button type="button" class="btn ghost" data-ref="mail-btn" aria-label="Mailbox">${icons.mail()}<span class="btn-text">Mail</span><span class="btn-count" data-ref="mail-count" hidden></span></button>
         <a class="btn ghost" data-ref="cat-btn" hidden>${icons.catalogue()}<span class="btn-text">Catalogue</span></a>
+        <a class="btn ghost" data-ref="prompts-btn" hidden>${icons.prompts()}<span class="btn-text">Prompts</span></a>
         <div class="account" data-ref="account"></div>
         <button type="button" class="btn ghost" data-ref="legend-btn" aria-pressed="false" aria-controls="legend">${icons.legend()}<span class="btn-text">Legend</span></button>
         <button type="button" class="btn ghost" data-ref="sound-btn" aria-pressed="false">${icons.soundOff()}<span class="btn-text">Sound off</span></button>
@@ -92,6 +94,9 @@ app.innerHTML = `
     </main>
     <main class="catalogue-page" data-ref="catalogue-page" aria-labelledby="cat-h" hidden>
       <a class="btn ghost back-link" data-ref="cat-back">${icons.back()}<span>Back to the plan</span></a>
+    </main>
+    <main class="catalogue-page prompts-page" data-ref="prompts-page" aria-labelledby="pr-h" hidden>
+      <a class="btn ghost back-link" data-ref="prompts-back">${icons.back()}<span>Back to the plan</span></a>
     </main>
   </div>`;
 
@@ -319,6 +324,7 @@ async function loadAuth() {
   renderAccount();
   settingsView.setAuth(auth);
   catPage.setAuth(auth);
+  promptsPage.setAuth(auth);
   syncTopButtons();
   void visitorStore.refresh();
 }
@@ -471,7 +477,10 @@ store.on(() => {
   noisesConfigured = true;
 });
 store.on(render);
-store.on(() => syncTopButtons());
+store.on(() => {
+  syncTopButtons();
+  promptsPage.worldChanged();
+});
 render();
 
 /* --------------------------------------------------------- visitors */
@@ -480,6 +489,9 @@ render();
 const dropBtn = $<HTMLButtonElement>('drop-btn');
 const mailBtn = $<HTMLButtonElement>('mail-btn');
 const catBtn = $<HTMLAnchorElement>('cat-btn');
+const promptsBtn = $<HTMLAnchorElement>('prompts-btn');
+const promptsPage = new PromptsPage(server.prompts, () => store.world?.name ?? 'this world');
+$('prompts-page').append(promptsPage.el);
 const catPage = new CataloguePage(visitorStore);
 $('catalogue-page').append(catPage.el);
 let enabledCache: { at: number; ids: string[] | null } | null = null;
@@ -556,6 +568,14 @@ function syncTopButtons() {
   const admin = auth?.role === 'admin';
   catBtn.hidden = !admin || !server.visitors;
   catBtn.href = withParam('page', 'catalogue');
+  promptsBtn.hidden = !admin || !server.prompts;
+  promptsBtn.href = withParam('page', 'prompts');
+  // Phones: the admin pages move from the top bar into the drawer.
+  const links = admin ? { ...(server.visitors && { catalogue: catBtn.href }), ...(server.prompts && { prompts: promptsBtn.href }) } : null;
+  if (JSON.stringify(links) !== JSON.stringify(panel.adminLinks)) {
+    panel.adminLinks = links;
+    if (!panel.openView) panel.update();
+  }
   // An archived world takes no inputs: no drops or mail (history and the catalogue stay).
   dropBtn.hidden = mailBtn.hidden = !server.visitors || store.archived;
   const banner = $('archived');
@@ -596,30 +616,35 @@ document.addEventListener('keydown', (e) => {
 
 // The catalogue page replaces the workspace; it has its own URL so it can be linked and reloaded.
 function showPage() {
-  const page = new URLSearchParams(location.search).get('page');
+  const q = new URLSearchParams(location.search);
+  const page = q.get('page');
   const cat = page === 'catalogue';
-  shell.dataset['page'] = cat ? 'catalogue' : 'plan';
+  const pr = page === 'prompts';
+  shell.dataset['page'] = cat || pr ? page! : 'plan';
   $('catalogue-page').hidden = !cat;
-  app.querySelector<HTMLElement>('.workspace')!.hidden = cat;
+  $('prompts-page').hidden = !pr;
+  app.querySelector<HTMLElement>('.workspace')!.hidden = cat || pr;
   {
     const p = new URLSearchParams(location.search);
-    p.delete('page');
-    p.delete('item');
-    $<HTMLAnchorElement>('cat-back').href = `${location.pathname}${p.size ? `?${p}` : ''}`;
+    for (const k of ['page', 'item', 'template']) p.delete(k);
+    const back = `${location.pathname}${p.size ? `?${p}` : ''}`;
+    $<HTMLAnchorElement>('cat-back').href = back;
+    $<HTMLAnchorElement>('prompts-back').href = back;
   }
-  // The plan isn't on screen behind the catalogue: stop drawing it.
-  if (cat) scene.app.ticker.stop();
+  // The plan isn't on screen behind an admin page: stop drawing it.
+  if (cat || pr) scene.app.ticker.stop();
   else scene.app.ticker.start();
-  if (cat) {
-    catBtn.setAttribute('aria-current', 'page');
-    void catPage.show(new URLSearchParams(location.search).get('item'));
-  } else {
-    catBtn.removeAttribute('aria-current');
-    catPage.hide();
-    requestAnimationFrame(layoutInsets);
+  for (const [btn, on] of [[catBtn, cat], [promptsBtn, pr]] as const) {
+    if (on) btn.setAttribute('aria-current', 'page');
+    else btn.removeAttribute('aria-current');
   }
+  if (cat) void catPage.show(q.get('item'));
+  else catPage.hide();
+  if (pr) void promptsPage.show(q.get('template'));
+  else promptsPage.hide();
+  if (!cat && !pr) requestAnimationFrame(layoutInsets);
 }
-for (const a of [catBtn, $<HTMLAnchorElement>('cat-back')]) {
+for (const a of [catBtn, promptsBtn, $<HTMLAnchorElement>('cat-back'), $<HTMLAnchorElement>('prompts-back')]) {
   a.addEventListener('click', (e) => {
     if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
     e.preventDefault();
@@ -628,6 +653,13 @@ for (const a of [catBtn, $<HTMLAnchorElement>('cat-back')]) {
   });
 }
 window.addEventListener('popstate', showPage);
+$('panel-body').addEventListener('click', (e) => {
+  const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[data-nav]');
+  if (!a || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  e.preventDefault();
+  history.pushState(null, '', a.href);
+  showPage();
+});
 visitorStore.start();
 syncTopButtons();
 showPage();

@@ -27,6 +27,8 @@ export interface WorldView {
   objectDefOf(entity: Readonly<AnyEntity>): import('./pack.ts').ObjectDef | undefined;
   /** Manhattan distance from `pos` to the nearest tile an entity covers (footprints). */
   distanceTo(entity: Readonly<AnyEntity>, pos: Pos): number;
+  /** A part of the world's active prompt template, if one was activated (e.g. `mail`/`line`). */
+  promptPart(id: string, part: string): string | undefined;
   /** The oldest waiting mailbox message, if any (read-only). */
   mailPeek(): { mailId: string; text: string } | undefined;
   sounds(): readonly Sound[];

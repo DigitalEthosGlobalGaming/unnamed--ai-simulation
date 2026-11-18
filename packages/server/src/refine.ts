@@ -31,7 +31,12 @@ export const noopRefine: RefineHook = { refine: () => {} };
 export function latestEvalReport(dir: string): unknown {
   try {
     if (!existsSync(dir)) return undefined;
-    const file = readdirSync(dir).filter((f) => f.endsWith('.json')).sort().at(-1);
+    // By date, then run number: `2026-11-18.json` comes before `2026-11-18-2.json`.
+    const order = (f: string) => {
+      const m = /^(\d{4}-\d{2}-\d{2})(?:-(\d+))?\.json$/.exec(f);
+      return m ? `${m[1]}-${(m[2] ?? '1').padStart(4, '0')}` : f;
+    };
+    const file = readdirSync(dir).filter((f) => f.endsWith('.json')).sort((a, b) => (order(a) < order(b) ? -1 : 1)).at(-1);
     return file ? JSON.parse(readFileSync(join(dir, file), 'utf8')) : undefined;
   } catch {
     return undefined;

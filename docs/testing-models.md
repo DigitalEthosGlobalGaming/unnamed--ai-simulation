@@ -196,6 +196,8 @@ npm run eval -- --plan gateway:openai/gpt-6-luna   # any AI Gateway model id
 npm run eval -- --dry                              # build everything, call nothing
 ```
 
+**Prompt templates.** `npm run eval -- --template plan@3 --db <path>` runs with a stored template version instead of the repo default (read-only on the database; version 1 needs no `--db`). Only the situations routed to that template exercise it, so pair it with `--only` or `--tag`. Each result and the report record `template@version`. From the viewer's Prompts page (or `POST /prompts/:tid/test`) the same scoring runs against a draft or a stored version through a running world's gateway, forced through the tested template, with the cost shown first and counted in that world's usage as `promptTest` ([prompts.md](architecture/prompts.md)).
+
 Hosted Laya is rate-limited to **5 requests a minute per team**, shared with any running server, so decide calls are paced (`--decide-rpm`, default 4) and a `429` is retried after 20 s. A full run therefore takes about 10 minutes, and costs well under A$0.01.
 
 Hosted Laya is deterministic (the same prompt always gets the same answer), so for decide-only runs `--samples 1` is enough; sampling matters for plans. A check passes when at least `round(minPassRate × applicable samples)` pass, so the default 0.67 means 2 of 3.

@@ -71,7 +71,7 @@ const ChainEntrySchema = z.union([
   }),
 ]);
 
-const JOBS = ['route', 'decide', 'appraise', 'scoreMemory', 'vocalize', 'plan', 'reflect', 'consolidate', 'sheet', 'embed'] as const;
+const JOBS = ['route', 'decide', 'appraise', 'scoreMemory', 'vocalize', 'plan', 'reflect', 'consolidate', 'sheet', 'embed', 'promptTest'] as const;
 
 export const ModelsConfigSchema = z.strictObject({
   /** Fixed conversion rate, from config so replays stay deterministic. */

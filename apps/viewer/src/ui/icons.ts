@@ -27,7 +27,9 @@ export const icons = {
   /** Airdrop: a crate under a parachute canopy. */
   airdrop: () => wrap('<path d="M4 9.5a8 6 0 0 1 16 0"/><path d="M4 9.5 10 15.5M20 9.5l-6 6M12 3.5v12"/><rect x="9" y="15.5" width="6" height="5" rx="1"/>'),
   mail: () => wrap('<rect x="3.5" y="6" width="17" height="12.5" rx="1.5"/><path d="m4 7 8 6.5L20 7"/>'),
-  /** Catalogue: a parts register (a list with item marks). */
-  catalogue: () => wrap('<rect x="4" y="3.5" width="16" height="17" rx="1.5"/><path d="M7.5 8h2M7.5 12h2M7.5 16h2M12 8h4.5M12 12h4.5M12 16h4.5"/>'),
+  /** Catalogue: a parts box. */
+  catalogue: () => wrap('<path d="M3.5 8.5h17v11.5h-17z"/><path d="M5.5 8.5 7.5 4.5h9l2 4M10 12.5h4"/>'),
+  /** Prompts: a page of text with a template brace. */
+  prompts: () => wrap('<path d="M6 3.5h9l3.5 3.5v13.5H6z"/><path d="M11 10.5c-1.2 0-1.5.6-1.5 1.5v.8c0 .7-.4 1.2-1 1.2.6 0 1 .5 1 1.2v.8c0 .9.3 1.5 1.5 1.5M14 10.5c1.2 0 1.5.6 1.5 1.5v.8c0 .7.4 1.2 1 1.2-.6 0-1 .5-1 1.2v.8c0 .9-.3 1.5-1.5 1.5"/>'),
   robot: () => wrap('<rect x="5" y="6.5" width="14" height="11" rx="3.5"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/>'),
 };

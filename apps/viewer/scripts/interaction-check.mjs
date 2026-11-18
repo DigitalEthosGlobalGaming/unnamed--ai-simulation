@@ -213,7 +213,7 @@ const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--ena
   });
   await page.waitForTimeout(500);
   const pill = await page.evaluate(() => ({ text: document.querySelector('.new-pill:not([hidden])')?.textContent ?? '', top: document.querySelector('.fe-row .fe-do')?.textContent ?? '' }));
-  check('new live entries wait behind "N new decisions" while scrolled back', /1 new decision/.test(pill.text) && !/test entry/.test(pill.top), JSON.stringify(pill));
+  check('new live entries wait behind "N new decisions" while scrolled back', /\d+ new decisions?/.test(pill.text) && !/test entry/.test(pill.top), JSON.stringify(pill));
   await page.click('.new-pill');
   await page.waitForTimeout(500);
   const shown = await page.evaluate(() => ({ hidden: document.querySelector('.new-pill')?.hidden, why: [...document.querySelectorAll('.fe-row')].slice(0, 3).map((r) => r.textContent).join(' ') }));

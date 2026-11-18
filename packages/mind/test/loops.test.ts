@@ -146,4 +146,21 @@ describe('behaviour loops', () => {
     const done = resolved.filter((a) => a.status === 'done' && a.verb !== 'moveTo' && a.verb !== 'wait');
     expect(done.some((a) => (a.result ?? '').length > 3)).toBe(true);
   });
+
+  it('pickup then drop without using it sets the pickup aside and leaves a question; using it in between does not', () => {
+    const t = setup();
+    const m = () => t.robot().mind!;
+    t.decide(act('pickup', 'ball'), act('drop', 'ball'));
+    t.until((d) => d.kind === 'action' && d.action.verb === 'drop' && d.status === 'done');
+    expect(setAside(t.world, m(), 'pickup:ball')).toBe(true);
+    expect(m().openItems.some((i) => i.kind === 'question' && i.text.includes('put it down without using it'))).toBe(true);
+    expect(buildCandidates(t.world, t.robot(), m()).map((c) => c.key)).not.toContain('pickup:ball');
+    // Used in between: no guard.
+    const u = setup();
+    u.decide(act('pickup', 'ball'), act('push', 'ball'));
+    u.until((d) => d.kind === 'action' && d.action.verb === 'push' && d.status === 'done');
+    u.decide(act('pickup', 'ball'), act('chase', 'ball'));
+    u.run(60);
+    expect(setAside(u.world, u.robot().mind!, 'pickup:ball')).toBe(false);
+  });
 });

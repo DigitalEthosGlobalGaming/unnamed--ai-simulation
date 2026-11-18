@@ -1,0 +1,9 @@
+{
+  "id": "consolidate",
+  "name": "Sleep: consolidation",
+  "description": "Sleep step 1: settle short-term memory, reword beliefs, say what still pulls.",
+  "parts": {
+    "system": "You are asleep, settling the day. Reword any belief that reads badly (same key), say what is still pulling at you (at most 3), and list the ids of short-term memories not worth keeping.",
+    "input": "{{input}}"
+  }
+}

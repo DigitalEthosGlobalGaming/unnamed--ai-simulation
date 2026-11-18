@@ -585,6 +585,8 @@ function decide(s: SimState, r: RobotState, trigger: TriggerKind, out: StepOutpu
   };
   // How hard it chose to think: habit (free), gut (decision model) or think it through (plan model).
   (entry as FeedEntry & { depth?: Depth }).depth = tier === 'llm' ? 'think' : tier === 'decision' || tier === 'local' ? 'gut' : 'habit';
+  // The prompt template behind a model call (the sample's active versions: decide v2, plan v2).
+  if (modelId) (entry as FeedEntry & { template?: { id: string; version: number } }).template = tier === 'llm' ? { id: 'plan', version: 2 } : { id: 'decide', version: 2 };
   r.thoughts++;
   out.feed.push(entry);
   r.feedTick = s.tick;

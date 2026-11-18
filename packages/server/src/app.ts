@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import { join } from 'node:path';
-import { captureSituation } from '@uas/evals';
+import { REPORTS_DIR, SITUATIONS_DIR, captureSituation } from '@uas/evals';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { CATALOG_TEMPLATES, type ObjectDef2, type EntityDef, type InputEvent, type Pos, type Sender } from '@uas/core';
 import { MindSystem } from '@uas/mind';
@@ -14,6 +14,7 @@ import { Hub } from './hub.ts';
 import { VercelAuth, type AuthEnv } from './session.ts';
 import type { WorldStatus } from './runtime.ts';
 import { Supervisor, type WorldHandle } from './supervisor.ts';
+import { PromptService, StatusError, type TestWorld } from './prompts.ts';
 import { Catalog, isRefusal, itemRules, redactEvent, redactState, validateCatalogItem2 } from './visitors.ts';
 
 export interface AppOptions {
@@ -26,6 +27,8 @@ export interface AppOptions {
   log?: (m: string) => void;
   /** Where `POST …/situation` also writes captured situations (e.g. evals/situations/captured); unset: return only. */
   situationsDir?: string;
+  /** Prompt previews and tests: the saved situations and eval reports (default: the repo's). */
+  prompts?: { situationsDir?: string; reportsDir?: string; pace?: boolean };
 }
 
 export interface App {
@@ -55,6 +58,7 @@ export function createApp(opts: AppOptions): App {
   const auth = new VercelAuth(db, opts.authEnv ?? {}, opts.authFetch);
   const hub = new Hub(supervisor, inputLog, snaps, opts.keys, (cookie) => auth.principalFor(cookie));
   const catalog = new Catalog(db);
+  const prompts = new PromptService(db, { situationsDir: opts.prompts?.situationsDir ?? SITUATIONS_DIR, reportsDir: opts.prompts?.reportsDir ?? REPORTS_DIR, ...(opts.prompts?.pace !== undefined && { pace: opts.prompts.pace }) });
 
   const app = express();
   app.use(express.json({ limit: '256kb' }));
@@ -339,6 +343,44 @@ export function createApp(opts: AppOptions): App {
     settle(await world(req).call({ method: 'removeMail', mailId: String(req.params.mailId), ...(principal(req)?.keyId && { userId: principal(req)!.keyId }) })),
   ));
 
+  // ---- prompt templates (server-wide versions; per-world activation is a logged input)
+  /** A running world for prompt tests: its models, metered calls and daily cap. */
+  const testWorld = (id?: string): TestWorld | undefined => {
+    const w = id ? supervisor.get(id) : [...supervisor.worlds.values()].find((x) => !x.config.archived);
+    if (!w || w.config.archived) return undefined;
+    return {
+      id: w.config.id,
+      models: w.config.models,
+      costAudToday: w.status?.costAudToday ?? 0,
+      activeVersion: async (tid) => (await w.call<Record<string, number | string>>({ method: 'prompts' }))[tid] ?? 1,
+      call: (model, request, as) => w.call({ method: 'modelCall', model, request, as }),
+    };
+  };
+  const body = (req: Request) => (req.body ?? {}) as Record<string, unknown>;
+  app.get('/prompts', need('admin'), route(() => prompts.list()));
+  app.get('/prompts/situations', need('admin'), route(() => prompts.situations()));
+  app.get('/prompts/tests/:testId', need('admin'), route((req) => prompts.testStatus(String(req.params.testId))));
+  app.get('/prompts/:tid', need('admin'), route((req) => prompts.get(String(req.params.tid))));
+  app.get('/prompts/:tid/versions/:v', need('admin'), route((req) => prompts.version(String(req.params.tid), Number(req.params.v))));
+  app.post('/prompts/:tid/versions', need('admin'), route((req) => prompts.create(String(req.params.tid), body(req).body, body(req).note, sender(req).username)));
+  app.post('/prompts/:tid/validate', need('admin'), route((req) => prompts.validate(String(req.params.tid), body(req).body)));
+  app.post('/prompts/:tid/preview', need('admin'), route((req) => prompts.preview(String(req.params.tid), body(req))));
+  app.post('/prompts/:tid/test', need('admin'), route((req) => prompts.test(String(req.params.tid), body(req), testWorld(typeof body(req).world === 'string' ? (body(req).world as string) : undefined))));
+  app.get('/worlds/:id/prompts', need('admin'), route(async (req) => {
+    const w = world(req);
+    return { active: await w.call({ method: 'prompts' }), history: prompts.history(w.config.id) };
+  }));
+  /** Activation is the logged input `prompts.activate` (with the version's text, so replays and forks need no lookup). */
+  const activate = async (req: Request, version: unknown) => {
+    const w = world(req);
+    const payload = prompts.activation(String(req.params.tid), version, sender(req).username);
+    await submit(w, 'prompts.activate', payload, { userId: principal(req)?.keyId });
+    const active = await w.call<Record<string, number | string>>({ method: 'prompts' });
+    return { active: { ...active, [payload.templateId]: payload.version } };
+  };
+  app.post('/worlds/:id/prompts/:tid/activate', need('admin'), route((req) => activate(req, body(req).version)));
+  app.post('/worlds/:id/prompts/:tid/rollback', need('admin'), route((req) => activate(req, prompts.rollbackTarget(world(req).config.id, String(req.params.tid)))));
+
   // ---- packs and usage
   app.get('/packs', need('admin'), route(() => listPacks()));
   app.post('/packs', need('admin'), route(() => {
@@ -358,7 +400,7 @@ export function createApp(opts: AppOptions): App {
   }));
 
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err instanceof HttpError ? err.status : err.message === 'world archived' ? 409 : 400;
+    const status = err instanceof HttpError || err instanceof StatusError ? err.status : err.message === 'world archived' ? 409 : 400;
     const errors = (err as { errors?: unknown }).errors;
     res.status(status).json({ error: err.message, ...(errors !== undefined && { errors }) });
   });

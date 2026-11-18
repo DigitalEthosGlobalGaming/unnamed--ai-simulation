@@ -28,6 +28,7 @@ import { mindConfigOf, type MindConfig } from './config.ts';
 import { admit, hearsay, recall, updateBelief } from './memory.ts';
 import { band, clamp, computeMood, feltWord, round3, updateNeeds } from './needs.ts';
 import { buildPrompt, consolidateQuestion, freezePrefix, sheetQuestion, timeWord } from './prompt.ts';
+import { TEMPLATE_IDS, activeBody, activeTemplatesOf, type TemplateId } from './templates.ts';
 import { SLEEP, allowedDepth, applySheetEdit, detectHabits, ensureLockedCore, fogOf, fogWord, pressureOf, shallower } from './sleep.ts';
 
 const ROUTINE: TriggerKind[] = ['action-finished', 'idle-timeout'];
@@ -64,8 +65,8 @@ const isRecord = (v: unknown): v is Record<string, Json> => !!v && typeof v === 
  * triggers, autopilot, memory, beliefs, sleep, and the job outbox for models.
  * Pure and deterministic; model answers only arrive as `model.answer` inputs.
  */
-/** How the mailbox's `read` presents a message (see the basic pack's mailRead). */
-const NOTE_PREFIX = 'a note from a stranger: ';
+/** A note as the mailbox's `read` quotes it (JSON string; see the basic pack's mailRead and the `mail` template). */
+const QUOTED = /"(?:[^"\\]|\\.)*"/;
 
 export class MindSystem implements SimPlugin {
   /** Jobs requested this tick. The host drains it and sends them to the gateway (never on replay). */
@@ -109,7 +110,7 @@ export class MindSystem implements SimPlugin {
       fog: 0,
       awakeSinceTick: world.tick,
     };
-    freezePrefix(world.registry, arch, m, world.tick, this.ticksPerDay(world), world.day);
+    freezePrefix(world.registry, arch, m, world.tick, this.ticksPerDay(world), world.day, activeTemplatesOf(world.state.ext));
     c.mind = m;
   }
 
@@ -129,6 +130,24 @@ export class MindSystem implements SimPlugin {
       for (const k of ['batteryPlanAbove', 'batteryGutAbove', 'batteryHabitAbove'] as const) if (typeof ch[k] === 'number') mind[k] = ch[k];
       world.state.ext.mind = mind;
       return true;
+    }
+    if (e.type === 'prompts.activate') {
+      // A template version for this world (logged with its body, so replays and forks reproduce it).
+      const p = e.payload as { templateId?: string; version?: number | string; body?: { parts?: Record<string, string> } };
+      if (!TEMPLATE_IDS.includes(p.templateId as TemplateId) || !p.body?.parts) return true;
+      const id = p.templateId as TemplateId;
+      const prompts = { ...((world.state.ext.prompts as Record<string, Json> | undefined) ?? {}) };
+      prompts[id] = { version: p.version ?? 1, body: { parts: { ...p.body.parts } } } as unknown as Json;
+      world.state.ext.prompts = prompts;
+      if (id === 'decide' || id === 'plan') {
+        // The cached prefix is rebuilt now, an admin action noted in the feed.
+        for (const c of world.characters()) {
+          if (!c.mind) continue;
+          freezePrefix(world.registry, world.archetype(c.type)!, c.mind, world.tick, this.ticksPerDay(world), world.day, activeTemplatesOf(world.state.ext));
+          world.emit({ kind: 'feed', entry: { tick: world.tick, characterId: c.id, trigger: 'admin-poke', tier: 'carry-on', actions: [], system: `prompt template ${id}@${p.version} activated` } });
+        }
+      }
+      return false; // the sim records it too (the mailbox's mail template works without a mind)
     }
     if (e.type === 'models.load') {
       world.state.ext.modelsBusy = (e.payload as { busy: boolean }).busy === true;
@@ -161,7 +180,10 @@ export class MindSystem implements SimPlugin {
     switch (job!.job) {
       case 'decide':
       case 'vocalize':
-        this.applyChoice(world, c, job!.candidates ?? [], answer, p, energyCost, job!.trigger, job!.depth ? { depth: job!.depth, ...(job!.depthWhy && { depthWhy: job!.depthWhy }) } : {});
+        this.applyChoice(world, c, job!.candidates ?? [], answer, p, energyCost, job!.trigger, {
+      ...(job!.depth && { depth: job!.depth, ...(job!.depthWhy && { depthWhy: job!.depthWhy }) }),
+      ...(job!.template && { template: job!.template }),
+    });
         break;
       case 'appraise':
       case 'scoreMemory': {
@@ -320,6 +342,7 @@ export class MindSystem implements SimPlugin {
           finished = true;
           const objectType = target?.kind === 'object' ? perceivedType(target) : undefined;
           if (objectType) this.countFailure(world, m, `${d.action.verb}:${objectType}`, d.status === 'failed');
+          if (d.status === 'done') this.trackCarrying(world, c, d.action, objectType);
           if (d.action.verb === 'vocalize' && Array.isArray(d.action.args?.notes)) {
             m.usedChains = [...m.usedChains, { notes: d.action.args.notes as string[], valence: m.mood.valence }].slice(-8);
           }
@@ -402,8 +425,10 @@ export class MindSystem implements SimPlugin {
     });
     this.diary(world, c, `${verb}${objectType ? ` at the ${objectType}` : ''}: ${observation} (felt ${m.mood.word})`);
     // A stranger's note (already quoted by the mailbox) may suggest something: hearsay only.
-    if (objectType === 'mailbox' && observation.startsWith(NOTE_PREFIX)) {
-      const told = hearsay(m, observation.slice(NOTE_PREFIX.length), world.day);
+    // The mail template may frame it differently; the note itself is always one JSON-quoted string.
+    const quoted = objectType === 'mailbox' && verb === 'read' ? QUOTED.exec(observation)?.[0] : undefined;
+    if (quoted) {
+      const told = hearsay(m, quoted, world.day);
       if (told) this.diary(world, c, `a stranger's note says ${told.text.replace(/^a stranger's note said /, '')}; I have not seen it myself`);
     }
     const cfg = mindConfigOf(world.state.ext);
@@ -580,7 +605,7 @@ export class MindSystem implements SimPlugin {
     m.asleepSinceTick = undefined;
     if (c.energy > cfg.batteryHabitAbove) m.energyFloorLatched = false;
     m.sheet = ensureLockedCore(m.sheet, arch.sheet);
-    freezePrefix(world.registry, arch, m, world.tick, this.ticksPerDay(world), world.day);
+    freezePrefix(world.registry, arch, m, world.tick, this.ticksPerDay(world), world.day, activeTemplatesOf(world.state.ext));
     this.diary(world, c, `woke up (${why}); ${arch.energy.label} ${feltWord(c.energy)}`);
     m.triggers.push({ kind: 'woke-up', tick: world.tick, salience: 1 });
   }
@@ -625,7 +650,7 @@ export class MindSystem implements SimPlugin {
     this.sleepStep(world, c, 'consolidating', moved, moved + m.stm.length);
     // A nap with nothing to settle isn't worth paying for: code does the steps.
     if (this.canThinkAsleep(c, cfg) && m.stm.length > 0) {
-      this.dispatch(world, c, arch, 'consolidate', !world.isDaylight, 'woke-up', consolidateQuestion(m));
+      this.dispatch(world, c, arch, 'consolidate', !world.isDaylight, 'woke-up', consolidateQuestion(m, activeTemplatesOf(world.state.ext)));
     } else this.sleepJobDone(world, c, 'consolidate', undefined);
   }
 
@@ -679,7 +704,7 @@ export class MindSystem implements SimPlugin {
       const lastStep = [...(m.sheetHistory ?? [])].reverse().find((e) => e.op !== 'goal');
       const due = !lastStep || lastStep.day < world.day;
       if (this.canThinkAsleep(c, cfg) && due) {
-        this.dispatch(world, c, arch, 'sheet', !world.isDaylight, 'woke-up', sheetQuestion(m, this.suggestedLine(m, day)));
+        this.dispatch(world, c, arch, 'sheet', !world.isDaylight, 'woke-up', sheetQuestion(m, this.suggestedLine(m, day), activeTemplatesOf(world.state.ext)));
         return;
       }
       return this.sleepJobDone(world, c, 'sheet', undefined);
@@ -1010,6 +1035,8 @@ export class MindSystem implements SimPlugin {
       deadlineTick: world.tick + cfg.jobTimeoutTicks * (job === 'reflect' || job === 'consolidate' || job === 'sheet' ? 10 : 1),
       trigger,
       ...(o.depth && { depth: o.depth, ...(o.depthWhy && { depthWhy: o.depthWhy }) }),
+      ...((job === 'decide' || job === 'vocalize') && { template: this.templateRef(world, o.depth === 'think' ? 'plan' : 'decide') }),
+      ...((job === 'consolidate' || job === 'sheet') && { template: this.templateRef(world, job) }),
       ...(o.candidates && { candidates: o.candidates }),
       ...(o.draftId && { draftId: o.draftId }),
     });
@@ -1027,7 +1054,7 @@ export class MindSystem implements SimPlugin {
     isNight: boolean,
     trigger: TriggerKind,
     jobId: string,
-    o: { question: string; candidates?: Candidate[]; input?: Json; multi?: number; depth?: ThinkingDepth },
+    o: { question: string; candidates?: Candidate[]; input?: Json; multi?: number; depth?: ThinkingDepth; template?: 'decide' | 'plan' },
   ): JobRequest {
     const m = c.mind!;
     return {
@@ -1044,6 +1071,8 @@ export class MindSystem implements SimPlugin {
         question: o.question,
         carrying: carrying(world, c).map((x) => x.type),
         ...(o.candidates && { candidates: o.candidates }),
+        template: o.template ?? (o.depth === 'think' ? 'plan' : 'decide'),
+        active: activeTemplatesOf(world.state.ext),
       }),
       question: o.question,
       ...(o.candidates && { options: o.candidates.map((x) => ({ id: x.id, label: x.label })) }),
@@ -1062,8 +1091,8 @@ export class MindSystem implements SimPlugin {
     world: World,
     c: Character,
     trigger: TriggerKind,
-    opts: { perceive?: boolean; salience?: number } = {},
-  ): JobRequest & { candidates: Candidate[]; thinking: { depth: ThinkingDepth; why: string } } {
+    opts: { perceive?: boolean; salience?: number; template?: 'decide' | 'plan' } = {},
+  ): JobRequest & { candidates: Candidate[]; thinking: { depth: ThinkingDepth; why: string }; template: { id: string; version: number | string } } {
     const arch = world.archetype(c.type)!;
     const m = c.mind!;
     if (opts.perceive) {
@@ -1079,8 +1108,10 @@ export class MindSystem implements SimPlugin {
       question: 'Which action next?',
       candidates,
       ...(thinking.depth !== 'habit' && { depth: thinking.depth }),
+      ...(opts.template && { template: opts.template }),
     });
-    return { ...req, candidates, thinking };
+    const tpl = opts.template ?? (thinking.depth === 'think' ? 'plan' : 'decide');
+    return { ...req, candidates, thinking, template: this.templateRef(world, tpl) };
   }
 
   // ------------------------------------------------------------------ helpers
@@ -1130,6 +1161,37 @@ export class MindSystem implements SimPlugin {
       world.emit({ kind: 'feedStep', characterId: c.id, feedTick: fs.tick, step: i, status, result });
     });
     c.mind!.feedSteps = undefined;
+  }
+
+  /**
+   * Pickup/drop loop guard: picking something up and putting it down again without using it in
+   * between is set aside for a while (like a failed option), and leaves a question on its mind,
+   * so the next think sees why. "Using it" is any other verb done while holding it.
+   */
+  private trackCarrying(world: World, c: Character, action: Action, objectType: string | undefined): void {
+    const m = c.mind!;
+    const verb = action.verb;
+    if (verb === 'pickup' && action.targetId && objectType) {
+      m.carried = { id: action.targetId, type: objectType, used: false };
+      return;
+    }
+    const held = m.carried;
+    if (!held) return;
+    if (verb === 'drop' && action.targetId === held.id) {
+      if (!held.used) {
+        m.failures = { ...(m.failures ?? {}), [`pickup:${held.type}`]: { n: 2, tick: world.tick } };
+        this.openItem(world, m, 'question', `I picked up the ${held.type} and put it down without using it. What is it for?`, `pickup:${held.type}`);
+        this.diary(world, c, `picked up the ${held.type} and put it down again without using it`);
+      }
+      m.carried = undefined;
+      return;
+    }
+    if (verb !== 'moveTo' && verb !== 'wait' && verb !== 'follow' && verb !== 'vocalize') held.used = true;
+  }
+
+  /** Which template version a job renders with (for the feed). */
+  templateRef(world: World, id: TemplateId): { id: string; version: number | string } {
+    return { id, version: activeBody(activeTemplatesOf(world.state.ext), id).version };
   }
 
   /** Loop protection: count failures in a row per option; a success clears them. */
