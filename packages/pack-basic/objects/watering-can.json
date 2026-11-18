@@ -1,0 +1,34 @@
+{
+  "schema": 2,
+  "id": "watering-can",
+  "name": "Watering can",
+  "description": "Fill it at the fountain, water plants with it.",
+  "icon": "<icon><rect x=\"6\" y=\"9\" w=\"10\" h=\"10\" r=\"1\"/><line x1=\"16\" y1=\"11\" x2=\"21\" y2=\"7\" weight=\"heavy\"/><path d=\"M 6 11 A 3 3 0 0 1 6 17\" weight=\"thin\"/></icon>",
+  "tags": [
+    "metal",
+    "container"
+  ],
+  "portable": true,
+  "state": {
+    "water": {
+      "initial": 0,
+      "min": 0,
+      "max": 1
+    }
+  },
+  "appearance": {
+    "water": [
+      {
+        "lt": 0.05,
+        "text": "an empty watering can"
+      },
+      {
+        "lt": 0.9,
+        "text": "a watering can with some water"
+      },
+      {
+        "text": "a full watering can"
+      }
+    ]
+  }
+}

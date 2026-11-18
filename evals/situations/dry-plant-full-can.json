@@ -1,0 +1,81 @@
+{
+  "id": "dry-plant-full-can",
+  "title": "Dry plant, full can",
+  "why": "With a full watering can and the plant's soil cracked and dry, it should water the plant.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "garden",
+    "plant",
+    "can"
+  ],
+  "job": "auto",
+  "world": {
+    "time": "11:00",
+    "day": 3,
+    "add": [
+      {
+        "id": "can",
+        "type": "watering-can",
+        "pos": [
+          7,
+          10
+        ],
+        "state": {
+          "water": 1
+        }
+      },
+      {
+        "id": "plant",
+        "type": "plant",
+        "pos": [
+          6,
+          11
+        ],
+        "state": {
+          "growth": 0.35,
+          "water": 0.05
+        }
+      }
+    ]
+  },
+  "character": {
+    "pos": [
+      7,
+      10
+    ],
+    "energy": 0.8,
+    "carrying": "can",
+    "needs": {
+      "curiosity": 0.55
+    },
+    "beliefs": [
+      {
+        "key": "water:plant@day",
+        "needs": {
+          "curiosity": 0.03
+        },
+        "valence": 0.2,
+        "firmness": 0.5
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "mustBeAmong",
+      "params": {
+        "options": [
+          {
+            "verb": "water",
+            "target": "plant"
+          }
+        ]
+      }
+    }
+  ]
+}

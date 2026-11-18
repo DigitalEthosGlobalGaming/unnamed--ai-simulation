@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { cleanMailText, mailTextProblem, parseDurationSeconds, type CatalogItem, type Character, type Delta, type InputEvent, type JobName, type Json, type Pos, type Sender, type TickDeltas } from '@uas/core';
+import { cleanMailText, mailTextProblem, parseDurationSeconds, type ObjectDef2, type Character, type Delta, type InputEvent, type JobName, type Json, type Pos, type Sender, type TickDeltas } from '@uas/core';
 import { MindSystem, allowedDepth, mindConfigOf } from '@uas/mind';
 import { PERSISTED, SETTINGS_SCHEMA, SettingsPatchSchema, type SettingsPatch, type SettingsValues } from './settings.ts';
 import { ModelGateway, ModelHost, parseModelsConfig, type GatewayOptions, type QueueStats, type UsageRow } from '@uas/models';
@@ -40,6 +40,8 @@ export interface WorldStatus {
   pendingJobs: number;
   /** Messages waiting in the world's mailbox. */
   mailWaiting: number;
+  /** Read-only: doesn't tick, refuses inputs. */
+  archived: boolean;
   costAudToday: number;
   modelLatencyMs: number;
   tickLagMs: number;
@@ -156,6 +158,8 @@ export class WorldRuntime {
       snapshotEveryTicks: this.config.snapshotEveryTicks,
     });
     this.lastDay = this.world.day;
+    // Archived: read-only. Nothing is logged, nothing runs; history stays readable.
+    if (this.config.archived) return;
     // Content packs changed since the last snapshot (e.g. the airdrop and mailbox objects): logged.
     if (this.world.state.packVersions !== registry.packVersions) {
       this.opts.log?.(`content packs changed: ${this.world.state.packVersions} -> ${registry.packVersions}`);
@@ -265,7 +269,13 @@ export class WorldRuntime {
     }
   }
 
+  /** Archived worlds don't tick and refuse every input. */
+  get archived(): boolean {
+    return this.config.archived;
+  }
+
   submit(type: string, payload: unknown, causedBy?: InputEvent['causedBy']): InputEvent {
+    if (this.config.archived) throw new Error('world archived');
     return this.recorder.submit(type, payload, causedBy);
   }
 
@@ -290,6 +300,7 @@ export class WorldRuntime {
       queue: this.host.stats(),
       pendingJobs: this.host.pending,
       mailWaiting: this.world.state.mailbox?.queue.length ?? 0,
+      archived: this.config.archived,
       costAudToday: this.gateway.meter.spentTodayAud(),
       modelLatencyMs: this.latencies.length ? this.latencies.reduce((a, b) => a + b, 0) / this.latencies.length : 0,
       tickLagMs,
@@ -368,6 +379,7 @@ export class WorldRuntime {
    * input when tick rate or walking speed change the sim's timing.
    */
   applySettings(raw: unknown, userId?: string) {
+    if (this.config.archived) throw new Error('world archived');
     const r = SettingsPatchSchema.safeParse(raw);
     if (!r.success) throw new Error(`settings: ${r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`);
     const before = this.settingsValues();
@@ -512,7 +524,7 @@ export class WorldRuntime {
    * Drop a catalogue item (already validated by the server). Limits apply to visitors, not admins.
    * Logged as `airdrop.drop` with a copy of the item JSON; the sim lands it on the nearest free tile.
    */
-  dropItem(item: CatalogItem, pos: Pos, by: Sender): Airdrop | Refusal {
+  dropItem(item: ObjectDef2, pos: Pos, by: Sender): Airdrop | Refusal {
     const L = this.limits;
     if (!L.catalogEnabled.includes('*') && !L.catalogEnabled.includes(item.id)) return refuse(403, `${item.name} is not enabled in this world`);
     if (!Number.isFinite(pos?.x) || !Number.isFinite(pos?.y)) return refuse(400, 'pos must be { x, y }');
@@ -531,7 +543,7 @@ export class WorldRuntime {
     const e = this.submit('airdrop.drop', { dropId, item: item as unknown as Json, pos: at, by, ...(expires > 0 && { expiresAfterSeconds: expires }) }, { userId: by.userKey });
     if (!by.admin) this.lastDrop.set(by.userKey, Date.now());
     const ticks = expires > 0 ? Math.max(1, Math.round(expires / this.world.state.config.secondsPerTick)) : 0;
-    const uses = item.behaviours.find((b) => b.block === 'consumable');
+    const uses = item.state.uses?.initial;
     return {
       id: dropId,
       entityId: `drop-${dropId}`,
@@ -541,7 +553,7 @@ export class WorldRuntime {
       droppedBy: { username: by.username, admin: by.admin },
       droppedTick: e.tick,
       ...(ticks && { expiresTick: e.tick + ticks }),
-      ...(uses?.block === 'consumable' && { usesLeft: uses.uses }),
+      ...(uses !== undefined && { usesLeft: uses }),
     };
   }
 

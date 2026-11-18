@@ -3,12 +3,14 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import {
   CATALOG_TEMPLATES,
-  airdropUses,
-  airdropVerbs,
+  CATALOG_TEMPLATES_V1,
+  appearanceOf,
+  compileObjectDef,
+  migrateToSchema2,
+  validateObjectDef2,
   buildRegistry,
   perceivedType,
   type Belief,
-  type CatalogItem,
   type Character,
   type Candidate,
   type EntityDef,
@@ -21,7 +23,7 @@ import {
 import { MindSystem, beliefText, fogOf, freezePrefix, pressureOf } from '@uas/mind';
 import { renderPrompt } from '@uas/models';
 import { World, type WorldState } from '@uas/sim';
-import { basicPack, gardenGrid } from '@uas/pack-basic';
+import { basicPack, garden2Grid } from '@uas/pack-basic';
 
 /**
  * A situation: one frozen moment for a model eval. It holds enough to rebuild the exact model
@@ -66,7 +68,14 @@ const MemorySpec = z.strictObject({
   /** Minutes before the moment (for ordering and worth). */
   minutesAgo: z.number().min(0).default(10),
 });
-const EntitySpec = z.strictObject({ id: z.string(), type: z.string(), pos: XY, state: z.record(z.string(), z.unknown()).optional() });
+const EntitySpec = z.strictObject({
+  id: z.string(),
+  type: z.string(),
+  pos: XY,
+  state: z.record(z.string(), z.unknown()).optional(),
+  /** Ready products by slot, e.g. `{ "flower": 1 }`. */
+  products: z.record(z.string(), z.int().min(0)).optional(),
+});
 
 const WorldSpec = z.strictObject({
   /** In-world local time, `HH:MM`. Daylight is 06:00 to 18:00. */
@@ -124,7 +133,7 @@ export const SituationSchema = z
     character: CharacterSpec.optional(),
     /** Captured: the world state at that moment, without `config.grid` (rebuilt from `map`). */
     snapshot: z.record(z.string(), z.unknown()).optional(),
-    map: z.string().default('basic:garden'),
+    map: z.string().default('basic:garden-2'),
     checks: z.array(CheckSpecSchema).default([]),
   })
   .refine((s) => (s.snapshot ? !s.world && !s.character : !!s.world && !!s.character), { message: 'either `snapshot` (captured) or `world` and `character` (hand-written)' });
@@ -132,14 +141,19 @@ export const SituationSchema = z
 export type Situation = z.infer<typeof SituationSchema>;
 export type SituationInput = z.input<typeof SituationSchema>;
 
-/** The default garden (as in worlds/garden.yaml) for hand-written situations. */
-export const GARDEN_OBJECTS: { id: string; type: string; pos: [number, number]; state?: Record<string, unknown> }[] = [
-  { id: 'pad', type: 'solarPad', pos: [8, 8] },
+/** The default garden (as in worlds/garden2.yaml, iteration 2) for hand-written situations. */
+export const GARDEN_OBJECTS: { id: string; type: string; pos: [number, number]; state?: Record<string, unknown>; products?: Record<string, number> }[] = [
   { id: 'dock', type: 'dock', pos: [2, 7] },
   { id: 'ball', type: 'ball', pos: [12, 12] },
   { id: 'fountain', type: 'fountain', pos: [14, 6] },
   { id: 'piano', type: 'piano', pos: [3, 3] },
   { id: 'mailbox', type: 'mailbox', pos: [17, 8] },
+  { id: 'bed', type: 'garden-bed', pos: [5, 11] },
+  { id: 'plant', type: 'plant', pos: [6, 11], state: { growth: 0.2, water: 0.6 } },
+  { id: 'seed-1', type: 'seed', pos: [9, 12] },
+  { id: 'seed-2', type: 'seed', pos: [9, 13] },
+  { id: 'can', type: 'watering-can', pos: [13, 8] },
+  { id: 'mast', type: 'antenna-mast', pos: [19, 12] },
 ];
 
 let registryCache: Registry | undefined;
@@ -182,7 +196,7 @@ export function buildSituation(s: Situation): Built {
   const minds = new MindSystem();
   if (s.snapshot) {
     const state = structuredClone(s.snapshot) as unknown as WorldState;
-    state.config = { ...state.config, grid: gardenGrid() };
+    state.config = { ...state.config, grid: garden2Grid() };
     const world = World.fromSnapshot(state, registry, minds, { allowPackUpgrade: true });
     const id = s.source.kind === 'captured' ? s.source.characterId : 'robot';
     const c = world.entity(id);
@@ -199,32 +213,50 @@ export function buildSituation(s: Situation): Built {
     ...objects.map((e) => ({ id: e.id, type: e.type, pos: { x: e.pos[0], y: e.pos[1] }, ...(e.state && { state: e.state as Record<string, Json> }) })),
   ];
   const world = World.create(
-    { worldId: `eval-${s.id}`, seed: 1, grid: gardenGrid(), secondsPerTick: 1, startSecond: w.day * 86_400 + hh * 3600 + mm * 60 },
+    { worldId: `eval-${s.id}`, seed: 1, grid: garden2Grid(), secondsPerTick: 1, startSecond: w.day * 86_400 + hh * 3600 + mm * 60 },
     registry,
     defs,
     minds,
     { mind: { brain: 'models' } },
   );
+  // Ready products (e.g. a flower to pick), as the hourly rules would have filled them.
+  for (const e of objects) {
+    const ent = world.entity(e.id);
+    if (!e.products || ent?.kind !== 'object') continue;
+    for (const [slot, ready] of Object.entries(e.products)) {
+      const p = ent.products?.find((x) => x.slot === slot);
+      if (!p) throw new Error(`${s.id}: ${e.id} has no product slot ${slot}`);
+      p.ready = Math.min(ready, p.max);
+    }
+  }
   // Airdrops as the sim lands them (a copy of the item, verbs from its blocks).
   for (const d of w.airdrops) {
-    const item = (typeof d.item === 'string' ? CATALOG_TEMPLATES.find((t) => t.item.id === d.item)?.item : d.item) as CatalogItem | undefined;
-    if (!item) throw new Error(`${s.id}: unknown catalogue item ${String(d.item)}`);
-    const uses = d.usesLeft ?? airdropUses(item);
+    const raw = typeof d.item === 'string' ? ([...CATALOG_TEMPLATES, ...CATALOG_TEMPLATES_V1].find((t) => t.item.id === d.item)?.item as unknown) : d.item;
+    if (!raw) throw new Error(`${s.id}: unknown catalogue item ${String(d.item)}`);
+    const migrated = migrateToSchema2(raw as Record<string, unknown>);
+    const r = validateObjectDef2(migrated, { pack: false });
+    if (!r.ok) throw new Error(`${s.id}: airdrop ${d.id}: ${r.errors.map((e) => `${e.path}: ${e.message}`).join('; ')}`);
+    const compiled = compileObjectDef(r.def);
+    const state: Record<string, Json> = {
+      ...compiled.state,
+      ...(d.usesLeft !== undefined && 'uses' in compiled.state && { uses: d.usesLeft }),
+      dropId: d.id,
+      itemId: r.def.id,
+      item: structuredClone(migrated) as Json,
+      verbs: { ...compiled.verbs, scan: { range: 6, durationTicks: 20, handler: 'basic.inspect' } } as unknown as Json,
+      droppedBy: { username: 'visitor', admin: false, userKey: 'eval' },
+      droppedTick: 0,
+    };
     world.state.entities[`drop-${d.id}`] = {
       id: `drop-${d.id}`,
       kind: 'object',
       type: 'airdrop',
       pos: { x: d.pos[0], y: d.pos[1] },
-      tags: [...item.tags],
-      state: {
-        dropId: d.id,
-        itemId: item.id,
-        item: structuredClone(item) as unknown as Json,
-        verbs: airdropVerbs(item) as unknown as Json,
-        droppedBy: { username: 'visitor', admin: false, userKey: 'eval' },
-        droppedTick: 0,
-        ...(uses !== undefined && { usesLeft: uses }),
-      },
+      tags: [...r.def.tags],
+      state,
+      stateSpec: compiled.stateSpec,
+      products: [],
+      appearance: appearanceOf(r.def, state),
     } as never;
   }
   if (w.mailbox.length) {

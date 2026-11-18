@@ -102,4 +102,6 @@ export type Change =
   | { kind: 'belief'; id: string; belief: Belief }
   | { kind: 'alerts'; id: string; alerts: Alert[] }
   | { kind: 'object'; id: string; pos: Vec2; state: Record<string, Json>; heldBy?: string }
+  | { kind: 'spawn'; entity: Entity & { createdBy?: { entityId: string; tick: number } } }
+  | { kind: 'despawn'; id: string }
   | { kind: 'spend'; spendTodayAud: number };

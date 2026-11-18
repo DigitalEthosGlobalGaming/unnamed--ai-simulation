@@ -28,38 +28,83 @@ const NEED_LABEL: Record<string, string> = { energy: 'battery' };
 const colName = (i: number) => String.fromCharCode(65 + i);
 const tileName = (p: Vec2) => `${colName(p.x)}${p.y + 1}`;
 
-/** What an item does, in plain words, from its behaviour blocks. */
+/** What an item does, in plain words: schema 1 behaviour blocks, or schema 2 verbs, rules and products. */
 export function describeItem(item: CatalogItem): string[] {
   const out: string[] = [];
   const signed = (v: number) => `${v > 0 ? '+' : '−'}${Math.round(Math.abs(v) * 100)}%`;
   const range = (r: unknown) => (typeof r === 'number' ? (r === 0 ? ' (standing on it)' : ` (from up to ${r} tile${r === 1 ? '' : 's'} away)`) : '');
-  for (const b of item.behaviours as CatalogBlock[]) {
-    switch (b.block) {
-      case 'affectsNeeds': {
-        const needs = Object.entries((b['needs'] ?? {}) as Record<string, number>)
-          .map(([k, v]) => `${signed(v)} ${NEED_LABEL[k] ?? k}`)
-          .join(', ');
-        const dur = typeof b['durationSeconds'] === 'number' ? ` over ${b['durationSeconds']} s` : '';
-        out.push(`“${b['verb']}” it${range(b['range'])}: ${needs}${dur}. The robot notices “${b['observation']}”.`);
-        break;
-      }
-      case 'makesNoise':
-        out.push(`“${b['verb']}” it${range(b['range'])}: it plays ${((b['notes'] ?? []) as string[]).join(' · ')}.`);
-        break;
-      case 'portable':
-        out.push('Can be picked up, carried and dropped.');
-        break;
-      case 'consumable':
-        out.push(`Used up after ${b['uses']} use${b['uses'] === 1 ? '' : 's'} of any verb.`);
-        break;
-      case 'inert':
-        out.push('Does nothing when used.');
-        break;
-      default:
-        out.push(`${b.block} (a block this viewer doesn’t describe yet).`);
+  const needs = (n: unknown) =>
+    Object.entries((n ?? {}) as Record<string, number>)
+      .map(([k, v]) => `${signed(v)} ${NEED_LABEL[k] ?? k}`)
+      .join(', ');
+  if (item.schema === 2) {
+    const deltas = (v: unknown, set = false) =>
+      Object.entries((v ?? {}) as Record<string, number>)
+        .map(([k, x]) => (set ? `${k} set to ${x}` : `${k} ${x > 0 ? '+' : '−'}${Math.abs(x)}`))
+        .join(', ');
+    const cond = (c: unknown) =>
+      Object.entries((c ?? {}) as Record<string, Record<string, number>>)
+        .map(([k, ops]) => Object.entries(ops).map(([op, x]) => `${k} ${{ lt: '<', lte: '≤', gt: '>', gte: '≥', eq: '=' }[op] ?? op} ${x}`).join(' and '))
+        .join(' and ');
+    for (const [verb, v] of Object.entries(item.verbs ?? {})) {
+      const parts = (v.effects ?? []).map((e) => {
+        switch (e.block) {
+          case 'changeState':
+            return `${e['target'] === 'held' ? 'what it holds' : e['target'] === 'actor' ? 'the robot' : 'it'}: ${deltas(e['values'] ?? e['set'], !e['values'])}`;
+          case 'affectNeeds':
+            return `${needs(e['needs'])}, and the robot notices “${e['observation']}”`;
+          case 'observe':
+            return `the robot notices “${e['text']}”`;
+          case 'makeNoise':
+            return `it plays ${((e['notes'] ?? []) as string[]).join(' · ')}`;
+          case 'consume':
+            return 'it is used up';
+          case 'createObject':
+            return `makes a ${e['type']}${e['consumeHeld'] ? ' from what the robot holds' : ''}`;
+          case 'harvest':
+            return `gives the robot one ${e['slot']}`;
+          default:
+            return e.block;
+        }
+      });
+      const req = v.requires as { self?: unknown; holding?: { type?: string; tag?: string } } | undefined;
+      const needsLine = req?.holding ? ` while holding a ${req.holding.type ?? req.holding.tag}` : req?.self ? ` when ${cond(req.self)}` : '';
+      out.push(`“${verb}” it${range(v.range)}${needsLine}: ${parts.join('; ') || 'nothing happens'}.${v.fail ? ` If it can’t: “${v.fail}”.` : ''}`);
     }
+    for (const r of item.rules ?? []) {
+      if (r.change) out.push(`Every ${r.every}${r.when ? ` while ${cond(r.when)}` : ''}: ${deltas(r.change)}.`);
+      if (r.remove) out.push(`It disappears${r.when ? ` once ${cond(r.when)}` : ''}.`);
+      if (r.nearby) out.push(`Every ${r.every}, robots within ${r.nearby.range} tiles get ${needs(r.nearby.needs)}.`);
+    }
+    for (const p of item.products ?? []) out.push(`Makes a ${p.item} every ${p.everyHours} h${p.when ? ` while ${cond(p.when)}` : ''} (up to ${p.max}); “${p.verb}” takes it.`);
+    if (item.portable) out.push('Can be picked up, carried and dropped.');
+    if (!out.length) out.push('Does nothing when used.');
+  } else {
+    for (const b of (item.behaviours ?? []) as CatalogBlock[]) {
+      switch (b.block) {
+        case 'affectsNeeds': {
+          const dur = typeof b['durationSeconds'] === 'number' ? ` over ${b['durationSeconds']} s` : '';
+          out.push(`“${b['verb']}” it${range(b['range'])}: ${needs(b['needs'])}${dur}. The robot notices “${b['observation']}”.`);
+          break;
+        }
+        case 'makesNoise':
+          out.push(`“${b['verb']}” it${range(b['range'])}: it plays ${((b['notes'] ?? []) as string[]).join(' · ')}.`);
+          break;
+        case 'portable':
+          out.push('Can be picked up, carried and dropped.');
+          break;
+        case 'consumable':
+          out.push(`Used up after ${b['uses']} use${b['uses'] === 1 ? '' : 's'} of any verb.`);
+          break;
+        case 'inert':
+          out.push('Does nothing when used.');
+          break;
+        default:
+          out.push(`${b.block} (a block this viewer doesn’t describe yet).`);
+      }
+    }
+    if (item.portable && !(item.behaviours ?? []).some((b) => b.block === 'portable')) out.push('Can be picked up, carried and dropped.');
   }
-  if (item.portable && !item.behaviours.some((b) => b.block === 'portable')) out.push('Can be picked up, carried and dropped.');
   out.push(item.tags.length ? `The robot sees only a thing tagged ${item.tags.join(', ')}, and learns the rest by trying.` : 'The robot sees only a thing, and learns the rest by trying.');
   return out;
 }

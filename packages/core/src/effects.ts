@@ -23,6 +23,10 @@ export interface WorldView {
   verbsOf(type: string): string[];
   /** Verb names one entity offers: its type's verbs plus any of its own (airdrops). */
   verbsFor(entity: Readonly<AnyEntity>): string[];
+  /** The engine form of an entity's object type (airdrops: their own item), with schema-2 extras. */
+  objectDefOf(entity: Readonly<AnyEntity>): import('./pack.ts').ObjectDef | undefined;
+  /** Manhattan distance from `pos` to the nearest tile an entity covers (footprints). */
+  distanceTo(entity: Readonly<AnyEntity>, pos: Pos): number;
   /** The oldest waiting mailbox message, if any (read-only). */
   mailPeek(): { mailId: string; text: string } | undefined;
   sounds(): readonly Sound[];
@@ -34,6 +38,8 @@ export interface StateChange {
   pos?: Pos;
   /** null = put down. */
   heldBy?: EntityId | null;
+  /** Replace the object's product slots (harvest). */
+  products?: import('./entities.ts').ProductState[];
 }
 
 export interface EffectContext {

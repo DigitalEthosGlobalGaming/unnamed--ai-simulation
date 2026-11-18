@@ -93,7 +93,7 @@ describe('M7: server', () => {
   it('serves a display catalog and filters recorded deltas by kind (for the viewer)', async () => {
     const c = anon();
     const cat = await c.catalog('garden');
-    expect(cat.objects.find((o) => o.type === 'solarPad')?.verbs).toEqual(['charge', 'scan']);
+    expect(cat.objects.find((o) => o.type === 'fountain')?.verbs).toEqual(['rinse', 'splash', 'fill', 'scan']);
     expect(cat.models.find((m) => m.id === 'hostedText')).toMatchObject({ adapter: 'openai-compatible', model: 'meta/llama-3.1-8b', provider: 'meta', local: false });
     expect(cat.models.find((m) => m.id === 'localDm')).toMatchObject({ adapter: 'ollama-decision', provider: 'ollama', local: true });
     expect(JSON.stringify(cat.models)).not.toMatch(/apiKey/);

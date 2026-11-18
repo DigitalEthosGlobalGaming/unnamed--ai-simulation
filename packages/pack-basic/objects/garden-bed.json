@@ -1,0 +1,38 @@
+{
+  "schema": 2,
+  "id": "garden-bed",
+  "name": "Garden bed",
+  "description": "Soil to plant seeds in.",
+  "icon": "<icon><rect x=\"2\" y=\"9\" w=\"20\" h=\"10\" shade=\"light\"/><line x1=\"2\" y1=\"14\" x2=\"22\" y2=\"14\" dashed=\"true\"/></icon>",
+  "tags": [
+    "soil"
+  ],
+  "footprint": {
+    "w": 3,
+    "h": 2
+  },
+  "verbs": {
+    "plant": {
+      "range": 1,
+      "durationSeconds": 8,
+      "requires": {
+        "holding": {
+          "tag": "seed"
+        }
+      },
+      "effects": [
+        {
+          "block": "createObject",
+          "type": "plant",
+          "at": "freeTileIn",
+          "consumeHeld": true
+        },
+        {
+          "block": "observe",
+          "text": "you pressed the seed into the soil"
+        }
+      ],
+      "fail": "you need to be holding a seed to plant"
+    }
+  }
+}

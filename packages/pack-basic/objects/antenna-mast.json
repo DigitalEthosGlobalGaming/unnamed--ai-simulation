@@ -1,0 +1,49 @@
+{
+  "schema": 2,
+  "id": "antenna-mast",
+  "name": "Antenna mast",
+  "description": "Signal is strong near it.",
+  "icon": "<icon><line x1=\"12\" y1=\"22\" x2=\"12\" y2=\"4\" weight=\"heavy\"/><polyline points=\"7,22 12,12 17,22\"/><path d=\"M 7 6 A 6 6 0 0 1 17 6\" dashed=\"true\"/><path d=\"M 4 4 A 9 9 0 0 1 20 4\" dashed=\"true\"/></icon>",
+  "tags": [
+    "metal",
+    "tall"
+  ],
+  "solid": true,
+  "state": {
+    "hum": {
+      "initial": 1,
+      "min": 0,
+      "max": 1
+    }
+  },
+  "verbs": {
+    "scan": {
+      "range": 6,
+      "durationSeconds": 20,
+      "effects": [
+        {
+          "block": "handler",
+          "name": "basic.inspect"
+        }
+      ]
+    }
+  },
+  "rules": [
+    {
+      "every": "1h",
+      "nearby": {
+        "range": 3,
+        "needs": {
+          "signal": 0.2
+        }
+      }
+    }
+  ],
+  "appearance": {
+    "hum": [
+      {
+        "text": "a tall mast, humming"
+      }
+    ]
+  }
+}

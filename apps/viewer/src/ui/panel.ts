@@ -22,6 +22,9 @@ export class Panel {
   private view: { key: string; el: HTMLElement; onClose?: () => void } | null = null;
   /** Item schedule rows link to the item card. */
   onOpenDrop: (dropId: string) => void = () => {};
+  onOpenObject: (objectId: string) => void = () => {};
+  private lastObjectsKey: string | null = null;
+  private builtArchived = false;
   onFocusDrop: (dropId: string | null) => void = () => {};
   onOpenAirdrop: () => void = () => {};
   onOpenMail: () => void = () => {};
@@ -48,6 +51,7 @@ export class Panel {
       if (a === 'back') store.select(null);
       if (a === 'close-view') this.closeView();
       if (a === 'open-drop') this.onOpenDrop(t.dataset['id']!);
+      if (a === 'open-object') this.onOpenObject(t.dataset['id']!);
       if (a === 'open-airdrop') this.onOpenAirdrop();
       if (a === 'open-mail') this.onOpenMail();
       if (a === 'tab') this.setTab(t.dataset['tab'] as Tab);
@@ -130,7 +134,7 @@ export class Panel {
       if (this.mode !== 'robot' || this.robotId !== sel.id) this.buildRobot(sel);
       this.updateRobot(sel);
     } else {
-      if (this.mode !== 'overview') this.buildOverview();
+      if (this.mode !== 'overview' || this.builtArchived !== this.store.archived) this.buildOverview();
       this.updateOverview();
     }
   }
@@ -139,9 +143,14 @@ export class Panel {
 
   private buildOverview() {
     if (this.tab === 'beliefs') this.tab = 'feed';
+    // An archived world is read only: no visitor actions, no settings.
+    this.builtArchived = this.store.archived;
+    if (this.builtArchived && this.tab === 'settings') this.tab = 'feed';
     this.mode = 'overview';
     this.robotId = null;
     this.lastRobotsKey = null;
+    this.lastObjectsKey = null;
+    this.lastDropsKey = null;
     this.root.innerHTML = `
       <section class="pane-section peek" aria-labelledby="robots-h">
         <div class="section-head">
@@ -154,7 +163,7 @@ export class Panel {
           <tbody data-ref="robots"></tbody>
         </table>
         <p class="hint" data-ref="hint">Tap a robot on the plan, or its mark here, to read its mind.</p>
-        ${this.visitors?.api ? `<div class="visitor-actions" role="group" aria-label="Visitors">
+        ${this.visitors?.api && !this.builtArchived ? `<div class="visitor-actions" role="group" aria-label="Visitors">
           <button type="button" class="btn" data-action="open-airdrop">${icons.airdrop()}<span>Airdrop</span></button>
           <button type="button" class="btn" data-action="open-mail">${icons.mail()}<span>Mailbox</span><span class="btn-count" data-ref="drawer-mail-count" hidden></span></button>
         </div>` : ''}
@@ -170,10 +179,21 @@ export class Panel {
           <tbody data-ref="drops"></tbody>
         </table>
       </section>
+      <section class="pane-section" aria-labelledby="objects-h" data-ref="objects-section" hidden>
+        <div class="section-head">
+          <h2 id="objects-h" class="draft-h">Object schedule</h2>
+          <p class="section-meta">What the robots can use</p>
+        </div>
+        <table class="schedule object-schedule">
+          <caption class="sr-only">Objects in this world and what the robots see of them. Choose one for its card.</caption>
+          <thead><tr><th scope="col">Object</th><th scope="col">Looks</th><th scope="col">Ready</th></tr></thead>
+          <tbody data-ref="objects"></tbody>
+        </table>
+      </section>
       <section class="pane-section tabs-section">
         <div class="tabs" role="tablist" aria-label="World">
           ${this.tabButton('feed', 'Brain feed')}
-          ${this.tabButton('settings', 'World settings')}
+          ${this.builtArchived ? '' : this.tabButton('settings', 'World settings')}
           <p class="section-meta tab-meta">${this.tab === 'settings' ? '' : 'All robots · newest first'}</p>
         </div>
         <div role="tabpanel" id="tp-feed" aria-labelledby="tab-feed" data-tab="feed" ${this.tab === 'feed' ? '' : 'hidden'}>
@@ -234,6 +254,34 @@ export class Panel {
     }
     this.updateFeed(null);
     this.updateDrops();
+    this.updateObjects();
+  }
+
+  /** Object schedule: every object with what it looks like and anything ready to harvest. */
+  private updateObjects() {
+    const sec = this.root.querySelector<HTMLElement>('[data-ref="objects-section"]');
+    const body = this.root.querySelector<HTMLElement>('[data-ref="objects"]');
+    if (!sec || !body) return;
+    const s = this.store;
+    const list = s.world!.objects.filter((o) => o.type !== 'airdrop' && o.type !== 'mailbox' && !o.heldBy);
+    sec.hidden = list.length === 0;
+    const key = JSON.stringify(list.map((o) => [o.id, o.appearance?.[o.appearance.length - 1], o.products?.map((p) => p.ready)])) + s.objectDefs.size;
+    if (key === this.lastObjectsKey) return;
+    this.lastObjectsKey = key;
+    body.closest('table')?.classList.toggle('no-ready', !list.some((o) => o.products?.some((p) => p.ready > 0)));
+    body.innerHTML = list
+      .map((o) => {
+        const def = s.objectDefs.get(o.type);
+        const ready = (o.products ?? []).filter((p) => p.ready > 0).map((p) => `${p.ready} ${s.objectDefs.get(p.item)?.name.toLowerCase() ?? p.item} · ${p.verb}`);
+        // Most telling text last in definition order (a plant's growth band), else the first.
+        const looks = o.appearance?.length ? o.appearance[o.appearance.length - 1]! : (def?.description ?? '');
+        return `<tr>
+          <th scope="row"><button type="button" class="mark-btn" data-action="open-object" data-id="${esc(o.id)}">${def?.icon ? iconSvg(def.icon, 20) : ''}<span>${esc(s.objectLabel(o.type))}</span></button></th>
+          <td>${looks ? esc(looks.charAt(0).toUpperCase() + looks.slice(1)) : '<span class="nil">—</span>'}</td>
+          <td>${ready.length ? esc(ready.join(', ')) : '<span class="nil">—</span>'}</td>
+        </tr>`;
+      })
+      .join('');
   }
 
   private updateDrops() {

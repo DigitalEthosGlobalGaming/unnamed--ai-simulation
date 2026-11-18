@@ -1,0 +1,48 @@
+{
+  "comment": "garden-2 (iteration 2): the same 24 x 16 layout as garden: hut (#), pond (~) on the east edge, gravel paths (:). No solar pad; a garden bed and an antenna mast stand in it as objects.",
+  "legend": {
+    ".": {
+      "walkable": true,
+      "blocksSight": false,
+      "soundDamping": 0
+    },
+    ":": {
+      "walkable": true,
+      "blocksSight": false,
+      "soundDamping": 0
+    },
+    "#": {
+      "walkable": false,
+      "blocksSight": true,
+      "soundDamping": 0.8
+    },
+    "~": {
+      "walkable": false,
+      "blocksSight": false,
+      "soundDamping": 0.1
+    },
+    "*": {
+      "walkable": false,
+      "blocksSight": true,
+      "soundDamping": 0.3
+    }
+  },
+  "rows": [
+    "........................",
+    ".######..........*.....~",
+    ".#....#...............~~",
+    ".#....#..............~~~",
+    ".#....#..............~~~",
+    ".###:##...............~~",
+    "....:..................~",
+    "....::::::::::::::......",
+    "...............:........",
+    "..*............:......~~",
+    "...............:.....~~~",
+    "...............:.....~~~",
+    "....*..........:......~~",
+    "...............:........",
+    "........*..............*",
+    "........................"
+  ]
+}

@@ -4,8 +4,9 @@
  * Roles come from the sample account (`?as=admin|visitor|spectator`). The sample sim doesn't know
  * about drops: they are drawn from this list, and robots don't use them.
  */
-import { CATALOG_TEMPLATES, MAIL_MAX_LENGTH, cleanMailText, mailTextProblem, validateCatalogItem } from '@uas/core';
+import { MAIL_MAX_LENGTH, migrateToSchema2, validateObjectDef2, cleanMailText, mailTextProblem, validateCatalogItem } from '@uas/core';
 import { VisitorError, type Airdrop, type AirdropDetail, type CatalogItem, type MailStatus, type MailView, type ValidateResult, type Vec2, type VisitorApi } from '../types.ts';
+import { DEFS } from './garden.ts';
 
 export interface SampleWorldHooks {
   tick(): number;
@@ -19,6 +20,13 @@ export interface SampleWorldHooks {
   enabled(): string[];
   feedTickNear(tick: number): number;
 }
+
+const ICONS2 = {
+  seed: '<icon><ellipse cx="12" cy="12" rx="4" ry="6" shade="medium" weight="heavy"/></icon>',
+  top: '<icon><path d="M4 9 L20 9 L12 21 Z" weight="heavy" shade="light"/><line x1="12" y1="3" x2="12" y2="9" weight="heavy"/></icon>',
+  chime: '<icon><line x1="4" y1="4" x2="20" y2="4" weight="heavy"/><line x1="8" y1="4" x2="8" y2="16"/><line x1="12" y1="4" x2="12" y2="19"/><line x1="16" y1="4" x2="16" y2="14"/></icon>',
+  gel: '<icon><rect x="4" y="7" w="16" h="10" r="3" weight="heavy" shade="light"/><line x1="8" y1="12" x2="16" y2="12" dashed="true"/></icon>',
+};
 
 const ICONS = {
   snack: '<icon><rect x="7" y="4" w="10" h="16" r="1" shade="light"/><line x1="10" y1="2" x2="14" y2="2" weight="heavy"/><line x1="9" y1="9" x2="15" y2="9" weight="thin"/></icon>',
@@ -98,11 +106,52 @@ const CATALOGUE: CatalogItem[] = [
   },
 ].map((i) => ({ ...i, updatedAt: now(), updatedBy: 'admin' }));
 
-const TEMPLATES = (): { name: string; item: CatalogItem }[] => CATALOG_TEMPLATES.map((t) => ({ name: t.name, item: { ...(t.item as CatalogItem), id: `new-${t.item.id}` } }));
+/** Schema-2 templates (docs/architecture/objects.md): seed, toy, noise-maker, cooling gel. */
+const TEMPLATES2: { name: string; item: CatalogItem }[] = [
+  {
+    name: 'seed',
+    item: {
+      schema: 2, id: 'new-seed', name: 'Wild seed', description: 'Press it into the garden bed; something grows.', icon: ICONS2.seed, tags: ['seed', 'small'], portable: true, expiresAfter: '7d',
+      state: {}, verbs: { shake: { range: 0, durationSeconds: 3, effects: [{ block: 'makeNoise', notes: ['chirp-C'], observation: 'it rattled faintly' }] } },
+    },
+  },
+  {
+    name: 'toy',
+    item: {
+      schema: 2, id: 'new-toy', name: 'Spinning top', description: 'Spin it and watch.', icon: ICONS2.top, tags: ['toy', 'round'], portable: true, expiresAfter: '3d',
+      state: { spin: { initial: 0, min: 0, max: 1 } },
+      verbs: { spin: { range: 1, durationSeconds: 6, effects: [{ block: 'changeState', target: 'self', set: { spin: 1 } }, { block: 'affectNeeds', needs: { curiosity: 0.1 }, observation: 'it whirled and wobbled' }] } },
+      rules: [{ every: '30m', change: { spin: -0.5 } }],
+      appearance: { spin: [{ gt: 0.1, text: 'a top, spinning' }, { text: 'a top lying on its side' }] },
+    },
+  },
+  {
+    name: 'noise-maker',
+    item: {
+      schema: 2, id: 'new-chime', name: 'Wind chime', description: 'Rings when tapped.', icon: ICONS2.chime, tags: ['metal', 'loud'], portable: false, expiresAfter: '7d',
+      state: {}, verbs: { tap: { range: 1, durationSeconds: 4, effects: [{ block: 'makeNoise', notes: ['trill-E', 'trill-G'], observation: 'it rang two bright notes' }] } },
+    },
+  },
+  {
+    name: 'cooling gel',
+    item: {
+      schema: 2, id: 'new-gel', name: 'Cooling gel', description: 'A cold pack, good for three uses.', icon: ICONS2.gel, tags: ['cold', 'soft'], portable: true, expiresAfter: '2d',
+      state: { uses: { initial: 3, min: 0, max: 3 } },
+      verbs: { press: { range: 0, durationSeconds: 8, effects: [{ block: 'affectNeeds', needs: { cool: 0.25 }, observation: 'a chill spread through the casing' }, { block: 'consume', target: 'self', uses: 1 }] } },
+      appearance: { uses: [{ lt: 1, text: 'an empty gel pack' }, { text: 'a cold gel pack' }] },
+    },
+  },
+];
+const TEMPLATES = (): { name: string; item: CatalogItem }[] => TEMPLATES2.map((t) => ({ name: t.name, item: structuredClone(t.item) }));
 
-/** The server's own validation (shared in @uas/core), with the sample world's needs and noises. */
+/** The server's own validation (shared in @uas/core), with the sample world's needs and noises; schema 2 or 1. */
 export function validateItem(raw: unknown): ValidateResult {
-  const r = validateCatalogItem(raw, { needKeys: ['energy', 'cool', 'signal', 'curiosity'], noiseNames: ['beep', 'chirp', 'trill', 'buzz'] });
+  const opts = { needKeys: ['energy', 'cool', 'signal', 'curiosity'], noiseNames: ['beep', 'chirp', 'trill', 'buzz'] };
+  if ((raw as { schema?: unknown } | null)?.schema === 2) {
+    const r = validateObjectDef2(raw, { ...opts, needKeys: opts.needKeys.filter((k) => k !== 'energy'), knownTypes: [...DEFS.map((d) => d.id)] });
+    return r.ok ? { ok: true, item: r.def as unknown as CatalogItem } : { ok: false, errors: r.errors };
+  }
+  const r = validateCatalogItem(raw, opts);
   return r.ok ? { ok: true, item: r.item as CatalogItem } : { ok: false, errors: r.errors };
 }
 
@@ -130,7 +179,7 @@ export class SampleVisitors implements VisitorApi {
       droppedBy: by,
       droppedTick: t - ago,
       expiresTick: t - ago + Math.round(parseDuration(item.expiresAfter) / hooks.secondsPerTick),
-      ...(item.behaviours.some((b) => b.block === 'consumable') && { usesLeft: Number(item.behaviours.find((b) => b.block === 'consumable')!['uses']) }),
+      ...((item.behaviours ?? []).some((b) => b.block === 'consumable') && { usesLeft: Number(item.behaviours!.find((b) => b.block === 'consumable')!['uses']) }),
     });
     this.drops.push(mk(this.catalogue[0]!, { x: 9, y: 11 }, { username: 'sample-owner', admin: true }, 900), mk(this.catalogue[1]!, { x: 20, y: 6 }, { username: 'kiwi-fan', admin: false }, 300));
     const ft = hooks.feedTickNear(t - 2000);
@@ -159,7 +208,8 @@ export class SampleVisitors implements VisitorApi {
 
   async catalog() {
     const admin = this.hooks.role() === 'admin';
-    return this.catalogue.filter((i) => admin || !i.disabled).map((i) => ({ ...i }));
+    // Read-time migration, like the server: schema-1 items come back as schema 2.
+    return this.catalogue.filter((i) => admin || !i.disabled).map((i) => ({ ...(migrateToSchema2(i as unknown as Record<string, unknown>) as unknown as CatalogItem), ...(i.disabled !== undefined && { disabled: i.disabled }), ...(i.updatedAt && { updatedAt: i.updatedAt, updatedBy: i.updatedBy }) }));
   }
   async templates() {
     this.need('admin');

@@ -1,0 +1,12 @@
+{
+  "schema": 2,
+  "id": "seed",
+  "name": "Seed",
+  "description": "Plant it in soil.",
+  "icon": "<icon><ellipse cx=\"12\" cy=\"12\" rx=\"5\" ry=\"3\" shade=\"dense\"/></icon>",
+  "tags": [
+    "seed",
+    "small"
+  ],
+  "portable": true
+}

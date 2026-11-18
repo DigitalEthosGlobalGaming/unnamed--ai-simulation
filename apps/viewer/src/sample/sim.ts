@@ -26,6 +26,7 @@ import type {
 } from './types.ts';
 import { next, pick, range, seedRng, type RngState } from './rng.ts';
 import { emptyMap, sampleMap, sampleObjects, terrainAt } from './map.ts';
+import { DEF, SOLID, gardenHour, harvest, type LivingEntity } from './garden.ts';
 
 export const TICKS_PER_SECOND = 10;
 export const SECONDS_PER_TICK = 6; // one in-world minute per real second at 1×
@@ -200,7 +201,7 @@ const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
 
 function blocked(s: SimState, x: number, y: number): boolean {
   if (!terrainAt(s.map, x, y).walkable) return true;
-  return s.objects.some((o) => o.type !== 'ball' && o.pos.x === x && o.pos.y === y);
+  return s.objects.some((o) => SOLID.has(o.type) && o.pos.x === x && o.pos.y === y);
 }
 
 /** BFS on 4-neighbour tiles. The grid is tiny, so A* buys nothing here. */
@@ -489,6 +490,22 @@ function candidates(s: SimState, r: RobotState): Candidate[] {
       notes: chainFor(s, r, r.heard?.from === other.id ? 'reply' : 'greet'),
     });
   }
+  // The new garden: keep the plant watered, admire it in flower, plant loose seeds.
+  const can = obj(s, 'watering-can');
+  const canWater = Number(can?.state['water'] ?? 0);
+  for (const p of s.objects.filter((o) => o.type === 'plant')) {
+    const w = Number(p.state['water'] ?? 0);
+    const g = Number(p.state['growth'] ?? 0);
+    if (can && w < 0.5 && canWater >= 0.25)
+      out.push({ verb: 'water', target: p, score: (0.5 - w) * 3 + 0.2, key: 'water:plant', reason: w < 0.15 ? 'the soil is cracked; it needs water' : 'the soil looks dry' });
+    if (can && w < 0.5 && canWater < 0.25 && fountain)
+      out.push({ verb: 'fill', target: fountain, score: (0.5 - w) * 2.4 + 0.1, key: 'fill:fountain', reason: 'the can is empty and the plant is dry' });
+    if (g >= 0.7) out.push({ verb: 'inspect', target: p, score: (1 - r.needs.curiosity) * 1.2 * (1 - bored('inspect:plant')), key: 'inspect:plant', reason: 'the flower smelled of something new' });
+  }
+  const bed = obj(s, 'garden-bed');
+  const seed = s.objects.find((o) => o.type === 'seed' && !o.heldBy);
+  if (bed && seed && freeBedTile(s, bed) && dayOf(s.tick) >= 2)
+    out.push({ verb: 'plant', target: bed, score: 0.35 + (1 - r.needs.curiosity) * 0.5, key: 'plant:garden-bed', reason: 'a loose seed; the bed has room' });
   out.push({ verb: 'scan', target: pick(rng, s.objects), score: 0.25 + (1 - r.needs.curiosity) * 0.2, key: 'scan', reason: 'looking around' });
   for (const c of out) c.score += range(rng, -0.12, 0.12);
   return out.sort((a, b) => b.score - a.score);
@@ -687,6 +704,13 @@ function durationFor(verb: string, notes?: string[]): number {
       return Math.max(6, (notes?.length ?? 1) * 4);
     case 'scan':
       return 20;
+    case 'water':
+    case 'fill':
+      return 30;
+    case 'inspect':
+      return 30;
+    case 'plant':
+      return 50;
     default:
       return 20;
   }
@@ -779,6 +803,7 @@ function finish(s: SimState, r: RobotState, out: StepOutput, ok: boolean) {
     }
   }
   if ((c.verb === 'chase' || c.verb === 'push') && c.targetId) moveBall(s, r, out);
+  if (ok) gardenEffect(s, r, c.verb, c.targetId, out);
   r.current = null;
   r.valence = Math.max(-1, Math.min(1, r.valence + (ok ? 0.08 : -0.12)));
   if (r.queue.length === 0) {
@@ -830,7 +855,7 @@ function doTick(s: SimState, r: RobotState, out: StepOutput) {
     }
     case 'rest':
       r.needs.cool = clamp01(r.needs.cool + 0.35 * h);
-      r.energy = clamp01(r.energy + (r.asleep ? 0.012 : 0.03) * h);
+      if (r.asleep) r.energy = clamp01(r.energy + (0.04 + r.pressure * 0.08) * r.chargeMul * h); // sleep is the only recharge
       if (!isDaylight(s.tick)) {
         r.asleep = true;
         c.remaining = Math.max(c.remaining, 2); // stay docked till dawn
@@ -842,7 +867,6 @@ function doTick(s: SimState, r: RobotState, out: StepOutput) {
       break;
     case 'splash':
       r.needs.curiosity = clamp01(r.needs.curiosity + 9 * h * (1 - (r.boredom['splash:fountain'] ?? 0)));
-      r.energy = clamp01(r.energy - 0.6 * h);
       break;
     case 'chase':
     case 'push':
@@ -906,6 +930,43 @@ function moveTick(s: SimState, r: RobotState, out: StepOutput) {
   out.changes.push({ kind: 'move', id: r.id, pos: { x: round3(r.pos.x), y: round3(r.pos.y) }, heading: round3(r.heading) });
 }
 
+/* -------------------------------------------------------------- garden */
+
+function freeBedTile(s: SimState, bed: Entity) {
+  const fp = DEF[bed.type]?.footprint ?? { w: 1, h: 1 };
+  for (let y = bed.pos.y; y < bed.pos.y + fp.h; y++)
+    for (let x = bed.pos.x; x < bed.pos.x + fp.w; x++) if (!s.objects.some((o) => o.type === 'plant' && o.pos.x === x && o.pos.y === y)) return { x, y };
+  return null;
+}
+
+/** What a finished garden verb does (the schema-2 effects, simplified: the can is used where it stands). */
+function gardenEffect(s: SimState, r: RobotState, verb: string, targetId: string | undefined, out: StepOutput) {
+  const t = s.objects.find((o) => o.id === targetId);
+  const can = obj(s, 'watering-can');
+  const push = (o: Entity) => out.changes.push({ kind: 'object', id: o.id, pos: o.pos, state: o.state });
+  if (verb === 'fill' && can) {
+    can.state = { ...can.state, water: 1 };
+    push(can);
+  } else if (verb === 'water' && t && can) {
+    can.state = { ...can.state, water: Math.max(0, round3(Number(can.state['water'] ?? 0) - 0.25)) };
+    t.state = { ...t.state, water: Math.min(1, round3(Number(t.state['water'] ?? 0) + 0.4)) };
+    push(can);
+    push(t);
+  } else if (verb === 'inspect' && t) {
+    r.needs.curiosity = clamp01(r.needs.curiosity + 0.15);
+    if (harvest(t as LivingEntity, 'flower')) push(t);
+  } else if (verb === 'plant' && t) {
+    const seed = s.objects.find((o) => o.type === 'seed' && !o.heldBy);
+    const at = freeBedTile(s, t);
+    if (!seed || !at) return;
+    s.objects = s.objects.filter((o) => o !== seed);
+    out.changes.push({ kind: 'despawn', id: seed.id });
+    const plant: LivingEntity = { id: `obj-plant-${s.tick}`, kind: 'object', type: 'plant', pos: at, tags: ['plant', 'living'], state: { water: 0.6, growth: 0 }, createdBy: { entityId: r.id, tick: s.tick } };
+    s.objects.push(plant);
+    out.changes.push({ kind: 'spawn', entity: plant });
+  }
+}
+
 /* ---------------------------------------------------------------- step */
 
 export function step(s: SimState): StepOutput {
@@ -915,6 +976,8 @@ export function step(s: SimState): StepOutput {
   const daylight = isDaylight(s.tick);
   const hour = hourOf(s.tick);
 
+  // Living objects: rules and product timers once an in-world hour (on sim ticks, never the host clock).
+  if (s.tick % TICKS_PER_HOUR === 0) for (const o of gardenHour(s.objects as LivingEntity[])) out.changes.push({ kind: 'object', id: o.id, pos: o.pos, state: o.state });
   const pad = obj(s, 'solarPad');
   if (pad && pad.state['lit'] !== daylight) {
     pad.state = { ...pad.state, lit: daylight };
@@ -930,7 +993,7 @@ export function step(s: SimState): StepOutput {
     r.needs.cool = clamp01(r.needs.cool - 0.075 * (active ? 2.5 : 1) * h);
     r.needs.signal = clamp01(r.needs.signal - 0.1 * h);
     r.needs.curiosity = clamp01(r.needs.curiosity - (r.asleep ? 0.01 : 0.15) * h);
-    r.energy = clamp01(r.energy - (r.asleep ? 0.006 : (0.05 + (active ? 0.05 : 0)) * r.drainMul) * h);
+    void active; // iteration 2: physical actions cost no battery; thinking does (energyCost)
     if (s.robots.some((o) => o.id !== r.id && dist(o.pos, r.pos) < 3)) r.needs.signal = clamp01(r.needs.signal + 0.18 * h);
     if (r.chargeMul < 1) r.energy = Math.min(r.energy, 0.14); // scenario: a worn cell that holds little charge
     for (const k of Object.keys(r.boredom)) r.boredom[k] = r.boredom[k]! * (1 - 0.25 * h);

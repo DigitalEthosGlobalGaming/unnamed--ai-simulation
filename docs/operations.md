@@ -160,7 +160,19 @@ Never commit a `.env` file; it is in `.gitignore` and `.dockerignore`.
 
 ## World configuration
 
-Each `worlds/*.yaml` is one world ([`config.ts`](../packages/server/src/config.ts)): `id`, `name`, `seed`, `packs`, `map`, pacing (`ticksPerRealSecond`, `timeScale`), `snapshotEveryTicks`, `publicRead`, `visitorArchetype`, `sim` (time and movement), `mind` ([mind.md](architecture/mind.md#configuration)), `entities`, and `models` ([models.md](architecture/models.md#jobs-and-routing)). `${VAR}` and `${VAR:-default}` are substituted from the environment before parsing. Pacing is in flux; see [simulation.md](architecture/simulation.md#clock-and-pacing).
+Each `worlds/*.yaml` is one world ([`config.ts`](../packages/server/src/config.ts)): `id`, `name`, `seed`, `packs`, `map`, pacing (`ticksPerRealSecond`, `timeScale`), `snapshotEveryTicks`, `publicRead`, `archived`, `sim` (time and movement), `mind` ([mind.md](architecture/mind.md#configuration)), `entities`, and `models` ([models.md](architecture/models.md#jobs-and-routing)). `${VAR}` and `${VAR:-default}` are substituted from the environment before parsing. Pacing is in flux; see [simulation.md](architecture/simulation.md#clock-and-pacing).
+
+## Archiving a world and starting a new one
+
+Iteration 2 starts a fresh garden (`garden2`, map `garden-2`) and keeps iteration 1's world readable ([objects.md](architecture/objects.md#archiving-the-iteration-1-world)). Stop the server first.
+
+```sh
+npm run world:archive -- --world garden    # SQLite backup to data/archive/garden-<date>.db, then archived: true in worlds/garden.yaml
+npm run world:new -- --world garden2 --map garden-2   # writes worlds/garden2.yaml from the template (skip it: garden2.yaml ships in worlds/)
+npm start                                  # garden is read-only (no ticking, inputs refused with 409); garden2 starts at day 0
+```
+
+Both take `--db` and `--worlds` (default `UAS_DB` and `UAS_WORLDS`). `world:new` refuses an id the database already has. An archived world loads no models and logs nothing; its timeline, replay, feed and history stay readable. Replaying it runs on today's pack code, so it is approximate where the old solar pad mattered (the pad is a verb-less legacy type now).
 
 ## Health and metrics
 

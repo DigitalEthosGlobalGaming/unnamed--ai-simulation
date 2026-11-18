@@ -1,8 +1,20 @@
 import {
+  BLOCKS_HANDLER,
+  DROP_HANDLER,
+  PERIOD_SECONDS,
+  PICKUP_HANDLER,
+  appearanceOf,
+  checkCondition,
+  clampState,
+  compileObjectDef,
+  migrateToSchema2,
+  validateObjectDef2,
+  type EffectBlock,
+  type EffectContext,
+  type ObjectDef,
+  type ProductState,
+  type WorldObject,
   DecideAnswerSchema,
-  airdropUses,
-  airdropVerbs,
-  type CatalogItem,
   type VerbDef,
   MAX_QUEUE,
   RngStreams,
@@ -37,6 +49,9 @@ import {
 import { findPath, type PathGoal } from './path.ts';
 
 const isRecord = (v: unknown): v is Record<string, Json> => !!v && typeof v === 'object' && !Array.isArray(v);
+
+/** Handlers the engine provides itself (schema-2 blocks; portable pickup and drop). */
+const BUILT_IN_HANDLERS = new Set([BLOCKS_HANDLER, PICKUP_HANDLER, DROP_HANDLER]);
 
 export interface WorldConfig {
   worldId: WorldId;
@@ -99,6 +114,8 @@ export interface WorldState {
   clock?: { baseSeconds: number; baseTick: number; dayZero: number; timezone: string; anchored?: boolean };
   /** The world's mailbox: messages oldest first (deterministic, snapshotted). Text is private until read. */
   mailbox?: { queue: MailItem[] };
+  /** In-world second up to which object rules have run (schema 2). */
+  rulesSeconds?: number;
 }
 
 export interface MailItem {
@@ -310,12 +327,15 @@ export class World implements WorldView {
     }
 
     this.expire();
+    this.runRules();
+    this.nearbyNeeds();
     const finished: Character[] = [];
     for (const c of this.characters()) {
       if (!c.current) this.startNext(c);
       if (c.current && this.advance(c)) finished.push(c);
     }
     for (const c of finished) if (this.state.entities[c.id]) this.resolve(c);
+    this.refreshViews();
     this.plugin?.afterTick?.(this, this.deltas);
 
     this.state.tick++;
@@ -464,7 +484,7 @@ export class World implements WorldView {
     if (action.targetId !== undefined && !target) return `no such target ${action.targetId}`;
 
     const verbDef = this.verbDefOf(target, action.verb);
-    if (verbDef && !this.registry.handlers.has(verbDef.handler)) return `${action.verb} does not work here`;
+    if (verbDef && !this.registry.handlers.has(verbDef.handler) && !BUILT_IN_HANDLERS.has(verbDef.handler)) return `${action.verb} does not work here`;
     if (target && verbDef) {
       if (this.reach(c, target) > verbDef.range) return 'out of range';
       c.current = { action, startedTick: tick, endsTick: tick + this.scaled(verbDef.durationTicks) };
@@ -552,14 +572,8 @@ export class World implements WorldView {
     const def = this.verbDefOf(target, action.verb)!;
     if (this.reach(c, target) > def.range) return this.finish(c, 'failed', 'out of range');
 
-    const handler = this.registry.handlers.get(def.handler)!;
-    const result = handler({
-      actor: c,
-      target,
-      world: this,
-      rng: this.streams.get('effects'),
-      params: { ...def.params, ...action.args },
-    });
+    const ctx = { actor: c, target, world: this, rng: this.streams.get('effects'), params: { ...def.params, ...action.args } };
+    const result = BUILT_IN_HANDLERS.has(def.handler) ? this.builtIn(def.handler, ctx, action.verb) : this.registry.handlers.get(def.handler)!(ctx);
     if (!result.ok) return this.finish(c, 'failed', result.reason ?? 'it did not work', result.observation);
     this.applyResult(c, action, target, result);
     if (target.tags.includes('loud')) this.tickSounds.push({ sourceId: target.id, pos: { ...target.pos }, loudness: 0.8 });
@@ -569,7 +583,14 @@ export class World implements WorldView {
     }
     if (result.takeMail) this.takeMail(c);
     this.finish(c, 'done', undefined, result.observation);
-    if (target.type === 'airdrop' && this.state.entities[target.id]) this.airdropUsed(c, target, action.verb);
+    if (target.type === 'airdrop') {
+      if (this.state.entities[target.id]) this.airdropUsed(c, target, action.verb);
+      else {
+        // Used up by a schema-2 `consume` block (already despawned).
+        this.emit({ kind: 'airdrop', event: 'used', dropId: String(target.state.dropId), entityId: target.id, itemId: String(target.state.itemId), verb: action.verb, by: c.id });
+        this.emit({ kind: 'airdrop', event: 'removed', dropId: String(target.state.dropId), entityId: target.id, itemId: String(target.state.itemId), pos: { ...target.pos }, reason: 'used up' });
+      }
+    }
   }
 
   private finish(c: Character, status: ActionStatus, reason?: string, observation?: string): void {
@@ -604,6 +625,10 @@ export class World implements WorldView {
     const e = this.state.entities[ch.id];
     if (!e) return;
     if (ch.set) this.setState(e, ch.set);
+    if (ch.products && e.kind === 'object') {
+      e.products = structuredClone(ch.products);
+      this.emitView(e);
+    }
     if (ch.heldBy !== undefined) this.setHeld(e, ch.heldBy);
     if (ch.pos && inBounds(this.grid, ch.pos)) this.move(e, ch.pos);
   }
@@ -630,7 +655,19 @@ export class World implements WorldView {
         queue: [],
       };
     } else if (obj) {
-      entity = { id, kind: 'object', type: def.type, pos: { ...def.pos }, tags: [...(def.tags ?? obj.tags)], state: { ...obj.state, ...def.state } };
+      const o: WorldObject = { id, kind: 'object', type: def.type, pos: { ...def.pos }, tags: [...(def.tags ?? obj.tags)], state: { ...obj.state, ...def.state } };
+      if (obj.stateSpec) {
+        o.stateSpec = structuredClone(obj.stateSpec);
+        if (obj.footprint) o.footprint = { ...obj.footprint };
+        o.products = (obj.products ?? []).map((p) => ({ slot: p.slot, item: p.item, ready: 0, max: p.max, verb: p.verb, hours: 0, nextInHours: p.everyHours }));
+        o.appearance = obj.def2 ? appearanceOf(obj.def2, o.state) : [];
+      }
+      if (def.createdBy) o.createdBy = { ...def.createdBy };
+      if (def.heldBy && this.state.entities[def.heldBy]) {
+        o.heldBy = def.heldBy;
+        o.pos = { ...this.state.entities[def.heldBy]!.pos };
+      }
+      entity = o;
     } else return `unknown entity type ${def.type}`;
     if (entity.kind === 'character') this.plugin?.onSpawn?.(this, entity);
     if (entity.type === 'mailbox') entity.state.waiting = this.state.mailbox?.queue.length ?? 0;
@@ -674,6 +711,275 @@ export class World implements WorldView {
     this.emit({ kind: 'state', id: e.id, set: structuredClone(set) });
   }
 
+  // ------------------------------------------------------------- schema-2 objects (docs/architecture/objects.md)
+
+  private readonly dropDefs = new Map<string, ObjectDef | null>();
+
+  /** The engine form of an entity's object type; an airdrop's own item (migrated from schema 1 if needed). */
+  objectDefOf(e: Readonly<AnyEntity>): ObjectDef | undefined {
+    if (e.kind !== 'object') return undefined;
+    if (e.type !== 'airdrop') return this.registry.objects.get(e.type);
+    const key = String(e.state.dropId);
+    if (!this.dropDefs.has(key)) {
+      const item = isRecord(e.state.item) ? migrateToSchema2(e.state.item as Record<string, unknown>) : undefined;
+      const r = item ? validateObjectDef2(item, { pack: false }) : undefined;
+      this.dropDefs.set(key, r?.ok ? (compileObjectDef(r.def) as ObjectDef) : null);
+    }
+    return this.dropDefs.get(key) ?? undefined;
+  }
+
+  private numericState(e: Readonly<AnyEntity>): Record<string, number> {
+    return Object.fromEntries(Object.entries(e.state).filter(([, v]) => typeof v === 'number')) as Record<string, number>;
+  }
+
+  /** The engine's own handlers: schema-2 blocks, and portable pickup/drop. */
+  private builtIn(name: string, ctx: EffectContext, verb: string): EffectResult {
+    const { actor, target } = ctx;
+    const name2 = this.objectDefOf(target as AnyEntity)?.name?.toLowerCase() ?? target.type;
+    const held = this.entities().find((e) => e.heldBy === actor.id);
+    if (name === PICKUP_HANDLER) {
+      if (target.heldBy === actor.id) return { ok: false, reason: "you're already holding it", observation: `the ${name2} was already in your grippers` };
+      if (target.heldBy) return { ok: false, reason: 'someone is already holding it', observation: 'it would not come loose' };
+      if (held) return { ok: false, reason: 'already carrying something', observation: 'your grippers were full' };
+      return { ok: true, needDeltas: { curiosity: 0.02 }, stateChanges: [{ id: target.id, heldBy: actor.id }], observation: `you picked up the ${name2}` };
+    }
+    if (name === DROP_HANDLER) {
+      return target.heldBy === actor.id
+        ? { ok: true, stateChanges: [{ id: target.id, heldBy: null }], observation: `you put the ${name2} down` }
+        : { ok: false, reason: 'not holding it', observation: 'there was nothing to let go of' };
+    }
+    return this.runBlocks(ctx, verb, held);
+  }
+
+  /**
+   * A schema-2 verb: requirements, then effects in order, all or nothing. Nothing is applied here:
+   * the result is applied by the normal effect path, so a failure leaves the world untouched.
+   */
+  private runBlocks(ctx: EffectContext, verb: string, held: AnyEntity | undefined): EffectResult {
+    const { actor, target, params } = ctx;
+    const p = params as { requires?: Record<string, Json>; effects?: EffectBlock[]; fail?: string; reset?: Record<string, number> };
+    // A failed requirement shows the verb's `fail` text; an effect that can't happen says why.
+    const failText = (generic: string): EffectResult => ({ ok: false, reason: p.fail ?? generic, observation: p.fail ?? generic });
+    const failEffect = (why: string): EffectResult => ({ ok: false, reason: why, observation: why });
+    const req = (p.requires ?? {}) as { self?: Record<string, Json>; holding?: { type?: string; tag?: string; state?: Record<string, Json> }; near?: { type?: string; tag?: string; range: number }; tile?: { tag: string } };
+    if (req.self && !checkCondition(req.self as never, target.state)) return failText('it did not work');
+    if (req.holding) {
+      const h = req.holding;
+      if (!held || (h.type && held.type !== h.type) || (h.tag && !held.tags.includes(h.tag)) || (h.state && !checkCondition(h.state as never, held.state))) {
+        return failText(h.type ? `you need to be holding the right thing` : 'you need to be holding something');
+      }
+    }
+    if (req.near) {
+      const n = req.near;
+      const ok = this.entities().some((e) => e.kind === 'object' && e.id !== held?.id && (!n.type || e.type === n.type) && (!n.tag || e.tags.includes(n.tag)) && this.distanceTo(e, actor.pos) <= n.range);
+      if (!ok) return failText('nothing suitable is near');
+    }
+    if (req.tile && !target.tags.includes(req.tile.tag)) return failText('not here');
+
+    const states = new Map<string, Record<string, number>>();
+    const cur = (e: Readonly<AnyEntity>) => {
+      if (!states.has(e.id)) states.set(e.id, this.numericState(e));
+      return states.get(e.id)!;
+    };
+    const specOf = (e: Readonly<AnyEntity>) => (e.kind === 'object' ? (e.stateSpec ?? this.objectDefOf(e)?.stateSpec ?? {}) : {});
+    const out: EffectResult = { ok: true, observation: '', needDeltas: {}, stateChanges: [], spawn: [], despawn: [] };
+    const obs: string[] = [];
+    let products: ProductState[] | undefined;
+    for (const b of p.effects ?? []) {
+      const which = (t: string): Readonly<AnyEntity> | undefined => (t === 'held' ? held : (target as AnyEntity));
+      switch (b.block) {
+        case 'changeState': {
+          const e = which(b.target);
+          if (!e) return failEffect('you are not holding anything');
+          const st = cur(e);
+          const spec = specOf(e);
+          for (const [k, d] of Object.entries(b.values ?? {})) st[k] = clampState(spec[k], (st[k] ?? 0) + d);
+          for (const [k, v] of Object.entries(b.set ?? {})) st[k] = clampState(spec[k], v);
+          break;
+        }
+        case 'affectNeeds':
+          for (const [k, v] of Object.entries(b.needs)) if (k !== 'energy') out.needDeltas![k] = (out.needDeltas![k] ?? 0) + v;
+          obs.push(b.observation);
+          break;
+        case 'observe':
+          obs.push(b.text);
+          break;
+        case 'makeNoise':
+          out.noise = [...b.notes];
+          if (b.observation) obs.push(b.observation);
+          break;
+        case 'consume': {
+          const e = which(b.target);
+          if (!e) return failEffect('you are not holding anything');
+          const st = cur(e);
+          // With a `uses` value it is removed at the start of the next tick once that reaches 0
+          // (so minds still see what they just used); without one, straight away.
+          if (typeof st.uses === 'number' && specOf(e).uses) st.uses = Math.max(0, st.uses - b.uses);
+          else out.despawn!.push(e.id);
+          break;
+        }
+        case 'createObject': {
+          let at: Pos | undefined;
+          if (b.at === 'here') at = { ...actor.pos };
+          else if (b.at === 'target') at = { ...target.pos };
+          else at = this.freeTileIn(target as AnyEntity, actor.pos, out.spawn!);
+          if (!at) return failEffect('no room');
+          out.spawn!.push({ type: b.type, pos: at, createdBy: { entityId: actor.id, tick: this.state.tick } });
+          if (b.consumeHeld) {
+            if (!held) return failEffect('you are not holding anything');
+            out.despawn!.push(held.id);
+          }
+          break;
+        }
+        case 'harvest': {
+          const prods = products ?? structuredClone((target as WorldObject).products ?? []);
+          const slot = prods.find((x) => x.slot === b.slot);
+          if (!slot || slot.ready < 1) return failEffect(`there is nothing to ${verb} yet`);
+          if (held && !out.despawn!.includes(held.id)) return failEffect('your grippers are full');
+          slot.ready -= 1;
+          products = prods;
+          out.spawn!.push({ type: slot.item, pos: { ...actor.pos }, heldBy: actor.id });
+          obs.push(`you took a ${slot.item.replace(/-/g, ' ')}`);
+          break;
+        }
+        case 'handler': {
+          const fn = this.registry.handlers.get(b.name);
+          if (!fn) return failEffect('it did not work');
+          const r = fn({ ...ctx, params: { ...((b.params ?? {}) as Record<string, Json>) } });
+          if (!r.ok) return r;
+          for (const [k, v] of Object.entries(r.needDeltas ?? {})) out.needDeltas![k] = (out.needDeltas![k] ?? 0) + v;
+          out.stateChanges!.push(...(r.stateChanges ?? []));
+          out.spawn!.push(...(r.spawn ?? []));
+          out.despawn!.push(...(r.despawn ?? []));
+          if (r.noise) out.noise = r.noise;
+          if (r.takeMail) out.takeMail = true;
+          if (r.observation) obs.push(r.observation);
+          break;
+        }
+      }
+    }
+    if (p.reset) {
+      const st = cur(target as AnyEntity);
+      for (const [k, v] of Object.entries(p.reset)) st[k] = clampState(specOf(target as AnyEntity)[k], v);
+    }
+    for (const [id, st] of states) out.stateChanges!.push({ id, set: st });
+    if (products) out.stateChanges!.push({ id: target.id, products });
+    out.observation = obs.join('; ') || 'nothing happened';
+    return out;
+  }
+
+  /** The free tile inside an object's footprint nearest `from` (no other object on it). */
+  private freeTileIn(e: AnyEntity, from: Pos, pending: readonly EntityDef[]): Pos | undefined {
+    const fp = e.kind === 'object' && e.footprint ? e.footprint : { w: 1, h: 1 };
+    const tiles: Pos[] = [];
+    for (let y = e.pos.y; y < e.pos.y + fp.h; y++) for (let x = e.pos.x; x < e.pos.x + fp.w; x++) tiles.push({ x, y });
+    const free = tiles.filter(
+      (t) => inBounds(this.grid, t) && !!terrainAt(this.grid, t)?.walkable && !this.entitiesAt(t).some((o) => o.kind === 'object' && o.id !== e.id && !o.heldBy) && !pending.some((d) => samePos(d.pos, t)),
+    );
+    free.sort((a, b) => manhattan(from, a) - manhattan(from, b) || a.y - b.y || a.x - b.x);
+    return free[0];
+  }
+
+  /**
+   * Rules and product timers on the in-world clock (never the host's). After a clock jump the
+   * missed periods are applied one by one, capped at 7 in-world days.
+   */
+  private runRules(): void {
+    const now = Math.floor(this.seconds);
+    const last = this.state.rulesSeconds;
+    this.state.rulesSeconds = now;
+    if (last === undefined || now <= last) return;
+    let catchUp: { periods: number; capped: boolean } | undefined;
+    for (const [every, P] of Object.entries(PERIOD_SECONDS) as [keyof typeof PERIOD_SECONDS, number][]) {
+      const n = Math.floor(now / P) - Math.floor(last / P);
+      if (n <= 0) continue;
+      const cap = Math.floor((7 * 86_400) / P);
+      const k = Math.min(n, cap);
+      if (P === 3600 && n > 1) catchUp = { periods: k, capped: n > cap };
+      for (const e of this.entities()) {
+        if (e.kind !== 'object') continue;
+        const def = this.objectDefOf(e);
+        const rules = (def?.rules ?? []).filter((r) => r.every === every && (r.change || r.remove));
+        const products = P === 3600 ? (def?.products ?? []) : [];
+        if (!rules.length && !products.length) continue;
+        this.applyPeriods(e, def!, rules, products, k);
+      }
+    }
+    if (catchUp) this.emit({ kind: 'catchUp', seconds: now - last, ...catchUp });
+  }
+
+  private applyPeriods(e: WorldObject, def: ObjectDef, rules: NonNullable<ObjectDef['rules']>, products: NonNullable<ObjectDef['products']>, k: number): void {
+    const st = this.numericState(e);
+    const spec = e.stateSpec ?? def.stateSpec ?? {};
+    const prods = structuredClone(e.products ?? []);
+    let remove = false;
+    for (let i = 0; i < k && !remove; i++) {
+      for (const r of rules) {
+        if (!checkCondition(r.when, st)) continue;
+        if (r.remove) remove = true;
+        for (const [key, d] of Object.entries(r.change ?? {})) st[key] = clampState(spec[key], (st[key] ?? 0) + d);
+      }
+      for (const p of products) {
+        const slot = prods.find((x) => x.slot === p.slot);
+        if (!slot || !checkCondition(p.when, st)) continue;
+        if (slot.ready >= slot.max) continue;
+        slot.hours += 1;
+        if (slot.hours >= p.everyHours) {
+          slot.ready += 1;
+          slot.hours = 0;
+        }
+      }
+    }
+    for (const slot of prods) {
+      const p = products.find((x) => x.slot === slot.slot);
+      if (p) {
+        if (slot.ready >= slot.max) delete slot.nextInHours;
+        else slot.nextInHours = Math.round(Math.max(0, p.everyHours - slot.hours) * 10) / 10;
+      }
+    }
+    const changed = Object.fromEntries(Object.entries(st).filter(([key, v]) => e.state[key] !== v));
+    if (Object.keys(changed).length) this.setState(e, changed);
+    if (products.length && JSON.stringify(prods) !== JSON.stringify(e.products ?? [])) {
+      const readyChanged = JSON.stringify(prods.map((x) => [x.ready, x.nextInHours])) !== JSON.stringify((e.products ?? []).map((x) => [x.ready, x.nextInHours]));
+      e.products = prods;
+      if (readyChanged) this.emitView(e);
+    }
+    if (remove) this.despawn(e.id);
+  }
+
+  /** `nearby` rules: characters in range get the needs, scaled by the time they spend there. */
+  private nearbyNeeds(): void {
+    for (const e of this.entities()) {
+      if (e.kind !== 'object') continue;
+      const def = this.objectDefOf(e);
+      for (const r of def?.rules ?? []) {
+        if (!r.nearby || !checkCondition(r.when, e.state)) continue;
+        const scale = this.state.config.secondsPerTick / PERIOD_SECONDS[r.every];
+        for (const c of this.characters()) {
+          if (this.distanceTo(e, c.pos) > r.nearby.range) continue;
+          for (const [k, d] of Object.entries(r.nearby.needs)) if (k in c.needs) c.needs[k] = clamp01(c.needs[k]! + d * scale);
+        }
+      }
+    }
+  }
+
+  private emitView(e: WorldObject): void {
+    this.emit({ kind: 'objectView', id: e.id, appearance: [...(e.appearance ?? [])], products: (e.products ?? []).map(({ hours: _h, ...v }) => v) });
+  }
+
+  /** Keep schema-2 objects' appearance current, with an `objectView` delta on change. */
+  private refreshViews(): void {
+    for (const e of this.entities()) {
+      if (e.kind !== 'object' || !e.stateSpec) continue;
+      const def = this.objectDefOf(e);
+      const appearance = def?.def2 ? appearanceOf(def.def2, e.state) : [];
+      if (JSON.stringify(e.appearance ?? []) !== JSON.stringify(appearance)) {
+        e.appearance = appearance;
+        this.emitView(e);
+      }
+    }
+  }
+
   // ------------------------------------------------------------- airdrops and the mailbox
 
   /** Land a copy of a catalogue item on the nearest free walkable tile. */
@@ -683,26 +989,36 @@ export class World implements WorldView {
     if (!this.registry.objects.has('airdrop')) return reject('no airdrop object type loaded');
     const at = this.nearestFreeTile(p.pos);
     if (!at) return reject('no free tile to land on');
-    const item = p.item as unknown as CatalogItem;
-    const uses = airdropUses(item);
+    // Schema 2 (schema-1 items are migrated): verbs, state and appearance come from the item.
+    const migrated = migrateToSchema2(p.item as Record<string, unknown>);
+    const r = validateObjectDef2(migrated, { pack: false });
+    if (!r.ok) return reject(`bad airdrop item: ${r.errors[0]!.path} ${r.errors[0]!.message}`);
+    const compiled = compileObjectDef(r.def);
+    const item = r.def;
     const ticks = p.expiresAfterSeconds ? Math.max(1, Math.round(p.expiresAfterSeconds / this.state.config.secondsPerTick)) : 0;
     const entity = this.spawn({
       id: `drop-${p.dropId}`,
       type: 'airdrop',
       pos: at,
-      tags: Array.isArray(item.tags) ? [...item.tags] : [],
+      tags: [...item.tags],
       state: {
+        ...compiled.state,
         dropId: p.dropId,
         itemId: item.id,
-        item: structuredClone(p.item),
-        verbs: airdropVerbs(item) as unknown as Json,
+        item: structuredClone(migrated) as Json,
+        verbs: { ...compiled.verbs, scan: { range: 6, durationTicks: 20, handler: 'basic.inspect' } } as unknown as Json,
         droppedBy: { ...p.by },
         droppedTick: this.state.tick,
-        ...(uses !== undefined && { usesLeft: uses }),
         ...(ticks && { expiresTick: this.state.tick + ticks }),
       },
     });
     if (typeof entity === 'string') return reject(entity);
+    if (entity.kind === 'object') {
+      entity.stateSpec = structuredClone(compiled.stateSpec ?? {});
+      entity.products = (compiled.products ?? []).map((x) => ({ slot: x.slot, item: x.item, ready: 0, max: x.max, verb: x.verb, hours: 0, nextInHours: x.everyHours }));
+      entity.appearance = appearanceOf(item, entity.state);
+      this.emitView(entity);
+    }
     this.emit({ kind: 'airdrop', event: 'added', dropId: p.dropId, entityId: entity.id, itemId: item.id, pos: { ...at } });
   }
 
@@ -744,8 +1060,12 @@ export class World implements WorldView {
   private expire(): void {
     const tick = this.state.tick;
     for (const e of this.entities()) {
-      if (e.type !== 'airdrop') continue;
-      if (typeof e.state.usesLeft === 'number' && e.state.usesLeft <= 0) this.removeAirdrop(e, 'used up');
+      const usedUp = (typeof e.state.usesLeft === 'number' && e.state.usesLeft <= 0) || (e.kind === 'object' && !!e.stateSpec?.uses && typeof e.state.uses === 'number' && e.state.uses <= 0);
+      if (e.type !== 'airdrop') {
+        if (usedUp) this.despawn(e.id);
+        continue;
+      }
+      if (usedUp) this.removeAirdrop(e, 'used up');
       else if (typeof e.state.expiresTick === 'number' && e.state.expiresTick <= tick) this.removeAirdrop(e, 'expired');
     }
     const box = this.state.mailbox;
@@ -779,7 +1099,16 @@ export class World implements WorldView {
 
   /** Distance used for verb range; something the actor holds is always in reach. */
   private reach(c: Character, target: AnyEntity): number {
-    return target.heldBy === c.id ? 0 : manhattan(c.pos, target.pos);
+    return target.heldBy === c.id ? 0 : this.distanceTo(target, c.pos);
+  }
+
+  /** Manhattan distance to the nearest tile an entity covers (a footprint, or its own tile). */
+  distanceTo(e: Readonly<AnyEntity>, pos: Pos): number {
+    const fp = e.kind === 'object' ? e.footprint : undefined;
+    if (!fp) return manhattan(pos, e.pos);
+    const dx = pos.x < e.pos.x ? e.pos.x - pos.x : pos.x > e.pos.x + fp.w - 1 ? pos.x - (e.pos.x + fp.w - 1) : 0;
+    const dy = pos.y < e.pos.y ? e.pos.y - pos.y : pos.y > e.pos.y + fp.h - 1 ? pos.y - (e.pos.y + fp.h - 1) : 0;
+    return dx + dy;
   }
 
   private planMove(c: Character, action: Action): Pos[] | string {

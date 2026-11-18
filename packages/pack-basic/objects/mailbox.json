@@ -1,10 +1,40 @@
 {
-  "type": "mailbox",
-  "tags": ["metal"],
+  "schema": 2,
+  "id": "mailbox",
+  "name": "Mailbox",
+  "description": "Visitors' notes wait here; the flag shows when one does.",
+  "icon": "<icon><rect x=\"5\" y=\"8\" w=\"12\" h=\"8\" r=\"2\"/><line x1=\"11\" y1=\"16\" x2=\"11\" y2=\"22\" weight=\"heavy\"/><polyline points=\"17,9 20,9 20,6\"/></icon>",
+  "tags": [
+    "metal"
+  ],
   "solid": true,
-  "verbs": {
-    "read": { "range": 1, "durationTicks": 10, "handler": "basic.mailRead" },
-    "scan": { "range": 6, "durationTicks": 20, "handler": "basic.inspect" }
+  "state": {
+    "waiting": {
+      "initial": 0,
+      "min": 0,
+      "max": 1000000
+    }
   },
-  "state": { "waiting": 0 }
+  "verbs": {
+    "read": {
+      "range": 1,
+      "durationSeconds": 10,
+      "effects": [
+        {
+          "block": "handler",
+          "name": "basic.mailRead"
+        }
+      ]
+    },
+    "scan": {
+      "range": 6,
+      "durationSeconds": 20,
+      "effects": [
+        {
+          "block": "handler",
+          "name": "basic.inspect"
+        }
+      ]
+    }
+  }
 }

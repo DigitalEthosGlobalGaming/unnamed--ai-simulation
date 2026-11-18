@@ -54,9 +54,9 @@ The design decisions (1 to 53) and open questions are recorded in the spec: [Dec
 | 46 | Items can never change the battery | Yes: catalogue validation rejects `energy`, and the airdrop handler ignores it in older items |
 | 47 | Sleep: consolidation, habits, sheet rewrite, empty `refine` hook | Yes (Stage 1): in that order, paid from the battery, code fallbacks; `refine` is a typed no-op ([mind.md](architecture/mind.md#sleep)) |
 | 48 | Editable, versioned prompt templates with a Prompts admin page | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
-| 49 | Object schema 2: state, rules, products, items that create objects, described appearance | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
-| 50 | Solar pad and charging removed; dock is home, rest and cool-down | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
-| 51 | Fresh garden at day 0; iteration 1 world archived read-only | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
+| 49 | Object schema 2: state, rules, products, items that create objects, described appearance | Yes (Stage 2): pack objects and catalogue items, schema-1 items migrated on read ([objects.md](architecture/objects.md#as-built)) |
+| 50 | Solar pad and charging removed; dock is home, rest and cool-down | Yes: no `charge` verb anywhere; the pad survives only as a verb-less legacy type for the archived world |
+| 51 | Fresh garden at day 0; iteration 1 world archived read-only | Built (`archived` worlds, `world:archive`, `world:new`, `worlds/garden2.yaml`); the owner archives the live garden |
 | 52 | Thought callouts on the map | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
 | 53 | Weather, experiment board, songbook and a second robot deferred | Not started: [iteration 2](iterations/iteration-02-robot-redesign.md) |
 
@@ -124,6 +124,8 @@ Where the code does something different from [the spec](../Unnamed%20AI%20Simula
 | D34 | Live settings | Clock changes via `PATCH /clock`; config otherwise static | `PATCH /worlds/:id/settings` changes tick rate, walking speed, cap, energy rate, hosted on/off, need decay and escalation live, logged as `settings.change` (+ `sim.config`) | [server-and-api.md](architecture/server-and-api.md#live-world-settings) |
 | D35 | Sleep numbers (an open question) | "Production defaults for sleep pressure, minimum sleep and recharge curve" | Provisional: pressure = 0.6 × hours awake ÷ 16 + 0.4 × fog; fog = memories since the last sleep ÷ (4 × STM size) (the STM itself is always nearly full, so its length would fog the head within an hour); recharge 0.3 × pressure per hour asleep; sleep repays time awake 2× faster; minimum 1 h; wake when pressure < 0.05, or battery ≥ 0.98 with pressure < 0.3 (so a robot that barely thinks still sleeps its pressure off), or on a trigger ≥ 0.9 after the minimum | [`sleep.ts`](../packages/mind/src/sleep.ts) |
 | D36 | Physical drain removed everywhere | Physical actions are free | Also enforced in the sim: an `energy` need delta from any effect handler is ignored, with or without a mind | [`world.ts`](../packages/sim/src/world.ts) |
+| D37 | Object schema 2 details | As the contract | Rules may `remove` an object; product timers live on the entity (`products[].hours`); `objectView` and `catchUp` deltas; a failed effect says why while a failed requirement shows `fail`; planting needs a `seed` tag; plant tuning as in [objects.md](architecture/objects.md#as-built) | [`objects.ts`](../packages/core/src/objects.ts), [`world.ts`](../packages/sim/src/world.ts) |
+| D38 | Archiving | A read-only server mode or world flag | A world-file flag (`archived: true`) after an SQLite backup copy; replay of the archived world runs today's pack code (approximate where the old pad mattered) | [`world.ts` script](../packages/server/scripts/world.ts) |
 
 Open questions from the spec that are still open, with the provisional values in use:
 

@@ -1,4 +1,4 @@
-import { CATALOG_SEED, perceivedType, validateCatalogItem, type CatalogItem, type InputEvent, type Json, type Registry } from '@uas/core';
+import { CATALOG_SEED, migrateToSchema2, perceivedType, validateCatalogItem2, type InputEvent, type Json, type ObjectDef2, type Registry } from '@uas/core';
 import type { WorldState } from '@uas/sim';
 import { eq } from 'drizzle-orm';
 import { schema, type Db, type MailRow } from '@uas/store';
@@ -53,7 +53,7 @@ export interface Airdrop {
   id: string;
   entityId: string;
   itemId: string;
-  item: CatalogItem;
+  item: ObjectDef2;
   pos: { x: number; y: number };
   droppedBy: { username: string; admin: boolean };
   droppedTick: number;
@@ -78,12 +78,12 @@ export function airdropView(e: { id: string; pos: { x: number; y: number }; stat
     id: String(s.dropId),
     entityId: e.id,
     itemId: String(s.itemId),
-    item: s.item as unknown as CatalogItem,
+    item: migrateToSchema2(s.item as Record<string, unknown>) as unknown as ObjectDef2,
     pos: { x: e.pos.x, y: e.pos.y },
     droppedBy: { username: by.username, admin: by.admin },
     droppedTick: Number(s.droppedTick),
     ...(typeof s.expiresTick === 'number' && { expiresTick: s.expiresTick }),
-    ...(typeof s.usesLeft === 'number' && { usesLeft: s.usesLeft }),
+    ...(typeof s.usesLeft === 'number' ? { usesLeft: s.usesLeft } : typeof s.uses === 'number' && { usesLeft: s.uses }),
   };
 }
 
@@ -130,7 +130,8 @@ export function redactEvent(e: InputEvent, admin: boolean): InputEvent {
 // ------------------------------------------------------------------ the catalogue (server-wide, SQLite)
 
 export interface CatalogRow {
-  item: CatalogItem;
+  /** Schema 2 (stored schema-1 items are migrated on read). */
+  item: ObjectDef2;
   disabled: boolean;
   updatedAt: string;
   updatedBy: string | null;
@@ -159,14 +160,14 @@ export class Catalog {
       .from(schema.catalogItems)
       .all()
       .sort((a, b) => (a.id < b.id ? -1 : 1))
-      .map((r) => ({ item: r.item as CatalogItem, disabled: r.disabled, updatedAt: r.updatedAt, updatedBy: r.updatedBy }));
+      .map((r) => ({ item: migrateToSchema2(r.item as Record<string, unknown>) as unknown as ObjectDef2, disabled: r.disabled, updatedAt: r.updatedAt, updatedBy: r.updatedBy }));
   }
 
   get(id: string): CatalogRow | undefined {
     return this.list().find((r) => r.item.id === id);
   }
 
-  put(item: CatalogItem, disabled: boolean, by: string | undefined): CatalogRow {
+  put(item: ObjectDef2, disabled: boolean, by: string | undefined): CatalogRow {
     const row = { id: item.id, item, disabled, updatedAt: new Date().toISOString(), updatedBy: by ?? null };
     this.db.insert(schema.catalogItems).values(row).onConflictDoUpdate({ target: schema.catalogItems.id, set: { item, disabled, updatedAt: row.updatedAt, updatedBy: row.updatedBy } }).run();
     return { item, disabled, updatedAt: row.updatedAt, updatedBy: row.updatedBy };
@@ -177,15 +178,16 @@ export class Catalog {
   }
 }
 
-/** Need keys and noise names an item may use, from the loaded packs (archetype needs; never energy). */
-export function itemRules(registry: Registry): { needKeys: string[]; noiseNames: string[] } {
+/** Need keys, noise names and object types an item may use, from the loaded packs (archetype needs; never energy). */
+export function itemRules(registry: Registry): { needKeys: string[]; noiseNames: string[]; packTypes: string[]; knownTypes: string[] } {
   const needs = new Set<string>(); // never `energy`: items can't change the battery
   const noises = new Set<string>();
   for (const a of registry.archetypes.values()) {
     for (const n of Object.keys(a.needs)) needs.add(n);
     for (const n of Object.keys(a.noises?.set ?? {})) noises.add(n);
   }
-  return { needKeys: [...needs].sort(), noiseNames: [...noises].sort() };
+  const types = [...registry.objects.keys()].sort();
+  return { needKeys: [...needs].sort(), noiseNames: [...noises].sort(), packTypes: types, knownTypes: types };
 }
 
-export { validateCatalogItem };
+export { validateCatalogItem2 };

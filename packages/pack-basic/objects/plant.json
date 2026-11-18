@@ -1,0 +1,176 @@
+{
+  "schema": 2,
+  "id": "plant",
+  "name": "Plant",
+  "description": "Grows when watered. Flowers, then seeds.",
+  "icon": "<icon><line x1=\"12\" y1=\"22\" x2=\"12\" y2=\"10\"/><path d=\"M 12 14 A 4 3 0 0 1 18 11\"/><path d=\"M 12 16 A 4 3 0 0 0 6 13\"/><circle cx=\"12\" cy=\"7\" r=\"3\" shade=\"medium\"/></icon>",
+  "tags": [
+    "plant",
+    "living"
+  ],
+  "state": {
+    "water": {
+      "initial": 0.6,
+      "min": 0,
+      "max": 1
+    },
+    "growth": {
+      "initial": 0,
+      "min": 0,
+      "max": 1
+    }
+  },
+  "verbs": {
+    "water": {
+      "range": 1,
+      "durationSeconds": 5,
+      "requires": {
+        "holding": {
+          "type": "watering-can",
+          "state": {
+            "water": {
+              "gte": 0.25
+            }
+          }
+        }
+      },
+      "effects": [
+        {
+          "block": "changeState",
+          "target": "held",
+          "values": {
+            "water": -0.25
+          }
+        },
+        {
+          "block": "changeState",
+          "target": "self",
+          "values": {
+            "water": 0.4
+          }
+        },
+        {
+          "block": "observe",
+          "text": "the soil darkened as the water soaked in"
+        }
+      ],
+      "fail": "you need a watering can with water in it"
+    },
+    "inspect": {
+      "range": 1,
+      "durationSeconds": 5,
+      "requires": {
+        "self": {
+          "growth": {
+            "gte": 0.7
+          }
+        }
+      },
+      "effects": [
+        {
+          "block": "affectNeeds",
+          "needs": {
+            "curiosity": 0.15
+          },
+          "observation": "the flower smelled of something new"
+        }
+      ],
+      "fail": "there is nothing much to see yet"
+    }
+  },
+  "rules": [
+    {
+      "every": "1h",
+      "change": {
+        "water": -0.025
+      }
+    },
+    {
+      "every": "1h",
+      "when": {
+        "water": {
+          "gte": 0.3
+        }
+      },
+      "change": {
+        "growth": 0.015
+      }
+    },
+    {
+      "every": "1h",
+      "when": {
+        "water": {
+          "lt": 0.05
+        }
+      },
+      "change": {
+        "growth": -0.01
+      }
+    }
+  ],
+  "products": [
+    {
+      "slot": "flower",
+      "item": "flower",
+      "when": {
+        "growth": {
+          "gte": 0.7
+        }
+      },
+      "everyHours": 24,
+      "max": 1,
+      "verb": "pick"
+    },
+    {
+      "slot": "seeds",
+      "item": "seed",
+      "when": {
+        "growth": {
+          "gte": 1
+        }
+      },
+      "everyHours": 24,
+      "max": 3,
+      "verb": "gather",
+      "reset": {
+        "growth": 0.6
+      }
+    }
+  ],
+  "appearance": {
+    "growth": [
+      {
+        "lt": 0.1,
+        "text": "a bare patch of soil"
+      },
+      {
+        "lt": 0.4,
+        "text": "a small green shoot"
+      },
+      {
+        "lt": 0.7,
+        "text": "a leafy plant"
+      },
+      {
+        "lt": 1,
+        "text": "a plant in flower"
+      },
+      {
+        "text": "a plant heavy with seeds"
+      }
+    ],
+    "water": [
+      {
+        "lt": 0.15,
+        "text": "the soil is cracked and dry"
+      },
+      {
+        "lt": 0.4,
+        "text": "the soil looks dry"
+      },
+      {
+        "text": "the soil is damp"
+      }
+    ]
+  }
+}

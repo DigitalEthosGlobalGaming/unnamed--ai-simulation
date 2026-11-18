@@ -201,6 +201,10 @@ export type Delta =
   | { kind: 'pressure'; id: EntityId; sleepPressure: number; fog: number }
   /** The sleep pipeline moved on (`done`/`total`: e.g. memories consolidated). */
   | { kind: 'sleepWork'; id: EntityId; step: SleepWorkStep; done?: number; total?: number }
+  /** A schema-2 object's appearance texts or product slots changed. */
+  | { kind: 'objectView'; id: EntityId; appearance: string[]; products: { slot: string; item: string; ready: number; max: number; verb: string; nextInHours?: number }[] }
+  /** Rules caught up after a clock jump: periods applied (capped at 7 in-world days). */
+  | { kind: 'catchUp'; seconds: number; periods: number; capped: boolean }
   /** The character sheet changed (one step per sleep), or the goal did. */
   | { kind: 'sheet'; id: EntityId; sheet: SheetLine[]; goal?: string; edit: SheetEdit }
   /** Habits after a sleep's habit detection. */

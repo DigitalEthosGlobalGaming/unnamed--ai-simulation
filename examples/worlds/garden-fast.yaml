@@ -7,7 +7,7 @@ id: garden-fast
 name: The Garden (fast)
 seed: 2026
 packs: [basic]
-map: basic:garden
+map: basic:garden-2
 clock:
   mode: scaled
 ticksPerRealSecond: 5          # while a viewer is subscribed
@@ -26,12 +26,17 @@ mind:
   appraiseOutcomes: ${UAS_APPRAISE:-false}
 entities:
   - { id: robot, type: robot, pos: [10, 10], state: { name: Robot } }   # TODO(open question): the robot's name
-  - { id: pad, type: solarPad, pos: [8, 8] }
   - { id: dock, type: dock, pos: [2, 7] }
   - { id: ball, type: ball, pos: [12, 12] }
   - { id: fountain, type: fountain, pos: [14, 6] }
   - { id: piano, type: piano, pos: [3, 3] }
   - { id: mailbox, type: mailbox, pos: [17, 8] }   # visitors' notes; the flag shows when one is waiting
+  - { id: bed, type: garden-bed, pos: [5, 11] }    # 3 x 2 tiles of soil
+  - { id: plant, type: plant, pos: [6, 11], state: { growth: 0, water: 0.6 } }   # a seed already planted
+  - { id: seed-1, type: seed, pos: [9, 12] }
+  - { id: seed-2, type: seed, pos: [9, 13] }
+  - { id: can, type: watering-can, pos: [13, 8] }  # fill it at the fountain
+  - { id: mast, type: antenna-mast, pos: [19, 12] } # signal is strong within 3 tiles
 
 models:
   audPerUsd: 1.55          # fixed config rate, never fetched (replays stay deterministic)

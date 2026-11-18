@@ -20,7 +20,9 @@
     "bakeoff": "node --env-file-if-exists=.env packages/models/scripts/bakeoff.ts",
     "smoke:gateway": "node --env-file-if-exists=.env packages/models/scripts/smoke-gateway.ts",
     "eval": "node --env-file-if-exists=.env packages/evals/scripts/eval.ts",
-    "eval:capture": "node --env-file-if-exists=.env packages/evals/scripts/capture.ts"
+    "eval:capture": "node --env-file-if-exists=.env packages/evals/scripts/capture.ts",
+    "world:archive": "node packages/server/scripts/world.ts archive",
+    "world:new": "node packages/server/scripts/world.ts new"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",

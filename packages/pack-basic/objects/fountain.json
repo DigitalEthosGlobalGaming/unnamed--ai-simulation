@@ -1,29 +1,91 @@
 {
-  "type": "fountain",
+  "schema": 2,
+  "id": "fountain",
+  "name": "Fountain",
+  "description": "Cool water. Fills a watering can.",
+  "icon": "<icon><ellipse cx=\"12\" cy=\"18\" rx=\"9\" ry=\"3\"/><line x1=\"12\" y1=\"18\" x2=\"12\" y2=\"8\" weight=\"heavy\"/><path d=\"M 12 8 A 4 4 0 0 1 18 12\" dashed=\"true\"/><path d=\"M 12 8 A 4 4 0 0 0 6 12\" dashed=\"true\"/></icon>",
   "tags": [
     "water",
     "loud"
   ],
   "solid": true,
+  "state": {
+    "flowing": {
+      "initial": 1,
+      "min": 0,
+      "max": 1
+    }
+  },
   "verbs": {
     "rinse": {
       "range": 1,
-      "durationTicks": 30,
-      "handler": "basic.rinse"
+      "durationSeconds": 30,
+      "effects": [
+        {
+          "block": "handler",
+          "name": "basic.rinse"
+        }
+      ]
     },
     "splash": {
       "range": 1,
-      "durationTicks": 15,
-      "handler": "basic.splash",
-      "boredomStep": 0.35
+      "durationSeconds": 15,
+      "boredomStep": 0.35,
+      "effects": [
+        {
+          "block": "handler",
+          "name": "basic.splash"
+        }
+      ]
+    },
+    "fill": {
+      "range": 1,
+      "durationSeconds": 8,
+      "requires": {
+        "self": {
+          "flowing": {
+            "gte": 1
+          }
+        },
+        "holding": {
+          "type": "watering-can"
+        }
+      },
+      "effects": [
+        {
+          "block": "changeState",
+          "target": "held",
+          "set": {
+            "water": 1
+          }
+        },
+        {
+          "block": "observe",
+          "text": "the can filled up with cold water"
+        }
+      ],
+      "fail": "you need to be holding a watering can to fill it"
     },
     "scan": {
       "range": 6,
-      "durationTicks": 20,
-      "handler": "basic.inspect"
+      "durationSeconds": 20,
+      "effects": [
+        {
+          "block": "handler",
+          "name": "basic.inspect"
+        }
+      ]
     }
   },
-  "state": {
-    "flowing": true
+  "appearance": {
+    "flowing": [
+      {
+        "lt": 1,
+        "text": "the fountain is dry"
+      },
+      {
+        "text": "water splashes in the fountain"
+      }
+    ]
   }
 }

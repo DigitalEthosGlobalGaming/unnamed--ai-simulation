@@ -1,4 +1,5 @@
 import type { Entity, WorldMap, Terrain } from './types.ts';
+import { DEFS, gardenObjects } from './garden.ts';
 
 /**
  * Sample garden for the first playable slice: 24 × 16 tiles with a hut,
@@ -43,29 +44,14 @@ export function terrainAt(map: WorldMap, x: number, y: number): Terrain {
   return { kind, walkable: kind === 'floor' || kind === 'path', blocksSight: kind === 'wall' };
 }
 
+/** The new garden (iteration 2): see garden.ts. */
 export function sampleObjects(): Entity[] {
-  return [
-    { id: 'obj-dock', kind: 'object', type: 'dock', pos: { x: 2, y: 2 }, tags: ['shelter'], state: { occupied: 0 } },
-    { id: 'obj-solar', kind: 'object', type: 'solarPad', pos: { x: 17, y: 3 }, tags: ['light'], state: { lit: true, charging: false } },
-    { id: 'obj-fountain', kind: 'object', type: 'fountain', pos: { x: 12, y: 12 }, tags: ['water', 'loud'], state: { flowing: true } },
-    { id: 'obj-ball', kind: 'object', type: 'ball', pos: { x: 7, y: 11 }, tags: ['portable'], state: {} },
-    { id: 'obj-piano', kind: 'object', type: 'piano', pos: { x: 20, y: 14 }, tags: ['loud'], state: { playing: false } },
-  ];
+  return gardenObjects();
 }
 
-export const OBJECT_LABEL: Record<string, string> = {
-  dock: 'Dock',
-  solarPad: 'Solar pad',
-  fountain: 'Fountain',
-  ball: 'Ball',
-  piano: 'Piano',
-};
+export const OBJECT_LABEL: Record<string, string> = Object.fromEntries(DEFS.map((d) => [d.id, d.name]));
 
-/** Verbs each object offers (affordances, never effects). */
-export const OBJECT_VERBS: Record<string, string[]> = {
-  solarPad: ['charge', 'scan'],
-  dock: ['dock', 'rest'],
-  ball: ['pickup', 'drop', 'push', 'chase'],
-  fountain: ['rinse', 'splash', 'scan'],
-  piano: ['play', 'press', 'scan'],
-};
+/** Verbs each object offers (affordances, never effects), product verbs included. */
+export const OBJECT_VERBS: Record<string, string[]> = Object.fromEntries(
+  DEFS.map((d) => [d.id, [...(d.portable ? ['pickup', 'drop'] : []), ...Object.keys(d.verbs ?? {}), ...(d.products ?? []).map((p) => p.verb), 'scan']]),
+);

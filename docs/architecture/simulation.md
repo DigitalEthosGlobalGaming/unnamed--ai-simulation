@@ -166,6 +166,17 @@ stateDiagram-v2
 
 Every transition emits an `action` delta. Range is Manhattan distance, checked at start and again when the handler runs; an object the actor holds is always in range.
 
+## Schema-2 objects
+
+Objects are defined in object schema 2 ([objects.md](objects.md)): numeric state with ranges, verbs with requirements and ordered effect blocks, rules over in-world time, product slots and described appearance. In the sim ([`world.ts`](../../packages/sim/src/world.ts)):
+
+- **Verbs** run `core.blocks`: requirements (`self`, `holding`, `near`, `tile`), then effects in order (`changeState`, `affectNeeds`, `observe`, `makeNoise`, `consume`, `createObject`, `harvest`, `handler`). They are worked out on copies first, so a failure applies nothing. `handler` blocks call the pack's TypeScript handlers (push, chase, dock, rinse, mailbox `read`, …).
+- **Footprints:** an object can cover `w × h` tiles from its `pos` (the garden bed is 3 × 2). Range checks, sight and candidates measure to its nearest tile. `createObject` with `at: freeTileIn` picks the free tile in the footprint nearest the actor ("no room" when full).
+- **Rules** run at the start of each tick for every in-world 30 min, hour or day that passed (`WorldState.rulesSeconds`). After a clock jump the missed periods are applied one by one, capped at 7 in-world days, and a `catchUp` delta records it. `nearby` rules (the antenna mast's signal) apply every tick to characters in range, scaled by the time spent there.
+- **Products** fill once every `everyHours` while their condition holds, up to `max`; the timer is on the entity. The slot's verb harvests one into the actor's hands (a new entity, `heldBy` set), then applies the `reset`.
+- **Views:** each schema-2 object carries `stateSpec`, `appearance` (current texts), `products`, `footprint` and `createdBy`. An `objectView` delta follows whenever the appearance or products change.
+- **The battery** is never touched by any of this (decision 42).
+
 ## Airdrops and the mailbox
 
 Visitors' items and notes ([visitors.md](visitors.md)) live in the sim, so expiry and consumption replay exactly:

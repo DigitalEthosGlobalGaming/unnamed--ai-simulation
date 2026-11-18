@@ -1,4 +1,4 @@
-import type { CatalogItem, Delta, InputEvent, Pos, Sender } from '@uas/core';
+import type { ObjectDef2, Delta, InputEvent, Pos, Sender } from '@uas/core';
 import type { WorldState } from '@uas/sim';
 import type { WorldFile } from './config.ts';
 import type { WorldStatus } from './runtime.ts';
@@ -23,7 +23,7 @@ export type WorkerMethod =
   | { method: 'setSettings'; patch: unknown; userId?: string }
   | { method: 'airdrops' }
   | { method: 'airdrop'; dropId: string }
-  | { method: 'drop'; item: CatalogItem; pos: Pos; by: Sender }
+  | { method: 'drop'; item: ObjectDef2; pos: Pos; by: Sender }
   | { method: 'removeAirdrop'; dropId: string; userId?: string }
   | { method: 'mail'; userKey?: string; admin: boolean }
   | { method: 'postMail'; text: unknown; by: Sender }

@@ -8,6 +8,7 @@ Terms as they are used in the code and these docs. Code identifiers are in `code
 | Adapter | A class that implements `DecisionModel` or `ChatModel` for one backend (fake, Ollama, AI SDK, Jev). See [models.md](architecture/models.md#adapters). |
 | Affordance | A verb name as a character sees it on an object, with no description of its effect. |
 | Airdrop | A catalogue item a visitor dropped into a world: an `airdrop` object the robot perceives only by its tags (`thing-metal-small`). |
+| Appearance | An object's current description per state band ("the soil looks dry"): what the robot perceives instead of numbers. |
 | Appraise | A model job that rates how good an outcome felt (refines a memory's valence). Off by default in the garden. |
 | Archetype | A character template in a pack: needs, battery, noises, sight and hearing range, mind tuning, sheet lines. |
 | Autopilot | The free tier: picks a candidate by utility computed from beliefs, with some curiosity and exploration. |
@@ -35,6 +36,7 @@ Terms as they are used in the code and these docs. Code identifiers are in `code
 | Escalation | A `decide` answer below `escalateBelow` confidence is re-asked through the `plan` chain. |
 | Fallback | Feed tier used when a model job timed out or was dropped and autopilot decided instead. |
 | Firmness | 0..1 confidence of a belief; autopilot treats ≥ 0.6 as "sure". |
+| Footprint | The tiles an object covers from its position (the garden bed is 3 × 2). |
 | Fork | A new world started from another world's exact state at a tick, with its own log and config. |
 | Hearsay | A belief from a stranger's note (`source: "told"`, firmness 0.15); real experience replaces it. |
 | Input event | Anything entering the sim from outside, logged with `seq`, `tick` and `packVersions`. The source of truth. |
@@ -51,11 +53,13 @@ Terms as they are used in the code and these docs. Code identifiers are in `code
 | Pack versions | `name@version#hash` of every loaded pack, stamped on the world and every input; replay refuses a mismatch. |
 | Read model | A table derived from deltas for fast queries: `deltas`, `feed`, `diary`. |
 | Recorder | Wraps a live world: logs each input before queueing it, and takes snapshots. |
+| Product | A slot an object fills over time while a condition holds (a flower, seeds), harvested by a verb into the robot's hands. |
 | Reflect | Iteration 1's nightly chat-model job; replaced by the sleep pipeline (consolidate, sheet). |
 | Replay session | A re-simulation from a snapshot plus the log, streamed over WebSocket with a `sessionId`. Never calls a model. |
 | Salience | 0..1 importance of an observation or trigger; triggers at or above `wakeThreshold` interrupt. |
 | Sense | A pure function from world state to observations for one character (`basic.sight`, `basic.hearing`). |
 | Sheet | The character sheet: authored lines (some locked) plus self-noticed lines that appear and fade. |
+| Schema 2 | The object definition format: state, verbs with requirements and effect blocks, rules, products, appearance ([objects.md](architecture/objects.md)). |
 | Snapshot | The full `WorldState` at a tick, compressed in SQLite. |
 | Standby | The robot's sleep: drowsy, then asleep at the dock, with consolidation and reflection at night. |
 | Tick | One fixed simulation step. In-world seconds per tick and ticks per real second are set per world. |

@@ -79,29 +79,24 @@ Pitches: C 523.25 Hz, D 587.33 Hz, E 659.25 Hz, G 783.99 Hz. A note is `noise-pi
 
 ### Objects and verbs
 
-Effects below are what the handlers do. **The robot is never told any of this**: it sees only verb names, and learns effects from what it feels.
+Since iteration 2 Stage 2 every object is **object schema 2** JSON ([objects.md](architecture/objects.md)): state, verbs with requirements and effect blocks, rules, products and appearance; the TypeScript handlers survive as `handler` blocks. Effects below are what they do. **The robot is never told any of this**: it sees names, appearance texts ("the soil looks dry") and verb names, and learns effects from what it feels.
 
-| Object | Solid | Verb | Range | Ticks | Handler | Effect |
-| --- | --- | --- | --- | --- | --- | --- |
-| `solarPad` | no | `charge` | 0 | 50 | `basic.charge` | nothing since iteration 2 ("warm light hummed through the pad" by day, "the pad stayed dark and cold" at night); removed in Stage 2 |
-| | | `scan` | 6 | 20 | `basic.inspect` | +0.03 curiosity; describes tags and state |
-| `dock` | no | `dock` | 0 | 60 | `basic.dock` | +0.05 cool |
-| | | `rest` | 0 | 200 | `basic.dock` | +0.05 cool; resting is sleeping (the only recharge, by the mind) |
-| `ball` (portable) | no | `pickup` | 1 | 10 | `basic.pickup` | holds it; +0.02 curiosity; fails if held ("you're already holding it" when it's yours) or grippers full |
-| | | `drop` | 0 | 5 | `basic.drop` | puts it down |
-| | | `push` | 1 | 10 | `basic.push` | rolls 1 to 3 tiles away; +0.04 curiosity, −0.01 cool. Pushing the ball you hold tosses it (released, rolls 1 to 3 tiles) |
-| | | `chase` | 3 | 40 | `basic.chase` | ball moves 1 to 2 tiles, robot follows; +0.08 curiosity, −0.04 cool |
-| `fountain` (tags `water`, `loud`) | yes | `rinse` | 1 | 30 | `basic.rinse` | +0.25 cool if flowing |
-| | | `splash` | 1 | 15 | `basic.splash` | +0.12 curiosity, +0.05 cool; boredom step 0.35 |
-| | | `scan` | 6 | 20 | `basic.inspect` | as above |
-| `piano` (tags `music`, `loud`) | yes | `play` | 1 | 40 | `basic.play` | +0.1 curiosity, +0.02 signal |
-| | | `press` | 1 | 5 | `basic.press` | +0.02 curiosity; a random key (C, D, E or G) from the `effects` stream |
-| | | `scan` | 6 | 20 | `basic.inspect` | as above |
-| `mailbox` (tag `metal`) | yes | `read` | 1 | 10 | `basic.mailRead` | the oldest waiting message as `a note from a stranger: "…"` (quoted) and takes it; +0.03 curiosity, +0.05 signal; or "the mailbox was empty". `state.waiting` is the flag |
-| | | `scan` | 6 | 20 | `basic.inspect` | as above |
-| `airdrop` | no | (per item) | | | `basic.airdropNeeds`, `basic.airdropNoise`, and the shared `pickup`, `drop`, `scan` | a visitor's dropped item: its verbs come from the item's catalogue blocks and live in its own `state.verbs` ([visitors.md](architecture/visitors.md)). `airdropNeeds` applies the block's need deltas and observation; `airdropNoise` plays the block's notes (+0.02 curiosity). `scan` names only its tags |
+| Object | Verbs (and what they need) | State, rules, products | Appearance |
+| --- | --- | --- | --- |
+| `dock` | `dock` (60 s), `rest` (200 s): +0.05 cool (`basic.dock`); resting is sleeping | | |
+| `ball` (portable) | `pickup`, `drop`; `push` (`basic.push`, a toss when held), `chase` (`basic.chase`) | | |
+| `fountain` (tags `water`, `loud`; solid) | `rinse` (+0.25 cool), `splash` (+0.12 curiosity, +0.05 cool; boredom step 0.35), `fill` (holding a watering can: sets its water to 1), `scan` | `flowing` 1 | "water splashes in the fountain" |
+| `piano` (solid) | `play`, `press`, `scan` | | |
+| `mailbox` (solid) | `read` (the oldest note), `scan` | `waiting` (the flag) | |
+| `garden-bed` (3 × 2, tag `soil`) | `plant` (holding a `seed`-tagged item: creates a `plant` on the nearest free tile of the bed, uses up the seed; "no room" when full) | | |
+| `plant` | `water` (holding a can with ≥ 0.25: can −0.25, soil +0.4), `inspect` (in flower: +0.15 curiosity), `pick` (flower), `gather` (seeds; growth back to 0.6) | `water` −0.025/h; `growth` +0.015/h while water ≥ 0.3, −0.01/h while water < 0.05; a flower every 24 h at growth ≥ 0.7 (max 1); seeds every 24 h at growth 1 (max 3) | bare soil → shoot → leafy → in flower → heavy with seeds; damp / dry / cracked and dry |
+| `seed` (portable, tag `seed`) | `pickup`, `drop` | | |
+| `flower` (portable) | `smell` (+0.05 curiosity) | `fresh` −0.021/h; removed at 0 (about 2 days) | fresh / wilting |
+| `watering-can` (portable) | `pickup`, `drop` | `water` 0..1, starts empty | empty / some water / full |
+| `antenna-mast` (solid) | `scan` | within 3 tiles: +0.2 signal per hour, scaled by time in range | "a tall mast, humming" |
+| `solarPad` | none | legacy, only so the archived iteration-1 world loads | |
 
-Handlers: [`energy.ts`](../packages/pack-basic/handlers/energy.ts), [`ball.ts`](../packages/pack-basic/handlers/ball.ts), [`fountain.ts`](../packages/pack-basic/handlers/fountain.ts), [`piano.ts`](../packages/pack-basic/handlers/piano.ts), [`inspect.ts`](../packages/pack-basic/handlers/inspect.ts), [`airdrop.ts`](../packages/pack-basic/handlers/airdrop.ts). Objects: [`objects/`](../packages/pack-basic/objects).
+Handlers: [`energy.ts`](../packages/pack-basic/handlers/energy.ts) (dock), [`ball.ts`](../packages/pack-basic/handlers/ball.ts), [`fountain.ts`](../packages/pack-basic/handlers/fountain.ts), [`piano.ts`](../packages/pack-basic/handlers/piano.ts), [`inspect.ts`](../packages/pack-basic/handlers/inspect.ts), [`airdrop.ts`](../packages/pack-basic/handlers/airdrop.ts). Objects: [`objects/`](../packages/pack-basic/objects). Maps: `garden` (iteration 1) and `garden-2` (the same layout, for the new garden).
 
 Using a verb on an object tagged `loud` makes a sound other characters can hear.
 

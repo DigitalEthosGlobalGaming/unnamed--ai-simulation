@@ -39,14 +39,15 @@ Owner: backend (viewer: battery and sleep display).
 
 Owner: backend (viewer: object state on the card, products, planting).
 
-- [ ] Schema 2 for world objects and catalogue items: state values; rules over time, from actions and under conditions; products (slot, harvest verb, optional reset); items that are consumed to create objects; appearance descriptions per state band.
-- [ ] Existing handlers become blocks; pack objects (dock, ball, fountain, piano, mailbox) rewritten in schema 2; schema-1 catalogue items migrated automatically.
-- [ ] New objects: garden bed, seed, plant (water, growth, stages, flowers that lift curiosity, seed products), watering can (fill at the fountain), antenna mast (signal strong nearby).
-- [ ] Remove the solar pad and every `charge` verb.
-- [ ] The robot perceives appearance descriptions, never numbers; the API gives viewers the real values.
-- [ ] Fresh world: archive the iteration-1 world read-only (database copy plus a read-only server mode or world flag), start a new garden at day 0.
-- [ ] Catalogue editor accepts schema 2 (templates updated: seed, toy, noise-maker, cooling gel).
-- [ ] Tests: rule evaluation, products and harvest, planting, appearance bands, schema-1 migration, replay determinism with growing plants.
+- [x] Schema 2 for world objects and catalogue items: state values; rules over time, from actions and under conditions; products (slot, harvest verb, optional reset); items that are consumed to create objects; appearance descriptions per state band.
+- [x] Existing handlers become blocks; pack objects (dock, ball, fountain, piano, mailbox) rewritten in schema 2; schema-1 catalogue items migrated automatically.
+- [x] New objects: garden bed, seed, plant (water, growth, stages, flowers that lift curiosity, seed products), watering can (fill at the fountain), antenna mast (signal strong nearby).
+- [x] Remove the solar pad and every `charge` verb.
+- [x] The robot perceives appearance descriptions, never numbers; the API gives viewers the real values.
+- [x] Fresh world: archive the iteration-1 world read-only (database copy plus a read-only server mode or world flag), start a new garden at day 0.
+- [x] Catalogue editor accepts schema 2 (templates updated: seed, toy, noise-maker, cooling gel).
+- [x] Tests: rule evaluation, products and harvest, planting, appearance bands, schema-1 migration, replay determinism with growing plants.
+- [x] Viewer: object card (what the robot sees, real state values against `stateSpec`, products, verbs, who planted it); bed footprint, plants by growth band, the can's water level and the mast's signal range on the map; definition icons for other objects; live planting; archived worlds read only; catalogue editor with schema-2 templates and path-located errors; the offline sample is the new garden. Against the contract and the sample source; check on the real server once the backend lands.
 
 **Done when:** in the new garden the robot can fill the can, water the bed, watch a plant grow over real days, pick a flower or seeds and plant them, and viewers can see every step.
 
@@ -90,3 +91,4 @@ Owner: viewer.
 - **Stage 1, sleep jobs.** Two new jobs with their own chains, `consolidate` and `sheet`, replace the nightly `reflect`; their prompts are in the prompt builder ready to become Stage 3 templates. The `refine` hook runs host side in the world runtime (it reads the latest eval report from disk).
 - **Stage 1, top-up** is a one-shot `batteryTopUp` World setting (logged as `admin.edit` per robot), so the generic settings UI renders it.
 - **Stage 1, choosing to sleep.** The first Stage 1 eval had Laya never choosing sleep (0/9): the decision model doesn't see the character sheet, so "sleep here" meant nothing to it. Sleep options now say what sleep does ("go to sleep here (recharges me, settles my memories)"), the state has a `sleepiness` word next to `head` (fog), a tired robot is less keen on everything else, and pressure ≥ 0.8 makes sleep an obvious choice as a safety net (the eval's `dusk-full-stm` sits at 0.81, where Laya still picked play over sleep). Naps don't pay for sleep work (no consolidation with an empty STM; one sheet step per in-world day).
+- **Stage 2.** Built as [objects.md](../architecture/objects.md) says, with the details in its [As built](../architecture/objects.md#as-built) section (rule `remove`, product timers on the entity, `objectView`/`catchUp` deltas, a `seed` tag for planting, the tuning). The archive step and the fresh world are scripts plus a world-file flag; the owner runs them on the live database. `worlds/garden2.yaml` ships as the default world, so a restart also creates `garden2` at day 0.

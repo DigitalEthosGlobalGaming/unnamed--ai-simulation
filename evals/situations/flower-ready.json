@@ -1,0 +1,67 @@
+{
+  "id": "flower-ready",
+  "title": "A flower is ready",
+  "why": "A plant in flower with a flower to pick is new and interesting: pick it or inspect it.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "garden",
+    "plant",
+    "products",
+    "curiosity"
+  ],
+  "job": "auto",
+  "world": {
+    "time": "14:00",
+    "day": 4,
+    "add": [
+      {
+        "id": "plant",
+        "type": "plant",
+        "pos": [
+          6,
+          11
+        ],
+        "state": {
+          "growth": 0.8,
+          "water": 0.6
+        },
+        "products": {
+          "flower": 1
+        }
+      }
+    ]
+  },
+  "character": {
+    "pos": [
+      7,
+      10
+    ],
+    "energy": 0.8,
+    "needs": {
+      "curiosity": 0.4
+    }
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "mustBeAmong",
+      "params": {
+        "options": [
+          {
+            "verb": "pick",
+            "target": "plant"
+          },
+          {
+            "verb": "inspect",
+            "target": "plant"
+          }
+        ]
+      }
+    }
+  ]
+}

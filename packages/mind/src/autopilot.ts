@@ -23,7 +23,11 @@ export function setAside(world: World, m: MindState, key: string): boolean {
 /** Bounded candidate list: affordances of objects this mind knows about, nearest first, plus built-ins. */
 export function buildCandidates(world: World, c: Character, m: MindState): Candidate[] {
   const known = Object.entries(m.known)
-    .map(([id, k]) => ({ id, ...k, d: manhattan(c.pos, k.pos) }))
+    .map(([id, k]) => {
+      // Footprints (the garden bed) count from their nearest tile.
+      const e = world.entity(id);
+      return { id, ...k, d: e && e.pos.x === k.pos.x && e.pos.y === k.pos.y ? world.distanceTo(e, c.pos) : manhattan(c.pos, k.pos) };
+    })
     .sort((a, b) => a.d - b.d || (a.id < b.id ? -1 : 1));
   const out: Candidate[] = [];
   const holding = carrying(world, c).length > 0;

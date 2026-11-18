@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { hashJson } from './json.ts';
 import type { EffectHandler } from './effects.ts';
 import type { Sense } from './mind-types.ts';
+import { BLOCKS_HANDLER, DROP_HANDLER, PICKUP_HANDLER, compileObjectDef, validateObjectDef2, type ObjectExtras } from './objects.ts';
 
 const json: z.ZodType<import('./json.ts').Json> = z.lazy(() =>
   z.union([z.null(), z.boolean(), z.number(), z.string(), z.array(json), z.record(z.string(), json)]),
@@ -103,7 +104,8 @@ export const PackManifestSchema = z.strictObject({
 });
 
 export type VerbDef = z.infer<typeof VerbDefSchema>;
-export type ObjectDef = z.infer<typeof ObjectDefSchema>;
+/** An object type in the engine's form; schema-2 objects carry their extras (state spec, rules, products, appearance). */
+export type ObjectDef = z.infer<typeof ObjectDefSchema> & ObjectExtras;
 export type ArchetypeDef = z.infer<typeof ArchetypeDefSchema>;
 export type Noises = z.infer<typeof NoisesSchema>;
 export type PackManifest = z.infer<typeof PackManifestSchema>;
@@ -135,7 +137,15 @@ export function loadPack(raw: RawPack): Pack {
     return r.data;
   };
   const manifest = parse(PackManifestSchema, raw.manifest, 'pack.json');
-  const objects = raw.objects.map((o, i) => parse(ObjectDefSchema, o, `${manifest.name} objects[${i}]`));
+  // Schema-2 objects (docs/architecture/objects.md) are validated and compiled; older ones parse as before.
+  const objects: ObjectDef[] = raw.objects.map((o, i) => {
+    if ((o as { schema?: unknown }).schema === 2) {
+      const r = validateObjectDef2(o, { pack: true });
+      if (!r.ok) throw new Error(`pack ${manifest.name} objects[${i}]: ${r.errors.map((e) => `${e.path}: ${e.message}`).join('; ')}`);
+      return compileObjectDef(r.def);
+    }
+    return parse(ObjectDefSchema, o, `${manifest.name} objects[${i}]`);
+  });
   const archetypes = raw.archetypes.map((a, i) => parse(ArchetypeDefSchema, a, `${manifest.name} archetypes[${i}]`));
   // Handler source is not hashed: transpilers rewrite it differently, which would make the same
   // pack hash differently per runtime. Changing handler behaviour requires a version bump.
@@ -170,10 +180,23 @@ export function buildRegistry(packs: Pack[]): Registry {
     for (const o of pack.objects) objects.set(o.type, o);
     for (const a of pack.archetypes) archetypes.set(a.type, a);
   }
+  const builtIn = new Set([BLOCKS_HANDLER, PICKUP_HANDLER, DROP_HANDLER]);
   for (const o of objects.values()) {
     for (const [verb, v] of Object.entries(o.verbs)) {
-      if (!handlers.has(v.handler)) throw new Error(`${o.type}.${verb}: unknown handler ${v.handler}`);
+      if (!handlers.has(v.handler) && !builtIn.has(v.handler)) throw new Error(`${o.type}.${verb}: unknown handler ${v.handler}`);
+      const effects = (v.params?.effects ?? []) as { block?: string; name?: string; type?: string }[];
+      for (const b of effects) {
+        if (b.block === 'handler' && !handlers.has(String(b.name))) throw new Error(`${o.type}.${verb}: unknown handler ${b.name}`);
+      }
     }
+  }
+  for (const o of objects.values()) {
+    for (const [verb, v] of Object.entries(o.verbs)) {
+      for (const b of (v.params?.effects ?? []) as { block?: string; type?: string }[]) {
+        if (b.block === 'createObject' && !objects.has(String(b.type))) throw new Error(`${o.type}.${verb}: creates unknown type ${b.type}`);
+      }
+    }
+    for (const p of o.products ?? []) if (!objects.has(p.item)) throw new Error(`${o.type}: product ${p.slot} is unknown type ${p.item}`);
   }
   const packVersions = [...packs]
     .map((p) => `${p.manifest.name}@${p.manifest.version}#${p.contentHash}`)

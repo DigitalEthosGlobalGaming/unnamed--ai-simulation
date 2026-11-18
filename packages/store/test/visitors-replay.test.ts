@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CATALOG_TEMPLATES, buildRegistry, type Action, type Delta, type Json } from '@uas/core';
+import { CATALOG_TEMPLATES_V1 as CATALOG_TEMPLATES, buildRegistry, type Action, type Delta, type Json } from '@uas/core';
 import { World, type WorldState } from '@uas/sim';
 import { basicPack, gardenGrid } from '@uas/pack-basic';
 import { MemoryInputLog, MemorySnapshotStore, Recorder, replay } from '../src/index.ts';

@@ -65,6 +65,7 @@ Boredom is kept per `verb:objectType` key. Each use adds `boredomStep` (or the v
 Senses come from the pack (`basic.sight`, `basic.hearing`; see [content-packs.md](../content-packs.md#senses)). Every tick, `perceive` runs each sense the archetype lists (or all of them), honouring a sense's `runEvery`, and keys each observation by `sense|subject|kind|summary`. Only new keys count, so a still scene raises nothing.
 
 - A newly seen object adds 0.5 salience and recalls memories about that object type; a moved one adds 0.2. Seen objects go into `known`, the mind's own map, which is **the only source of candidate actions**. A visible airdrop landing is such a new object, so it raises `sensed`.
+- Objects are seen as their **appearance texts** and ready products ("a plant: a small green shoot; the soil looks dry", "has a flower you could pick"), never state numbers; `scan` describes the same.
 - Objects are known by their **perceived type** (`perceivedType` in [`catalog.ts`](../../packages/core/src/catalog.ts)): their type, except airdrops, which are `thing-<sorted tags>` (e.g. `thing-metal-small`). The robot is never told an item's name, description or behaviours; it learns them by trying, like everything else. Memories, beliefs, boredom and candidates all use the perceived type.
 - A heard note chain is stored in `heard` and raises `heard-noise`.
 - Anything else at or above the archetype's `wakeThreshold` raises `sensed`.

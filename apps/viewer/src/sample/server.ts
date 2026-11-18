@@ -12,6 +12,8 @@ import { SampleVisitors } from './visitors.ts';
 import { terrainAt } from './map.ts';
 import { cloneState, createSim, dayOf, step, SECONDS_PER_TICK, TICKS_PER_SECOND, type RobotState, type Scenario, type SimState, type StepOutput } from './sim.ts';
 import { OBJECT_VERBS } from './map.ts';
+import { DEF, DEFS, extrasOf, type LivingEntity } from './garden.ts';
+import type { ObjectDef } from '../types.ts';
 import type { Change } from './types.ts';
 
 const SNAPSHOT_EVERY = 200;
@@ -20,6 +22,8 @@ const TERRAIN_KEY = { floor: '.', path: ':', wall: '#', water: '~' } as const;
 
 export interface SampleOptions {
   scenario: Scenario;
+  /** Show the world as archived (read only), like an iteration-1 world on the real server. */
+  archived?: boolean;
   /** Start the live world at this tick (history before it is pre-simulated). */
   startTick: number;
   /** Simulate a dropped connection for the "disconnected" state. */
@@ -47,7 +51,7 @@ function sampleCatalog(): WorldCatalog {
       { id: 'claude-haiku-5-5', adapter: 'ai-sdk', model: 'claude-haiku-5-5', provider: 'anthropic', local: false },
       { id: 'claude-sonnet-5-5', adapter: 'ai-sdk', model: 'claude-sonnet-5-5', provider: 'anthropic', local: false },
     ],
-    objects: Object.entries(OBJECT_VERBS).map(([type, verbs]) => ({ type, tags: [], portable: type === 'ball', solid: type !== 'ball' && type !== 'dock' && type !== 'solarPad', verbs })),
+    objects: Object.entries(OBJECT_VERBS).map(([type, verbs]) => ({ type, tags: DEF[type]?.tags ?? [], portable: !!DEF[type]?.portable, solid: !!DEF[type]?.solid, verbs })),
     archetypes: [
       {
         type: 'robot',
@@ -66,10 +70,15 @@ function sampleCatalog(): WorldCatalog {
   } as WorldCatalog;
 }
 
+/** A sample object as the real snapshot entity, with the schema-2 extras. */
+function objectEntity(o: LivingEntity) {
+  return { id: o.id, kind: 'object', type: o.type, pos: { ...o.pos }, tags: [...o.tags], state: { ...o.state }, ...extrasOf(o) };
+}
+
 /** The sample sim's state as the real snapshot `state`. */
 export function stateOf(s: SimState): WorldStateView {
   const entities: WorldStateView['entities'] = {};
-  for (const o of s.objects) entities[o.id] = { id: o.id, kind: 'object', type: o.type, pos: { ...o.pos }, tags: [...o.tags], state: { ...o.state } } as never;
+  for (const o of s.objects) entities[o.id] = objectEntity(o) as never;
   for (const r of s.robots) {
     entities[r.id] = {
       id: r.id,
@@ -170,8 +179,22 @@ function deltasOf(s: SimState, out: StepOutput, prev: Map<string, { x: number; y
         if (from && (from.x !== c.pos.x || from.y !== c.pos.y)) d.push({ kind: 'moved', id: c.id, from: { ...from }, to: { ...c.pos } });
         prev.set(c.id, { ...c.pos });
         d.push({ kind: 'state', id: c.id, set: { ...c.state } });
+        // Schema 2: what it looks like now and its product slots, as the real server sends them.
+        const o = s.objects.find((x) => x.id === c.id);
+        if (o && DEF[o.type]) {
+          const x = extrasOf(o);
+          d.push({ kind: 'objectView', id: c.id, appearance: x.appearance ?? [], products: x.products ?? [] } as unknown as Delta);
+        }
         break;
       }
+      case 'spawn':
+        prev.set(c.entity.id, { ...c.entity.pos });
+        d.push({ kind: 'spawned', entity: objectEntity(c.entity) as never });
+        break;
+      case 'despawn':
+        prev.delete(c.id);
+        d.push({ kind: 'despawned', id: c.id });
+        break;
       case 'spend':
         break;
     }
@@ -261,7 +284,7 @@ export class SampleServer implements WorldConnection {
   }
 
   private emitPace() {
-    this.emit({ type: 'pace', realtime: false, ticksPerRealSecond: TICKS_PER_SECOND });
+    this.emit({ type: 'pace', realtime: false, ticksPerRealSecond: TICKS_PER_SECOND, ...(this.opts.archived && { archived: true }) });
   }
 
   private emitSpend(s: SimState) {
@@ -343,6 +366,10 @@ export class SampleServer implements WorldConnection {
   async feedBefore(beforeTick: number, limit: number, characterId?: string): Promise<FeedEntry[]> {
     const rows = this.feed.filter((e) => e.tick < beforeTick && (!characterId || e.characterId === characterId));
     return rows.slice(-limit);
+  }
+
+  async objectDefs(): Promise<ObjectDef[]> {
+    return DEFS.map((d) => structuredClone(d));
   }
 
   feedUntil(tick: number): FeedEntry[] {

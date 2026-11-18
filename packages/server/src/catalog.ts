@@ -1,9 +1,9 @@
 import { buildRegistry, type Grid, type Pack, type Registry } from '@uas/core';
-import { basicPack, gardenGrid } from '@uas/pack-basic';
+import { basicPack, garden2Grid, gardenGrid } from '@uas/pack-basic';
 
 /** Packs this server can load, by name. Third-party packs would register here (npm-installed). */
 const PACKS: Record<string, { pack: () => Pack; maps: Record<string, () => Grid> }> = {
-  basic: { pack: basicPack, maps: { garden: gardenGrid } },
+  basic: { pack: basicPack, maps: { garden: gardenGrid, 'garden-2': garden2Grid } },
 };
 
 export function loadPacks(names: string[]): { packs: Pack[]; registry: Registry } {

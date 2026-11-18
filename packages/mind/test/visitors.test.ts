@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CATALOG_TEMPLATES, quoteNote, type Action, type Character, type Delta, type Json, type SimInputEvent } from '@uas/core';
+import { CATALOG_TEMPLATES_V1 as CATALOG_TEMPLATES, quoteNote, type Action, type Character, type Delta, type Json, type SimInputEvent } from '@uas/core';
 import { buildPrompt, freezePrefix } from '../src/prompt.ts';
 import { hearsay } from '../src/memory.ts';
 import { buildCandidates, score } from '../src/autopilot.ts';

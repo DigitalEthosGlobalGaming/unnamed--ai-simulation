@@ -21,7 +21,7 @@ let lag = 0;
 
 function loop() {
   const interval = 1000 / (rt.ticksPerRealSecond() * Math.max(rt.timeScale, 0.01));
-  if (!rt.paused && rt.timeScale > 0) {
+  if (!rt.archived && !rt.paused && rt.timeScale > 0) {
     const now = performance.now();
     lag = Math.max(0, now - next);
     // Catch up at most a few ticks per turn so a slow host degrades gracefully.
@@ -40,7 +40,7 @@ setInterval(() => send({ type: 'status', status: rt.status(lag) }), 1000).unref(
 // Real-time worlds: re-align with a logged jump when the tick loop drifts from the wall clock
 // (slow host, timer jitter). Not while paused or sped up.
 setInterval(() => {
-  if (rt.paused || rt.timeScale !== 1) return;
+  if (rt.archived || rt.paused || rt.timeScale !== 1) return;
   if (Math.abs(rt.drift()) > rt.config.clock.maxDriftSeconds) rt.realign('sync');
 }, 60_000).unref();
 

@@ -1,6 +1,12 @@
 import { gridFromRows, loadPack, type Grid, type Pack, type Terrain } from '@uas/core';
 import manifest from '../pack.json' with { type: 'json' };
 import solarPad from '../objects/solar-pad.json' with { type: 'json' };
+import gardenBed from '../objects/garden-bed.json' with { type: 'json' };
+import plant from '../objects/plant.json' with { type: 'json' };
+import seed from '../objects/seed.json' with { type: 'json' };
+import flower from '../objects/flower.json' with { type: 'json' };
+import wateringCan from '../objects/watering-can.json' with { type: 'json' };
+import antennaMast from '../objects/antenna-mast.json' with { type: 'json' };
 import dockObj from '../objects/dock.json' with { type: 'json' };
 import ball from '../objects/ball.json' with { type: 'json' };
 import fountain from '../objects/fountain.json' with { type: 'json' };
@@ -9,7 +15,8 @@ import airdrop from '../objects/airdrop.json' with { type: 'json' };
 import mailbox from '../objects/mailbox.json' with { type: 'json' };
 import robot from '../archetypes/robot.json' with { type: 'json' };
 import garden from '../maps/garden.json' with { type: 'json' };
-import { charge, dock } from '../handlers/energy.ts';
+import garden2 from '../maps/garden-2.json' with { type: 'json' };
+import { dock } from '../handlers/energy.ts';
 import { chase, drop, pickup, push } from '../handlers/ball.ts';
 import { rinse, splash } from '../handlers/fountain.ts';
 import { play, press } from '../handlers/piano.ts';
@@ -21,9 +28,10 @@ import { hearing } from '../senses/hearing.ts';
 export function basicPack(): Pack {
   return loadPack({
     manifest,
-    objects: [solarPad, dockObj, ball, fountain, piano, airdrop, mailbox],
+    // solarPad is legacy: no verbs, kept only so the archived iteration-1 world still loads.
+    objects: [solarPad, dockObj, ball, fountain, piano, airdrop, mailbox, gardenBed, plant, seed, flower, wateringCan, antennaMast],
     archetypes: [robot],
-    handlers: { charge, dock, pickup, drop, push, chase, rinse, splash, play, press, inspect, airdropNeeds, airdropNoise, mailRead },
+    handlers: { dock, pickup, drop, push, chase, rinse, splash, play, press, inspect, airdropNeeds, airdropNoise, mailRead },
     senses: [sight, hearing],
   });
 }
@@ -31,4 +39,9 @@ export function basicPack(): Pack {
 /** The first-slice map: a 24 x 16 garden with a hut, pond edge and paths. */
 export function gardenGrid(): Grid {
   return gridFromRows(garden.rows, garden.legend as Record<string, Terrain>);
+}
+
+/** Iteration 2's garden (`garden-2`): the same layout, for the new objects. */
+export function garden2Grid(): Grid {
+  return gridFromRows(garden2.rows, garden2.legend as Record<string, Terrain>);
 }

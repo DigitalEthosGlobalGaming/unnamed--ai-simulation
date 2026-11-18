@@ -1,11 +1,44 @@
 {
-  "type": "piano",
-  "tags": ["music", "loud"],
+  "schema": 2,
+  "id": "piano",
+  "name": "Piano",
+  "description": "Keys that ring out.",
+  "icon": "<icon><rect x=\"3\" y=\"8\" w=\"18\" h=\"10\"/><line x1=\"7\" y1=\"8\" x2=\"7\" y2=\"18\"/><line x1=\"11\" y1=\"8\" x2=\"11\" y2=\"18\"/><line x1=\"15\" y1=\"8\" x2=\"15\" y2=\"18\"/><rect x=\"6\" y=\"8\" w=\"2\" h=\"5\" shade=\"dense\"/><rect x=\"14\" y=\"8\" w=\"2\" h=\"5\" shade=\"dense\"/></icon>",
+  "tags": [
+    "music",
+    "loud"
+  ],
   "solid": true,
   "verbs": {
-    "play": { "range": 1, "durationTicks": 40, "handler": "basic.play" },
-    "press": { "range": 1, "durationTicks": 5, "handler": "basic.press" },
-    "scan": { "range": 6, "durationTicks": 20, "handler": "basic.inspect" }
-  },
-  "state": { "lastKey": null }
+    "play": {
+      "range": 1,
+      "durationSeconds": 40,
+      "effects": [
+        {
+          "block": "handler",
+          "name": "basic.play"
+        }
+      ]
+    },
+    "press": {
+      "range": 1,
+      "durationSeconds": 5,
+      "effects": [
+        {
+          "block": "handler",
+          "name": "basic.press"
+        }
+      ]
+    },
+    "scan": {
+      "range": 6,
+      "durationSeconds": 20,
+      "effects": [
+        {
+          "block": "handler",
+          "name": "basic.inspect"
+        }
+      ]
+    }
+  }
 }

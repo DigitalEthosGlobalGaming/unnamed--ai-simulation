@@ -3,7 +3,7 @@ import { createServer, type Server } from 'node:http';
 import { join } from 'node:path';
 import { captureSituation } from '@uas/evals';
 import express, { type NextFunction, type Request, type Response } from 'express';
-import { CATALOG_TEMPLATES, type CatalogItem, type EntityDef, type InputEvent, type Pos, type Sender } from '@uas/core';
+import { CATALOG_TEMPLATES, type ObjectDef2, type EntityDef, type InputEvent, type Pos, type Sender } from '@uas/core';
 import { MindSystem } from '@uas/mind';
 import { World, type WorldState } from '@uas/sim';
 import { SqliteInputLog, SqliteReadModels, SqliteSnapshotStore, openDb, replay } from '@uas/store';
@@ -14,7 +14,7 @@ import { Hub } from './hub.ts';
 import { VercelAuth, type AuthEnv } from './session.ts';
 import type { WorldStatus } from './runtime.ts';
 import { Supervisor, type WorldHandle } from './supervisor.ts';
-import { Catalog, isRefusal, itemRules, redactEvent, redactState, validateCatalogItem } from './visitors.ts';
+import { Catalog, isRefusal, itemRules, redactEvent, redactState, validateCatalogItem2 } from './visitors.ts';
 
 export interface AppOptions {
   dbPath: string;
@@ -114,7 +114,7 @@ export function createApp(opts: AppOptions): App {
   };
   /** Need keys and noises an item may use: from every pack the server knows (validation is server-wide). */
   const rules = () => itemRules(loadPacks(listPacks().map((p) => p.name)).registry);
-  const summary = (w: WorldHandle) => ({ id: w.config.id, name: w.config.name, packs: w.config.packs, map: w.config.map, publicRead: w.config.publicRead, status: w.status });
+  const summary = (w: WorldHandle) => ({ id: w.config.id, name: w.config.name, packs: w.config.packs, map: w.config.map, publicRead: w.config.publicRead, archived: w.config.archived, status: w.status });
 
   async function startWorld(config: WorldFile, extra: { initialState?: WorldState; parent?: { worldId: string; forkTick: number } } = {}) {
     const h = await supervisor.start({ config, ...extra });
@@ -285,6 +285,14 @@ export function createApp(opts: AppOptions): App {
     return summary(await startWorld(config, { initialState: at.snapshot(), parent: { worldId: parent.config.id, forkTick: Number(body.tick) } }));
   }));
 
+  // ---- object definitions (schema 2): every pack object and enabled catalogue item
+  app.get('/objects/defs', need('spectator'), route(() => {
+    const { registry } = loadPacks(listPacks().map((p) => p.name));
+    const pack = [...registry.objects.values()].flatMap((o) => (o.def2 ? [{ ...o.def2, source: 'pack' as const }] : []));
+    const items = catalog.list().filter((r) => !r.disabled).map((r) => ({ ...r.item, source: 'catalog' as const }));
+    return [...pack, ...items];
+  }));
+
   // ---- the airdrop catalogue (server-wide)
   app.get('/catalog', need('spectator'), route((req) => {
     const rows = catalog.list();
@@ -292,10 +300,10 @@ export function createApp(opts: AppOptions): App {
     return rows.filter((r) => !r.disabled).map((r) => r.item);
   }));
   app.get('/catalog/templates', need('admin'), route(() => CATALOG_TEMPLATES));
-  app.post('/catalog/validate', need('admin'), route((req) => validateCatalogItem((req.body as { item?: unknown })?.item, rules())));
+  app.post('/catalog/validate', need('admin'), route((req) => validateCatalogItem2((req.body as { item?: unknown })?.item, rules())));
   app.put('/catalog/:itemId', need('admin'), route((req) => {
     const body = (req.body ?? {}) as { item?: unknown; disabled?: unknown };
-    const r = validateCatalogItem(body.item, rules());
+    const r = validateCatalogItem2(body.item, rules());
     if (!r.ok) throw Object.assign(new HttpError(400, `invalid item: ${r.errors.map((e) => `${e.path || 'item'}: ${e.message}`).join('; ')}`), { errors: r.errors });
     if (r.item.id !== req.params.itemId) throw new HttpError(400, `item id ${r.item.id} does not match the URL (${req.params.itemId})`);
     const row = catalog.put(r.item, body.disabled === true, sender(req).username);
@@ -315,7 +323,7 @@ export function createApp(opts: AppOptions): App {
     const row = typeof body.itemId === 'string' ? catalog.get(body.itemId) : undefined;
     if (!row || (row.disabled && !isAdmin(req))) throw new HttpError(404, `no catalogue item ${String(body.itemId)}`);
     if (!body.pos || typeof body.pos.x !== 'number' || typeof body.pos.y !== 'number') throw new HttpError(400, 'pos must be { x, y }');
-    return settle(await w.call({ method: 'drop', item: row.item as CatalogItem, pos: { x: body.pos.x, y: body.pos.y }, by: sender(req) }));
+    return settle(await w.call({ method: 'drop', item: row.item as ObjectDef2, pos: { x: body.pos.x, y: body.pos.y }, by: sender(req) }));
   }));
   app.delete('/worlds/:id/airdrops/:dropId', need('admin'), route(async (req) =>
     settle(await world(req).call({ method: 'removeAirdrop', dropId: String(req.params.dropId), ...(principal(req)?.keyId && { userId: principal(req)!.keyId }) })),
@@ -350,7 +358,7 @@ export function createApp(opts: AppOptions): App {
   }));
 
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err instanceof HttpError ? err.status : 400;
+    const status = err instanceof HttpError ? err.status : err.message === 'world archived' ? 409 : 400;
     const errors = (err as { errors?: unknown }).errors;
     res.status(status).json({ error: err.message, ...(errors !== undefined && { errors }) });
   });

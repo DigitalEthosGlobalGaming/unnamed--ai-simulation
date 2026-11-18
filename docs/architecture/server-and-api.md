@@ -82,10 +82,11 @@ Auth: `Authorization: Bearer <key>` or `x-api-key: <key>`. An unknown key gets 4
 | `GET /metrics` | anyone | Prometheus text, see below |
 | `GET /worlds` | spectator | Every running world's summary with live status |
 | `POST /worlds` | admin | Start a world from a world-config body (not saved to `worlds/`) |
-| `GET /worlds/:id` | spectator | One world's summary and status |
+| `GET /worlds/:id` | spectator | One world's summary and status; `archived: true` for a read-only world (it doesn't tick and refuses every input with 409 `world archived`) |
 | `GET /worlds/:id/settings` | spectator | `{ values, schema, derived }`: live world settings, each with a label, unit, range, step and help text for a generic UI, plus derived costs ([below](#live-world-settings)) |
 | `PATCH /worlds/:id/settings` | admin | Validate and apply a partial `values` live; returns `{ values, derived, effects }` |
 | `PATCH /worlds/:id/clock` | admin | `{ paused?, timeScale? }`; returns the status |
+| `GET /objects/defs` | spectator | Every object definition as schema 2 (pack objects and enabled catalogue items), each with `source: 'pack' \| 'catalog'` ([objects.md](objects.md)) |
 | `GET /worlds/:id/catalog` | spectator | Display data from the world's packs: objects (tags, solid, portable, verb names), archetypes (needs, energy label, noises, sight and hearing range), `ticksPerRealSecond`, `secondsPerTick`, daily cap, energy floor, energy per AUD, and `models: { id, adapter, model?, provider?, local }[]` (the feed's `modelId` is the `id`; no keys) |
 | `POST /worlds/:id/entities` | admin | `admin.spawn` input; returns the logged event |
 | `PATCH /worlds/:id/entities/:eid` | admin | `admin.edit` input (`pos`, `state`, `needs`, `energy`) |

@@ -42,8 +42,27 @@ export interface Character extends Entity {
   mind?: MindState;
 }
 
+/** A product slot as an entity carries it (`hours` is the fill timer; the view is the rest). */
+export interface ProductState {
+  slot: string;
+  item: string;
+  ready: number;
+  max: number;
+  verb: string;
+  /** Hours its condition has held since the last fill. */
+  hours: number;
+  /** Hours until the next one, while it can still fill. */
+  nextInHours?: number;
+}
+
 export interface WorldObject extends Entity {
   kind: 'object';
+  /** Schema-2 objects (docs/architecture/objects.md): kept current by the sim for viewers and perception. */
+  stateSpec?: Record<string, { min: number; max: number }>;
+  appearance?: string[];
+  products?: ProductState[];
+  footprint?: { w: number; h: number };
+  createdBy?: { entityId: EntityId; tick: number };
 }
 
 export type AnyEntity = Character | WorldObject;
@@ -56,6 +75,10 @@ export interface EntityDef {
   state?: Record<string, Json>;
   /** Replaces the type's default tags (airdrops carry their item's tags). */
   tags?: string[];
+  /** Spawn straight into a character's hands (harvest). */
+  heldBy?: EntityId;
+  /** Made by `createObject` (who, when). */
+  createdBy?: { entityId: EntityId; tick: number };
 }
 
 export const MAX_QUEUE = 3;

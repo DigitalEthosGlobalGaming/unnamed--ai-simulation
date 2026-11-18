@@ -1,0 +1,70 @@
+{
+  "id": "empty-can-at-fountain",
+  "title": "Empty can at the fountain",
+  "why": "Holding an empty watering can next to the fountain, it should fill it.",
+  "source": {
+    "kind": "handwritten"
+  },
+  "tags": [
+    "garden",
+    "can",
+    "fountain"
+  ],
+  "job": "auto",
+  "world": {
+    "time": "10:00",
+    "day": 2,
+    "add": [
+      {
+        "id": "can",
+        "type": "watering-can",
+        "pos": [
+          13,
+          7
+        ],
+        "state": {
+          "water": 0
+        }
+      }
+    ]
+  },
+  "character": {
+    "pos": [
+      13,
+      7
+    ],
+    "energy": 0.8,
+    "carrying": "can",
+    "needs": {
+      "curiosity": 0.6,
+      "cool": 0.8
+    },
+    "memories": [
+      {
+        "text": "I tried pickup at the watering-can by day: you picked up the watering can",
+        "verb": "pickup",
+        "objectType": "watering-can",
+        "when": "day",
+        "valence": 0.1,
+        "minutesAgo": 1
+      }
+    ]
+  },
+  "checks": [
+    {
+      "check": "validAnswer",
+      "minPassRate": 1
+    },
+    {
+      "check": "mustBeAmong",
+      "params": {
+        "options": [
+          {
+            "verb": "fill",
+            "target": "fountain"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import type {
   Action,
-  CatalogItem,
+  ObjectDef2,
   ArchetypeDef,
   Belief,
   Character,
@@ -73,6 +73,8 @@ export interface WorldSummary {
   packs: string[];
   map: string;
   publicRead: boolean;
+  /** Read-only (iteration 1's archived garden): no ticking, inputs refused with 409. */
+  archived: boolean;
   status?: WorldStatus;
 }
 
@@ -251,19 +253,19 @@ export interface SettingsUpdate {
 // ---- visitors: the airdrop catalogue, airdrops and the mailbox (docs/architecture/visitors.md)
 
 /** `GET /catalog` for admins: items plus edit metadata (others get plain `CatalogItem`s, enabled only). */
-export type CatalogEntry = CatalogItem & { disabled?: boolean; updatedAt?: string; updatedBy?: string | null };
+export type CatalogEntry = ObjectDef2 & { disabled?: boolean; updatedAt?: string; updatedBy?: string | null };
 export interface PathError {
   path: string;
   message: string;
 }
-export type ValidateResult = { ok: true; item: CatalogItem } | { ok: false; errors: PathError[] };
+export type ValidateResult = { ok: true; item: ObjectDef2 } | { ok: false; errors: PathError[] };
 
 export interface Airdrop {
   id: string;
   entityId: string;
   itemId: string;
-  /** A copy of the catalogue item at drop time. */
-  item: CatalogItem;
+  /** A copy of the catalogue item at drop time (schema 2; older drops are migrated). */
+  item: ObjectDef2;
   pos: { x: number; y: number };
   droppedBy: { username: string; admin: boolean };
   droppedTick: number;
@@ -368,10 +370,12 @@ export class UasClient {
 
   // ---- Visitors: the airdrop catalogue (server-wide), airdrops and the mailbox (per world)
   catalogItems = () => this.req<CatalogEntry[]>('GET', '/catalog');
-  catalogTemplates = () => this.req<{ name: string; item: CatalogItem }[]>('GET', '/catalog/templates');
+  /** Every object definition (pack and enabled catalogue items) as schema 2, with `source`. */
+  objectDefs = () => this.req<(ObjectDef2 & { source: 'pack' | 'catalog' })[]>('GET', '/objects/defs');
+  catalogTemplates = () => this.req<{ name: string; item: ObjectDef2 }[]>('GET', '/catalog/templates');
   validateItem = (item: unknown) => this.req<ValidateResult>('POST', '/catalog/validate', { item });
   /** Throws ApiError (400) with `errors` when the item is invalid. */
-  saveItem = (item: CatalogItem, disabled?: boolean) =>
+  saveItem = (item: ObjectDef2, disabled?: boolean) =>
     this.req<CatalogEntry>('PUT', `/catalog/${encodeURIComponent(item.id)}`, { item, ...(disabled !== undefined && { disabled }) });
   deleteItem = (itemId: string) => this.req<{ ok: true }>('DELETE', `/catalog/${encodeURIComponent(itemId)}`);
   airdrops = (id: string) => this.req<Airdrop[]>('GET', `/worlds/${id}/airdrops`);

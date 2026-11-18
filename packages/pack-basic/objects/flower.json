@@ -1,0 +1,62 @@
+{
+  "schema": 2,
+  "id": "flower",
+  "name": "Flower",
+  "description": "Picked from a plant. Wilts after a couple of days.",
+  "icon": "<icon><circle cx=\"12\" cy=\"8\" r=\"3\" shade=\"dense\"/><circle cx=\"8\" cy=\"8\" r=\"2\"/><circle cx=\"16\" cy=\"8\" r=\"2\"/><circle cx=\"12\" cy=\"4\" r=\"2\"/><line x1=\"12\" y1=\"11\" x2=\"12\" y2=\"21\"/></icon>",
+  "tags": [
+    "flower",
+    "small"
+  ],
+  "portable": true,
+  "state": {
+    "fresh": {
+      "initial": 1,
+      "min": 0,
+      "max": 1
+    }
+  },
+  "verbs": {
+    "smell": {
+      "range": 0,
+      "durationSeconds": 5,
+      "effects": [
+        {
+          "block": "affectNeeds",
+          "needs": {
+            "curiosity": 0.05
+          },
+          "observation": "a sweet smell"
+        }
+      ]
+    }
+  },
+  "rules": [
+    {
+      "every": "1h",
+      "change": {
+        "fresh": -0.021
+      }
+    },
+    {
+      "every": "1h",
+      "when": {
+        "fresh": {
+          "lte": 0
+        }
+      },
+      "remove": true
+    }
+  ],
+  "appearance": {
+    "fresh": [
+      {
+        "lt": 0.3,
+        "text": "a wilting flower"
+      },
+      {
+        "text": "a fresh flower"
+      }
+    ]
+  }
+}

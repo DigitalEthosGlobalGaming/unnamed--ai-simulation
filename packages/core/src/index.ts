@@ -10,3 +10,4 @@ export * from './protocol.ts';
 export * from './icon.ts';
 export * from './catalog.ts';
 export * from './mail.ts';
+export * from './objects.ts';

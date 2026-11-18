@@ -21,7 +21,11 @@ flowchart LR
 - Visitor (signed in with Vercel, or a `visitor` API key): drop items and post mail, subject to the world's limits; see their own mail.
 - Admin: everything, no limits, edit the catalogue, delete items and mail, see waiting mail.
 
-## Catalogue item JSON (schema 1, provisional)
+## Catalogue item JSON
+
+Since iteration 2 Stage 2 the catalogue speaks **object schema 2** ([objects.md](objects.md)): the editor's templates are a seed, a toy, a noise-maker and a cooling gel; validation refuses `handler` blocks, `energy` and built-in object ids, with path errors like `verbs.dab.effects[1].needs.hunger`. Schema-1 items (below) are migrated when read, losslessly; saving writes schema 2. Drops already in a world keep their stored copy.
+
+### Schema 1 (legacy)
 
 ```json
 {

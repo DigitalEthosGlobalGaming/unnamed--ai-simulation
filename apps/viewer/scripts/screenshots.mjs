@@ -104,6 +104,20 @@ const sampleShots = [
     steps: [{ js: () => document.querySelector('#set-batteryPlanAbove')?.scrollIntoView({ block: 'start' }) }, { type: { sel: '#set-batteryTopUp', value: '0.25' } }, { js: () => document.querySelector('#set-batteryTopUp').dispatchEvent(new Event('change', { bubbles: true })), wait: 900 }],
   },
   { name: 'desktop-depth-popover', vp: [1440, 900], q: 'select=rb-03', steps: [{ click: '.fe-row .tier-btn' }] },
+  // Iteration 2 Stage 2: the new garden, object cards, archived worlds.
+  { name: 'desktop-garden', vp: [1440, 900], q: 'view=11.5,2.5,2.6&open=obj:obj-plant-1', wait: 3800 },
+  { name: 'desktop-plant-card', vp: [1440, 900], q: 'open=obj:obj-plant-1', wait: 3800 },
+  { name: 'desktop-mast', vp: [1440, 900], q: 'open=obj:obj-mast', wait: 3800 },
+  {
+    name: 'desktop-planted-card',
+    vp: [1440, 900],
+    q: 'view=11.5,2.5,2.6',
+    steps: [{ js: () => window.__uas.scene.onSelectObject(window.__uas.store.world.objects.find((o) => o.createdBy).id), wait: 900 }],
+  },
+  { name: 'desktop-can', vp: [1440, 900], q: 'view=13,12.5,3&open=obj:obj-can', wait: 3800 },
+  { name: 'desktop-archived', vp: [1440, 900], q: 'archived=1', wait: 3800 },
+  { name: 'mobile-plant-card', vp: [390, 844], q: 'open=obj:obj-plant-1', mobile: true, wait: 3800 },
+  { name: 'mobile-garden', vp: [390, 844], q: 'view=11.5,2.5,2.4&drawer=closed', mobile: true },
   // Visitors: airdrops, the mailbox and the catalogue (sample mocks the API).
   { name: 'desktop-drops', vp: [1440, 900], q: 'as=visitor&view=12,10,1.6' },
   { name: 'desktop-item-card', vp: [1440, 900], q: 'as=admin&open=drop:d1', wait: 3800, steps: [{ click: '[data-act="json"]' }] },

@@ -12,8 +12,12 @@ const act = (verb: string, targetId?: string, args?: Action['args']): Action => 
 
 /** Every object verb in the pack, plus a rejection and every built-in. */
 const PLANS: Action[][] = [
-  [act('charge', 'pad')], // rejected: out of range
-  [act('moveTo', 'pad'), act('charge', 'pad'), act('scan', 'pad')],
+  [act('water', 'plant')], // rejected: out of range
+  // The gardening loop (iteration 2): fill the can at the fountain, water the plant, plant a seed.
+  [act('moveTo', 'can'), act('pickup', 'can'), act('moveTo', 'fountain')],
+  [act('fill', 'fountain'), act('moveTo', 'plant'), act('water', 'plant')],
+  [act('drop', 'can'), act('moveTo', 'seed'), act('pickup', 'seed')],
+  [act('moveTo', 'bed'), act('plant', 'bed'), act('scan', 'mast')],
   [act('moveTo', 'ball'), act('pickup', 'ball'), act('moveTo', undefined, { x: 14, y: 13 })],
   [act('drop', 'ball'), act('push', 'ball'), act('chase', 'ball')],
   [act('moveTo', 'fountain'), act('rinse', 'fountain'), act('splash', 'fountain')],
@@ -28,8 +32,12 @@ function run(seed: number) {
   const registry = buildRegistry([basicPack()]);
   const world = World.create({ worldId: 'm1', seed, grid: gardenGrid() }, registry, [
     { id: 'robot', type: 'robot', pos: { x: 10, y: 10 } },
-    { id: 'pad', type: 'solarPad', pos: { x: 8, y: 8 } },
     { id: 'dock', type: 'dock', pos: { x: 2, y: 7 } },
+    { id: 'bed', type: 'garden-bed', pos: { x: 5, y: 11 } },
+    { id: 'plant', type: 'plant', pos: { x: 6, y: 11 } },
+    { id: 'seed', type: 'seed', pos: { x: 9, y: 12 } },
+    { id: 'can', type: 'watering-can', pos: { x: 13, y: 8 } },
+    { id: 'mast', type: 'antenna-mast', pos: { x: 8, y: 14 } },
     { id: 'ball', type: 'ball', pos: { x: 12, y: 12 } },
     { id: 'fountain', type: 'fountain', pos: { x: 19, y: 6 } },
     { id: 'piano', type: 'piano', pos: { x: 3, y: 3 } }, // inside the hut: the path goes through the door
@@ -38,27 +46,27 @@ function run(seed: number) {
   const brain = new ScriptedBrain('robot', PLANS, (e: SimInputEvent) => world.enqueue(e));
   const deltas: Delta[] = [];
   const hashes: string[] = [];
-  const energyAfterCharge: number[] = [];
+  const water: { can: number; plant: number }[] = [];
   while (world.tick < 5_000) {
     if (brain.think(world, seq)) seq++;
     const { changes } = world.step();
     deltas.push(...changes);
     for (const d of changes) {
-      if (d.kind === 'action' && d.action.verb === 'charge' && d.status === 'done') {
-        energyAfterCharge.push((world.entity('robot') as { energy: number }).energy);
+      if (d.kind === 'action' && (d.action.verb === 'fill' || d.action.verb === 'water') && d.status === 'done') {
+        water.push({ can: Number(world.entity('can')!.state.water), plant: Number(world.entity('plant')!.state.water) });
       }
     }
     if (world.tick % 100 === 0) hashes.push(world.hash());
     const robot = world.entity('robot');
     if (brain.finished && robot?.kind === 'character' && !robot.current && robot.queue.length === 0) break;
   }
-  return { world, deltas, hashes, energyAfterCharge, hash: world.hash() };
+  return { world, deltas, hashes, water, hash: world.hash() };
 }
 
 describe('M1: scripted robot in the garden', () => {
   const a = run(1234);
 
-  it('runs every verb on all five objects', () => {
+  it('runs every verb on the garden objects', () => {
     const done = new Set(
       a.deltas.flatMap((d) => {
         if (d.kind !== 'action' || d.status !== 'done' || !d.action.targetId) return [];
@@ -66,7 +74,7 @@ describe('M1: scripted robot in the garden', () => {
       }),
     );
     for (const v of [
-      'solarPad.charge', 'solarPad.scan',
+      'watering-can.pickup', 'watering-can.drop', 'fountain.fill', 'plant.water', 'seed.pickup', 'garden-bed.plant', 'antenna-mast.scan',
       'dock.dock', 'dock.rest',
       'ball.pickup', 'ball.drop', 'ball.push', 'ball.chase',
       'fountain.rinse', 'fountain.splash', 'fountain.scan',
@@ -88,8 +96,15 @@ describe('M1: scripted robot in the garden', () => {
     expect(rejected.map((d) => d.kind === 'action' && d.reason)).toEqual(['out of range', 'unknown note "honk-C"']);
   });
 
-  it('the solar pad charges nothing any more: physical actions leave the battery alone (iteration 2)', () => {
-    expect(a.energyAfterCharge[0]).toBeCloseTo(0.75);
+  it('fills the can, waters the plant and plants a seed (schema-2 blocks); the battery never moves', () => {
+    expect(a.water[0]!.can).toBe(1); // fill sets it full
+    expect(a.water[1]!.can).toBe(0.75); // watering takes a quarter
+    expect(a.water[1]!.plant).toBeGreaterThan(a.water[0]!.plant); // and the soil gets wetter
+    const planted = a.world.entities().filter((e) => e.type === 'plant' && e.id !== 'plant');
+    expect(planted).toHaveLength(1);
+    expect(planted[0]).toMatchObject({ pos: { x: 5, y: 11 }, createdBy: { entityId: 'robot' } });
+    expect(a.world.entity('seed')).toBeUndefined(); // used up
+    expect((a.world.entity('robot') as { energy: number }).energy).toBe(0.75);
   });
 
   it('produces identical state hashes across two runs', () => {

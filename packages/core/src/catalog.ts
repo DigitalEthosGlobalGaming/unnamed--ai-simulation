@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Json } from './json.ts';
 import { parseIcon } from './icon.ts';
+import { migrateToSchema2, validateObjectDef2, type ObjectDef2 } from './objects.ts';
 
 /**
  * Catalogue items (schema 1): what visitors can airdrop. Behaviour comes only from code-defined
@@ -148,7 +149,8 @@ const ICONS = {
   rock: '<icon><polyline points="4,18 7,9 13,6 19,10 20,17 4,18" weight="heavy"/><line x1="9" y1="13" x2="14" y2="11" dashed="true"/></icon>',
 };
 
-export const CATALOG_TEMPLATES: { name: string; item: CatalogItem }[] = [
+/** Schema-1 starters, kept for migration tests and old databases (the catalogue now speaks schema 2). */
+export const CATALOG_TEMPLATES_V1: { name: string; item: CatalogItem }[] = [
   {
     name: 'snack',
     item: {
@@ -158,14 +160,6 @@ export const CATALOG_TEMPLATES: { name: string; item: CatalogItem }[] = [
         { block: 'affectsNeeds', verb: 'eat', range: 0, durationSeconds: 5, needs: { curiosity: 0.05, signal: 0.05 }, observation: 'a fizzy tingle' },
         { block: 'consumable', uses: 1 },
       ],
-    },
-  },
-  {
-    name: 'toy',
-    item: {
-      schema: 1, id: 'bouncy-ball', name: 'Bouncy ball', description: 'Fun to play with, again and again.', icon: ICONS.ball,
-      tags: ['round', 'soft'], portable: true, expiresAfter: '7d',
-      behaviours: [{ block: 'affectsNeeds', verb: 'bounce', range: 1, durationSeconds: 10, needs: { curiosity: 0.08 }, observation: 'it bounced back up' }],
     },
   },
   {
@@ -181,12 +175,72 @@ export const CATALOG_TEMPLATES: { name: string; item: CatalogItem }[] = [
   },
   {
     name: 'inert',
+    item: { schema: 1, id: 'heavy-rock', name: 'Heavy rock', description: 'It just sits there.', icon: ICONS.rock, tags: ['stone', 'heavy'], portable: false, behaviours: [{ block: 'inert' }] },
+  },
+];
+
+const ICONS2 = {
+  seed: '<icon><ellipse cx="12" cy="12" rx="5" ry="3" shade="dense"/><line x1="12" y1="9" x2="14" y2="5" weight="thin"/></icon>',
+  gel: '<icon><rect x="7" y="4" w="10" h="16" r="3"/><rect x="7" y="12" w="10" h="8" r="3" shade="medium"/><line x1="10" y1="2" x2="14" y2="2" weight="heavy"/></icon>',
+};
+
+/** Schema-2 starter items for the catalogue editor (docs/architecture/objects.md): seed, toy, noise-maker, cooling gel. */
+export const CATALOG_TEMPLATES: { name: string; item: ObjectDef2 }[] = [
+  {
+    name: 'seed',
     item: {
-      schema: 1, id: 'heavy-rock', name: 'Heavy rock', description: 'It just sits there.', icon: ICONS.rock,
-      tags: ['stone', 'heavy'], portable: false, behaviours: [{ block: 'inert' }],
+      schema: 2, id: 'sunflower-seed', name: 'Sunflower seed', description: 'Plant it in a garden bed.', icon: ICONS2.seed,
+      tags: ['seed', 'small'], solid: false, portable: true, expiresAfter: '7d', state: {}, verbs: {}, rules: [], products: [], appearance: {},
+    },
+  },
+  {
+    name: 'toy',
+    item: {
+      schema: 2, id: 'bouncy-ball', name: 'Bouncy ball', description: 'Fun to play with, again and again.', icon: ICONS.ball,
+      tags: ['round', 'soft'], solid: false, portable: true, expiresAfter: '7d', state: {}, rules: [], products: [], appearance: {},
+      verbs: { bounce: { range: 1, durationSeconds: 10, effects: [{ block: 'affectNeeds', needs: { curiosity: 0.08 }, observation: 'it bounced back up' }] } },
+    },
+  },
+  {
+    name: 'noise-maker',
+    item: {
+      schema: 2, id: 'squeaky-toy', name: 'Squeaky toy', description: 'Squeeze it and it squeaks a little tune.', icon: ICONS.bell,
+      tags: ['soft', 'small'], solid: false, portable: true, expiresAfter: '7d', state: {}, rules: [], products: [], appearance: {},
+      verbs: {
+        squeeze: { range: 1, durationSeconds: 4, effects: [{ block: 'makeNoise', notes: ['chirp-E', 'chirp-G'], observation: 'it squeaked' }] },
+        chew: { range: 0, durationSeconds: 8, effects: [{ block: 'affectNeeds', needs: { curiosity: 0.04 }, observation: 'rubbery' }] },
+      },
+    },
+  },
+  {
+    name: 'cooling gel',
+    item: {
+      schema: 2, id: 'cooling-gel', name: 'Cooling gel', description: 'Three dabs of cold gel. Cools a hot robot.', icon: ICONS2.gel,
+      tags: ['cold', 'small'], solid: false, portable: true, expiresAfter: '24h', rules: [], products: [],
+      state: { uses: { initial: 3, min: 0, max: 3 } },
+      verbs: { dab: { range: 0, durationSeconds: 5, effects: [{ block: 'affectNeeds', needs: { cool: 0.2 }, observation: 'a cold tingle spread through your casing' }, { block: 'consume', target: 'self', uses: 1 }] } },
+      appearance: { uses: [{ lt: 1, text: 'an empty tube' }, { lt: 3, text: 'a tube of gel, partly used' }, { text: 'a full tube of gel' }] },
     },
   },
 ];
 
-/** Seeded into an empty catalogue on first run. */
-export const CATALOG_SEED: CatalogItem[] = CATALOG_TEMPLATES.filter((t) => t.name !== 'toy').map((t) => t.item);
+/** Seeded into an empty catalogue on first run (schema 2). */
+export const CATALOG_SEED: ObjectDef2[] = [
+  ...CATALOG_TEMPLATES.filter((t) => t.name !== 'toy').map((t) => t.item),
+  migrateToSchema2(CATALOG_TEMPLATES_V1[2]!.item as unknown as Record<string, unknown>) as unknown as ObjectDef2,
+];
+
+/**
+ * Validate a catalogue item: schema 2 (schema 1 is migrated first), never `handler` blocks,
+ * `energy` or a pack object's id. Errors carry paths like `verbs.water.effects[1].values.colour`.
+ */
+export function validateCatalogItem2(
+  raw: unknown,
+  opts: { needKeys?: readonly string[]; noiseNames?: readonly string[]; packTypes?: readonly string[]; knownTypes?: readonly string[] } = {},
+): { ok: true; item: ObjectDef2 } | { ok: false; errors: CatalogError[] } {
+  const migrated = raw && typeof raw === 'object' ? migrateToSchema2(raw as Record<string, unknown>) : raw;
+  const r = validateObjectDef2(migrated, { pack: false, ...opts });
+  if (!r.ok) return r;
+  if (opts.packTypes?.includes(r.def.id)) return { ok: false, errors: [{ path: 'id', message: 'that id belongs to a built-in object' }] };
+  return { ok: true, item: r.def };
+}

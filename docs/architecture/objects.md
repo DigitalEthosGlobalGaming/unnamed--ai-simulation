@@ -1,6 +1,6 @@
 # Objects: schema 2
 
-Status: **contract** (agreed 18 Nov 2026, iteration 2 Stage 2). Design source: the spec's "Objects, schema 2" and "The new garden" ([decision 49](../../Unnamed%20AI%20Simulation%20—%20Spec.md#decision-log-and-open-questions)). Backend and viewer build against this page; any change to it is messaged to the other agent and edited here in the same change.
+Status: **built** (contract agreed 18 Nov 2026; backend built the same day, iteration 2 Stage 2). [Built differently](#as-built) lists where the code settled a detail. Design source: the spec's "Objects, schema 2" and "The new garden" ([decision 49](../../Unnamed%20AI%20Simulation%20—%20Spec.md#decision-log-and-open-questions)). Backend and viewer build against this page; any change to it is messaged to the other agent and edited here in the same change.
 
 One JSON schema describes every object: built-in pack objects (dock, ball, fountain, piano, mailbox, garden bed, plant, watering can, antenna mast) and admin catalogue items. Behaviour is data (state, verbs with requirements and effects, rules, products, appearance); the old TypeScript handlers survive only as named effect blocks.
 
@@ -125,11 +125,11 @@ Effects run in order and are all-or-nothing: if one fails, none apply.
 - `every`: `"1h"` (in-world hours; `"30m"` and `"1d"` also allowed). Evaluated inside the sim on the in-world clock, never the host clock.
 - `when`: optional condition; `change`: deltas to state values.
 - Optional `nearby`: `{ range, needs }`: each character within range gets these need deltas per period (the antenna mast's signal). Applied scaled to the time spent in range, so walking past gives a little.
-- **Clock jumps** (downtime, `clock.jump`): periods are applied one by one, capped at 7 in-world days, so state ends where it would have been. The cap and the number applied are recorded in the jump's delta.
+- **Clock jumps** (downtime, `clock.jump`): periods are applied one by one, capped at 7 in-world days, so state ends where it would have been. The number applied and whether the cap was hit are recorded in a `{ kind: 'catchUp', seconds, periods, capped }` delta right after the jump.
 
 ### Products
 
-- A slot fills by one every `everyHours` while `when` holds, up to `max`. The fill timer is part of entity state (`_products.<slot>`) so it snapshots and replays.
+- A slot fills by one every `everyHours` while `when` holds, up to `max`. The fill timer lives on the entity (`products[].hours`, beside `ready`) so it snapshots and replays.
 - The slot's `verb` is added to the object automatically (`range` 1, 3 s). Using it runs `harvest`, then applies `reset` (absolute values) if given.
 - `item` is an object `id` (pack or catalogue). The harvested entity is created with that definition's initial state.
 
@@ -196,8 +196,9 @@ interface ObjectView {
 }
 ```
 
+- **Keeping it current:** state changes still arrive as `{ kind: 'state', id, set }` (real values only). Whenever an object's `appearance` or `products` change, a `{ kind: 'objectView', id, appearance, products }` delta follows in the same tick. `createdBy` and `footprint` come with the `spawned` entity.
 - `GET /objects/defs` (spectator): every definition (pack and enabled catalogue) as schema 2, so the viewer can show names, icons, verbs and rules.
-- `GET /worlds/:id` includes `archived`.
+- `GET /worlds/:id` (and `GET /worlds`) include `archived` on the summary; it is not in the snapshot.
 - Feed entries for verbs that fail a requirement carry the `fail` text as `result`.
 - Catalogue `GET /catalog/templates` returns schema-2 templates: seed, toy, noise-maker, cooling gel. `POST /catalog/validate` returns path errors for schema 2 (e.g. `verbs.water.effects[1].values.colour`).
 
@@ -209,3 +210,21 @@ interface ObjectView {
 - **Catalogue editor:** schema-2 templates; validation errors located by path.
 
 Out of Stage 2: state-over-time sparklines and growth history (Stage 4), thought callouts (Stage 4).
+
+## As built
+
+Where the code settled a detail the contract left open (all messaged to the viewer agent):
+
+- **Engine form.** Schema-2 definitions are validated (`validateObjectDef2` in [`objects.ts`](../../packages/core/src/objects.ts)) and compiled: every verb runs the engine's own `core.blocks` handler with its requirements and effects; `portable` adds `core.pickup`/`core.drop`; each product slot adds its verb (`range` 1, 3 s). The sim runs them in [`world.ts`](../../packages/sim/src/world.ts) (`runBlocks`, `runRules`, `nearbyNeeds`, `refreshViews`).
+- **Failures.** A failed *requirement* shows the verb's `fail` text; an *effect* that can't happen says why ("no room", "your grippers are full", "there is nothing to pick yet"). Either way nothing is applied.
+- **Rules** may also say `remove: true` (with `when`): the flower is removed once `fresh` reaches 0. Rules start counting at a world's first tick under this code, so a world doesn't "catch up" from before it had rules.
+- **Product timers** live on the entity (`products[].hours`), not in state; the view adds `nextInHours`.
+- **Deltas:** `{ kind: 'objectView', id, appearance, products }` whenever either changes; `{ kind: 'catchUp', seconds, periods, capped }` after a clock jump.
+- **`consume`** on an object with a `uses` value removes it at the start of the next tick once `uses` reaches 0 (so the mind still sees what it used); without `uses`, straight away.
+- **`GET /objects/defs`** entries carry `source: 'pack' | 'catalog'`.
+- **Planting** requires holding something tagged `seed` (not the `seed` type), so catalogue seeds plant too.
+- **Tuning** (real-time garden): water −0.025/h; growth +0.015/h while water ≥ 0.3; −0.01/h while water < 0.05; a watering adds 0.4 and takes 0.25 from the can. With daily watering a planted seed flowers in about 2 days (growth 0.7) and seeds at 1 (about 3 days); a dry plant stops growing within half a day and starts wilting after about a day and a half. A picked flower wilts in 2 days.
+- **The solar pad** stays in the pack only as a verb-less legacy type, so the archived iteration-1 world still loads; it charges nothing and the new garden has none.
+- **Archiving** is a world-file flag (`archived: true`), set by `npm run world:archive` after an SQLite backup copy. `worlds/garden2.yaml` ships as the new default world; on a server that already runs `garden`, the next start creates `garden2` at day 0 too (the same as `npm run world:new -- --world garden2`).
+- **Schema-1 drops** already in a world keep their stored item (migrated when read for the API); their old verbs still run.
+

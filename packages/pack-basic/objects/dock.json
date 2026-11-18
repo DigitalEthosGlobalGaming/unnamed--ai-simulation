@@ -1,5 +1,9 @@
 {
-  "type": "dock",
+  "schema": 2,
+  "id": "dock",
+  "name": "Dock",
+  "description": "Home: a place to rest, sleep and cool down.",
+  "icon": "<icon><rect x=\"3\" y=\"12\" w=\"18\" h=\"8\" r=\"1\"/><polyline points=\"5,12 12,5 19,12\"/><rect x=\"10\" y=\"15\" w=\"4\" h=\"5\" shade=\"dense\"/></icon>",
   "tags": [
     "metal",
     "shelter"
@@ -7,19 +11,29 @@
   "verbs": {
     "dock": {
       "range": 0,
-      "durationTicks": 60,
-      "handler": "basic.dock",
-      "params": {
-        "cool": 0.05
-      }
+      "durationSeconds": 60,
+      "effects": [
+        {
+          "block": "handler",
+          "name": "basic.dock",
+          "params": {
+            "cool": 0.05
+          }
+        }
+      ]
     },
     "rest": {
       "range": 0,
-      "durationTicks": 200,
-      "handler": "basic.dock",
-      "params": {
-        "cool": 0.05
-      }
+      "durationSeconds": 200,
+      "effects": [
+        {
+          "block": "handler",
+          "name": "basic.dock",
+          "params": {
+            "cool": 0.05
+          }
+        }
+      ]
     }
   }
 }

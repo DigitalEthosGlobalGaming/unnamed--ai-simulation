@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CATALOG_SEED, CATALOG_TEMPLATES, airdropVerbs, cleanMailText, mailTextProblem, parseDurationSeconds, parseIcon, perceivedType, quoteNote, validateCatalogItem } from '../src/index.ts';
+import { CATALOG_SEED, CATALOG_TEMPLATES_V1 as CATALOG_TEMPLATES, airdropVerbs, cleanMailText, mailTextProblem, parseDurationSeconds, parseIcon, perceivedType, quoteNote, validateCatalogItem } from '../src/index.ts';
 
 const rules = { needKeys: ['cool', 'curiosity', 'signal'], noiseNames: ['beep', 'chirp', 'trill', 'buzz', 'honk'] };
 const base = () => structuredClone(CATALOG_TEMPLATES.find((t) => t.name === 'snack')!.item) as Record<string, unknown>;
@@ -38,7 +38,7 @@ describe('icon language', () => {
 describe('catalogue items (schema 1)', () => {
   it('accepts the templates and seed items', () => {
     for (const t of CATALOG_TEMPLATES) expect(validateCatalogItem(t.item, rules), t.name).toMatchObject({ ok: true });
-    expect(CATALOG_SEED.map((i) => i.id)).toEqual(['battery-snack', 'squeaky-toy', 'heavy-rock']);
+    expect(CATALOG_SEED.map((i) => i.id)).toEqual(['sunflower-seed', 'squeaky-toy', 'cooling-gel', 'heavy-rock']); // schema 2 since Stage 2
   });
 
   it('reports path-specific errors', () => {
@@ -67,7 +67,7 @@ describe('catalogue items (schema 1)', () => {
     const toy = CATALOG_TEMPLATES.find((t) => t.name === 'noise-maker')!.item;
     expect(Object.keys(airdropVerbs(toy)).sort()).toEqual(['chew', 'drop', 'pickup', 'scan', 'squeeze']);
     expect(airdropVerbs(toy).squeeze).toMatchObject({ handler: 'basic.airdropNoise', durationTicks: 4, params: { notes: ['chirp-E', 'chirp-G'] } });
-    expect(Object.keys(airdropVerbs(CATALOG_SEED[2]!))).toEqual(['scan']);
+    expect(Object.keys(airdropVerbs(CATALOG_TEMPLATES[2]!.item))).toEqual(['scan']);
     expect(perceivedType({ type: 'airdrop', tags: ['small', 'metal'] })).toBe('thing-metal-small');
     expect(perceivedType({ type: 'ball', tags: ['round'] })).toBe('ball');
     expect(parseDurationSeconds('24h')).toBe(86_400);

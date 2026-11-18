@@ -40,6 +40,8 @@ const RawWorldFileSchema = z.strictObject({
   snapshotEveryTicks: z.int().positive().optional(),
   /** Spectators may read without a key. */
   publicRead: z.boolean().default(true),
+  /** Archived (iteration 1's garden): loads read-only; no ticking, no inputs, no model calls. */
+  archived: z.boolean().default(false),
   sim: z
     .strictObject({
       secondsPerTick: z.number().positive(),

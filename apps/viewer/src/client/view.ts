@@ -57,7 +57,23 @@ export function mapOf(state: WorldStateView): WorldMap {
 }
 
 function objectView(e: WorldObject): ObjectView {
-  return { id: e.id, kind: 'object', type: e.type, pos: { ...e.pos }, state: { ...e.state }, ...(e.heldBy && { heldBy: e.heldBy }) };
+  // Schema-2 extras (docs/architecture/objects.md), read tolerantly: older servers don't send them.
+  const x = e as WorldObject & Partial<Pick<ObjectView, 'stateSpec' | 'appearance' | 'products' | 'footprint' | 'createdBy'>>;
+  const state: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(e.state)) if (!k.startsWith('_')) state[k] = v;
+  return {
+    id: e.id,
+    kind: 'object',
+    type: e.type,
+    pos: { ...e.pos },
+    state,
+    ...(e.heldBy && { heldBy: e.heldBy }),
+    ...(x.stateSpec && { stateSpec: { ...x.stateSpec } }),
+    ...(Array.isArray(x.appearance) && { appearance: [...x.appearance] }),
+    ...(Array.isArray(x.products) && { products: x.products.map((p) => ({ ...p })) }),
+    ...(x.footprint && { footprint: { ...x.footprint } }),
+    ...(x.createdBy && { createdBy: { ...x.createdBy } }),
+  };
 }
 
 /** Iteration 2 mind fields, read tolerantly (sleep pressure, fog, sleep work) until the contract settles. */
@@ -198,7 +214,7 @@ export function applyDeltas(w: WorldView, tick: number, changes: Delta[], cat: W
       }
       case 'state': {
         const o = ob(d.id) ?? ch(d.id);
-        if (o && 'state' in o) Object.assign(o.state, d.set);
+        if (o && 'state' in o) for (const [k, v] of Object.entries(d.set)) if (!k.startsWith('_')) o.state[k] = v;
         break;
       }
       case 'held': {
@@ -273,8 +289,18 @@ export function applyDeltas(w: WorldView, tick: number, changes: Delta[], cat: W
         if (c) c.mind.sleepWork = { step: d.step, ...(d.done !== undefined && { done: d.done }), ...(d.total !== undefined && { total: d.total }) };
         break;
       }
-      default:
+      default: {
+        // Schema 2: what an object looks like to the robot, and its product slots, changed.
+        const x = d as unknown as { kind: string; id?: string; appearance?: string[]; products?: ObjectView['products'] };
+        if (x.kind === 'objectView' && x.id) {
+          const o = ob(x.id);
+          if (o) {
+            if (x.appearance) o.appearance = [...x.appearance];
+            if (x.products) o.products = x.products.map((p) => ({ ...p }));
+          }
+        }
         break;
+      }
     }
   }
   // Expire old refusal notes even when nothing else about the robot changed.

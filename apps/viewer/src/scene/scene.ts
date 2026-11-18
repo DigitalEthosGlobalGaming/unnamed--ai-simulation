@@ -4,7 +4,7 @@
  * arcs and red-pen markup. All controls live in HTML.
  */
 import { Application, Container, Graphics, Text } from 'pixi.js';
-import type { CharacterView, Vec2, WorldView } from '../types.ts';
+import type { CharacterView, ObjectView, Vec2, WorldView } from '../types.ts';
 import type { NoiseEvent, ViewerStore } from '../client/store.ts';
 import { NoisePlayer } from '../ui/audio.ts';
 import { C, FONT_DRAFT } from './palette.ts';
@@ -105,6 +105,10 @@ export class Scene {
   onPlace: (tile: Vec2) => void = () => {};
   /** Drop highlighted from the HTML item schedule (focus) or the open item card. */
   focusDrop: string | null = null;
+  /** The object whose card is open: ringed, and the mast shows its signal range. */
+  focusObject: string | null = null;
+  onSelectObject: (objectId: string) => void = () => {};
+  private objectPts: { id: string; x: number; y: number; r: number }[] = [];
   private hoverDrop: string | null = null;
   private dropPts: { id: string; x: number; y: number }[] = [];
   private mailboxPt: Vec2 | null = null;
@@ -346,7 +350,7 @@ export class Scene {
         if (id !== this.hoverId || drop !== this.hoverDrop) {
           this.hoverId = id;
           this.hoverDrop = drop;
-          canvas.style.cursor = id || drop || (!id && this.hitMailbox(p.x, p.y)) ? 'pointer' : 'grab';
+          canvas.style.cursor = id || drop || (!id && (this.hitMailbox(p.x, p.y) || this.hitObject(p.x, p.y))) ? 'pointer' : 'grab';
         }
         return;
       }
@@ -407,6 +411,8 @@ export class Scene {
         const drop = this.hitDrop(p.x, p.y);
         if (drop) return this.onSelectDrop(drop);
         if (this.hitMailbox(p.x, p.y)) return this.onOpenMail();
+        const obj = this.hitObject(p.x, p.y);
+        if (obj) return this.onSelectObject(obj);
       }
       this.onSelect(robot);
     };
@@ -1016,13 +1022,30 @@ export class Scene {
     // Activity is read from what the robots are doing, so it is the same for any pack state shape.
     const busy = (id: string, verb: string) => world.characters.some((c) => c.action?.verb === verb && c.action.targetId === id);
     this.mailboxPt = null;
+    this.objectPts = [];
+    // Footprints first (the garden bed), so what grows in them draws on top.
+    for (const o of world.objects) if (o.type !== 'airdrop' && !o.heldBy && this.footprintOf(o)) this.drawFootprint(g, o, world);
     for (const o of world.objects) {
       if (o.type === 'airdrop') continue; // drawn by drawDrops from the visitor layer
       // A carried object rides with its carrier (at the carrier's glide position), slightly ahead of it.
       const carrier = o.heldBy ? this.disp.get(o.heldBy) : undefined;
       if (o.heldBy && !carrier) continue;
       const c = carrier ? this.center({ x: carrier.x + 0.3, y: carrier.y - 0.3 }) : this.center(o.pos);
+      const fp = this.footprintOf(o);
+      if (fp) {
+        // Its footprint is drawn already; label it at the footprint's centre.
+        const fc = this.center({ x: o.pos.x + (fp.w - 1) / 2, y: o.pos.y + (fp.h - 1) / 2 });
+        this.objectPts.push({ id: o.id, x: fc.x, y: fc.y, r: ts * Math.max(fp.w, fp.h) * 0.5 });
+        const spot = this.fixtureLabelSpot(o, { x: fc.x, y: fc.y - (L.rot ? fp.w : fp.h) * ts * 0.5 + ts * 0.5 }, true);
+        if (spot) {
+          this.label(`obj-${o.id}`, spot.name, spot.x, spot.nameY, { size: L.compact ? 12 : 13, spacing: 1.2 });
+          this.placed.push({ x: spot.x, y: spot.nameY, w: spot.nameW, h: 14 });
+        }
+        continue;
+      }
+      if (!carrier) this.objectPts.push({ id: o.id, x: c.x, y: c.y, r: ts * 0.5 });
       this.placed.push({ x: c.x, y: c.y, w: ts * 0.95, h: ts * 0.95 });
+      if (this.focusObject === o.id) g.circle(c.x, c.y, ts * 0.62).stroke({ width: 1.5, color: C.ink });
       const s = (x: number, y: number) => {
         // local unit coords → screen, rotating with the plan
         const [rx, ry] = L.rot ? [-y, x] : [x, y];
@@ -1106,6 +1129,54 @@ export class Scene {
           }
           break;
         }
+        case 'plant':
+          this.drawPlant(g, o, s, ts);
+          break;
+        case 'seed': {
+          const a = s(-0.1, -0.16), b = s(0.1, 0.16);
+          g.ellipse(c.x, c.y, Math.abs(b.x - a.x) / 2 + 1, Math.abs(b.y - a.y) / 2 + 1).fill({ color: C.ink2 }).stroke({ width: 1.25, color: C.ink });
+          break;
+        }
+        case 'flower':
+          this.drawBloom(g, c.x, c.y, ts * 0.16, Number(o.state['fresh'] ?? 1) < 0.3);
+          break;
+        case 'watering-can': {
+          // Body in plan view, spout to one side; the water level fills it from the bottom.
+          const lvl = Math.max(0, Math.min(1, Number(o.state['water'] ?? 0)));
+          g.poly(poly([[-0.28, -0.26], [0.18, -0.26], [0.18, 0.3], [-0.28, 0.3]])).fill({ color: C.sheet }).stroke({ width: 2, color: C.ink });
+          if (lvl > 0.02) {
+            g.poly(poly([[-0.28, 0.3 - 0.56 * lvl], [0.18, 0.3 - 0.56 * lvl], [0.18, 0.3], [-0.28, 0.3]])).fill({ color: C.ink2 });
+            const w0 = s(-0.28, 0.3 - 0.56 * lvl), w1 = s(0.18, 0.3 - 0.56 * lvl);
+            g.moveTo(w0.x, w0.y).lineTo(w1.x, w1.y).stroke({ width: 1.5, color: C.ink }); // waterline
+          }
+          const sp0 = s(0.18, -0.02), sp1 = s(0.46, -0.3);
+          g.moveTo(sp0.x, sp0.y).lineTo(sp1.x, sp1.y).stroke({ width: 2, color: C.ink, cap: 'round' });
+          break;
+        }
+        case 'antenna-mast': {
+          g.poly(poly([[-0.3, -0.3], [0.3, -0.3], [0.3, 0.3], [-0.3, 0.3]])).fill({ color: C.sheet }).stroke({ width: 2, color: C.ink });
+          for (const [x0, y0, x1, y1] of [[-0.3, -0.3, 0.3, 0.3], [0.3, -0.3, -0.3, 0.3]] as const) {
+            const a = s(x0, y0), b = s(x1, y1);
+            g.moveTo(a.x, a.y).lineTo(b.x, b.y);
+          }
+          g.stroke({ width: 1, color: C.ink2 });
+          g.circle(c.x, c.y, ts * 0.09).fill({ color: C.ink });
+          // Signal range (from its definition's `nearby` rule) when it's selected.
+          if (this.focusObject === o.id) {
+            const range = this.store.objectDefs.get(o.type)?.rules?.find((r) => r.nearby)?.nearby?.range ?? 3;
+            dashCircle(g, c.x, c.y, (range + 0.5) * ts, 6, 5);
+            g.stroke({ width: 1.25, color: C.ink2 });
+            const R = (range + 0.5) * ts;
+            const txt = `SIGNAL · ${range} TILES`;
+            const tw = txt.length * 7 + 10;
+            const cands = [{ x: c.x, y: c.y + R + 10 }, { x: c.x, y: c.y - R - 10 }, { x: c.x + R + tw / 2 + 6, y: c.y }, { x: c.x - R - tw / 2 - 6, y: c.y }];
+            const inside = (q: Vec2) => q.y > 30 && q.y < L.h - this.insets.bottom - 10 && q.x - tw / 2 > 8 && q.x + tw / 2 < L.w - 8;
+            const at = cands.find((q) => inside(q) && !this.collides(q.x, q.y, tw, 14)) ?? cands.find(inside) ?? cands[0]!;
+            this.label(`mast-range-${o.id}`, txt, at.x, at.y, { size: 12, color: C.ink2 });
+            this.placed.push({ x: at.x, y: at.y, w: tw, h: 14 });
+          }
+          break;
+        }
         case 'piano': {
           g.poly(poly([[-0.48, -0.34], [0.48, -0.34], [0.48, 0.34], [-0.48, 0.34]])).fill({ color: C.ink, alpha: busy(o.id, 'play') ? 0.16 : 0.04 }).stroke({ width: 2, color: C.ink });
           const k0 = s(-0.48, 0.1), k1 = s(0.48, 0.1);
@@ -1122,7 +1193,15 @@ export class Scene {
           }
           break;
         }
+        default: {
+          // Any other object (pack or catalogue): its definition's icon, in line ink.
+          const d = this.store.objectDefs.get(o.type);
+          if (d?.icon) drawIcon(g, d.icon, c.x, c.y, Math.max(16, Math.min(ts * 0.8, 40)), C.ink);
+          else g.rect(c.x - ts * 0.3, c.y - ts * 0.3, ts * 0.6, ts * 0.6).stroke({ width: 1.5, color: C.ink2 });
+        }
       }
+      // Plants in a bed and loose seeds stay unlabelled unless chosen: the bed's label names the place.
+      if (o.type === 'plant' || o.type === 'seed') continue;
       const spot = carrier ? undefined : this.fixtureLabelSpot(o, c, true);
       if (spot) {
         const { name, nameY, x, vtxt, verbY } = spot;
@@ -1134,6 +1213,100 @@ export class Scene {
         }
       }
     }
+  }
+
+  private footprintOf(o: ObjectView): { w: number; h: number } | null {
+    const fp = o.footprint ?? this.store.objectDefs.get(o.type)?.footprint;
+    return fp && (fp.w > 1 || fp.h > 1) ? fp : null;
+  }
+
+  /** A footprint object (the garden bed): a ruled bed of soil over its tiles, lightly hatched. */
+  private drawFootprint(g: Graphics, o: ObjectView, _world: WorldView) {
+    const fp = this.footprintOf(o)!;
+    const a = this.P(o.pos.x + 0.08, o.pos.y + 0.08);
+    const b = this.P(o.pos.x + fp.w - 0.08, o.pos.y + fp.h - 0.08);
+    const x = Math.min(a.x, b.x);
+    const y = Math.min(a.y, b.y);
+    const w = Math.abs(b.x - a.x);
+    const h = Math.abs(b.y - a.y);
+    g.rect(x, y, w, h).fill({ color: C.sheet, alpha: 0.6 });
+    // soil: sparse diagonal hatch, like the pond's but lighter
+    const gap = Math.max(6, this.L!.ts * 0.22);
+    for (let k = gap; k < w + h; k += gap) {
+      const x0 = x + Math.max(0, k - h);
+      const y0 = y + Math.min(k, h);
+      const x1 = x + Math.min(k, w);
+      const y1 = y + Math.max(0, k - w);
+      g.moveTo(x0, y0).lineTo(x1, y1);
+    }
+    g.stroke({ width: 0.75, color: C.ink2, alpha: 0.35 });
+    g.rect(x, y, w, h).stroke({ width: 2.5, color: C.ink, join: 'miter' });
+    if (this.focusObject === o.id) g.rect(x - 5, y - 5, w + 10, h + 10).stroke({ width: 1.5, color: C.ink });
+  }
+
+  /** A plant by growth band: soil, shoot, leafy, bud, flower (docs/architecture/objects.md). */
+  private drawPlant(g: Graphics, o: ObjectView, s: (x: number, y: number) => Vec2, ts: number) {
+    const growth = Number(o.state['growth'] ?? 0);
+    const water = Number(o.state['water'] ?? 1);
+    const flowering = growth >= 1 || (o.products?.some((p) => p.slot === 'flower' && p.ready > 0) ?? false);
+    const c = s(0, 0);
+    // A dried-out planting hole shows as a dashed ring (the bed's hatch is the soil).
+    if (water < 0.15) {
+      dashCircle(g, c.x, c.y, ts * 0.32, 2, 3);
+      g.stroke({ width: 1, color: C.ink2 });
+    }
+    if (growth < 0.1) {
+      g.circle(c.x, c.y, ts * 0.06).fill({ color: C.ink2 });
+      return;
+    }
+    // Top-down: leaves as pointed lenses in alternate pairs of unequal length (never a regular
+    // rosette, which would read as a flower); two for a shoot, four when leafy. Minimum sizes keep
+    // the bands apart at the default zoom.
+    const unit = Math.max(ts, 30);
+    const spec: [number, number][] = growth < 0.4 ? [[0.35, 0.22], [3.5, 0.17]] : [[0.35, 0.36], [3.5, 0.3], [1.95, 0.24], [5.1, 0.19]];
+    for (const [a, len] of spec) {
+      const ux = Math.cos(a);
+      const uy = Math.sin(a);
+      const wid = len * 0.4;
+      const L = (k: number) => (k * unit) / ts; // local units scaled so the leaf keeps a minimum size
+      const tip = s(L(ux * len), L(uy * len));
+      const l = s(L(ux * len * 0.5 - uy * wid), L(uy * len * 0.5 + ux * wid));
+      const r = s(L(ux * len * 0.5 + uy * wid), L(uy * len * 0.5 - ux * wid));
+      g.moveTo(c.x, c.y).quadraticCurveTo(l.x, l.y, tip.x, tip.y).quadraticCurveTo(r.x, r.y, c.x, c.y);
+      g.fill({ color: C.ink, alpha: 0.18 }).stroke({ width: 1.5, color: C.ink });
+    }
+    if (flowering) this.drawBloom(g, c.x, c.y, Math.max(5, ts * 0.13), false);
+    else if (growth >= 0.7) {
+      // a bud: a closed teardrop pointing up the plan
+      const r = Math.max(5, ts * 0.14);
+      const top = s(0, -(r * 1.6) / ts);
+      g.moveTo(top.x, top.y).quadraticCurveTo(c.x + r * 1.1, c.y + r * 0.2, c.x, c.y + r * 0.7).quadraticCurveTo(c.x - r * 1.1, c.y + r * 0.2, top.x, top.y);
+      g.fill({ color: C.sheet }).stroke({ width: 1.5, color: C.ink });
+    } else g.circle(c.x, c.y, Math.max(2, ts * 0.04)).fill({ color: C.ink });
+  }
+
+  /** Five petals round a dense centre; a wilting flower droops (dashed petals). */
+  private drawBloom(g: Graphics, x: number, y: number, r: number, wilting: boolean) {
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      const px = x + Math.cos(a) * r;
+      const py = y + Math.sin(a) * r;
+      g.circle(px, py, r * 0.62).fill({ color: C.sheet });
+      if (wilting) dashCircle(g, px, py, r * 0.62, 2, 2);
+      else g.circle(px, py, r * 0.62);
+    }
+    g.stroke({ width: 1.25, color: C.ink });
+    g.circle(x, y, r * 0.45).fill({ color: C.ink });
+  }
+
+  /** The object under a canvas point (footprints count their whole area); robots and drops win first. */
+  private hitObject(sx: number, sy: number): string | null {
+    let best: { id: string; d: number } | null = null;
+    for (const p of this.objectPts) {
+      const d = Math.hypot(p.x - sx, p.y - sy);
+      if (d <= Math.max(p.r, 14) && (!best || d < best.d)) best = { id: p.id, d };
+    }
+    return best?.id ?? null;
   }
 
   /** True if any of three points across a label's width lands on a wall tile. */

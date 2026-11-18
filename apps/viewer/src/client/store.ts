@@ -3,7 +3,7 @@
  * the selection and the live/replay mode. Transport-agnostic: it consumes `ViewerMessage`s from
  * a `WorldConnection` (the real server via `@uas/client`, or the offline sample).
  */
-import type { Delta, BeliefMark, CharacterView, ConnectionStatus, FeedEntry, Vec2, ViewerMessage, WorldCatalog, WorldConnection, WorldStateView, WorldView } from '../types.ts';
+import type { Delta, ObjectDef, BeliefMark, CharacterView, ConnectionStatus, FeedEntry, Vec2, ViewerMessage, WorldCatalog, WorldConnection, WorldStateView, WorldView } from '../types.ts';
 import { applyDeltas, labelOf, verbsOf, viewFromState } from './view.ts';
 
 export interface NoiseEvent {
@@ -32,6 +32,11 @@ export class ViewerStore {
   highlightSeq = 0;
   private revs = new WeakMap<FeedEntry, number>();
   feed: FeedEntry[] = [];
+  /** The world is archived: read only (no drops, mail or settings), history still browsable. */
+  archived = false;
+  private defsAsked = false;
+  /** Schema-2 object definitions by id (`GET /objects/defs`), for names, icons and verbs. */
+  objectDefs = new Map<string, ObjectDef>();
   noises: NoiseEvent[] = [];
   private noiseSeq = 0;
   private listeners = new Set<Listener>();
@@ -97,7 +102,7 @@ export class ViewerStore {
   }
 
   objectLabel(type: string): string {
-    return labelOf(type);
+    return this.objectDefs.get(type)?.name ?? labelOf(type);
   }
 
   objectVerbs(type: string): string[] {
@@ -241,6 +246,7 @@ export class ViewerStore {
         this.statusDetail = m.detail ?? '';
         break;
       case 'pace':
+        this.archived = m.archived === true;
         this.ticksPerRealSecond = m.ticksPerRealSecond;
         this.realtime = m.realtime;
         if (this.world) this.world.clock.realtime = m.realtime;
@@ -253,6 +259,16 @@ export class ViewerStore {
         const prevTick = this.world?.clock.tick;
         const cat = this.catalog;
         this.world = viewFromState(m.state as WorldStateView, cat, cat?.ticksPerRealSecond ?? cat?.ticksPerSecond ?? 10);
+        if (!this.defsAsked && this.conn.objectDefs) {
+          this.defsAsked = true;
+          void this.conn
+            .objectDefs()
+            .then((defs) => {
+              this.objectDefs = new Map(defs.map((d) => [d.id, d]));
+              this.notify();
+            })
+            .catch(() => {});
+        }
         this.world.spendTodayAud = this.spend;
         this.world.clock.realtime = this.realtime;
         this.session = m.sessionId;

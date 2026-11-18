@@ -3,7 +3,7 @@
  * replay through a server replay session (replay.open / seek / play / pause / replay.close).
  */
 import { UasClient, type WorldStream } from '@uas/client';
-import type { VisitorApi, AccountApi, Belief, BeliefMark, ConnectionStatus, FeedEntry, ViewerMessage, WorldCatalog, WorldConnection } from '../types.ts';
+import type { ObjectDef, VisitorApi, AccountApi, Belief, BeliefMark, ConnectionStatus, FeedEntry, ViewerMessage, WorldCatalog, WorldConnection } from '../types.ts';
 import { RestAccount } from './account.ts';
 import { RestVisitors } from './visitors.ts';
 
@@ -27,6 +27,8 @@ export class RealConnection implements WorldConnection {
   private cat: WorldCatalog | null = null;
   private worldId: string | undefined;
   private feed: FeedEntry[] = [];
+  private readonly base: string;
+  private readonly apiKey: string | undefined;
   private trimmed = 0;
   private marks: BeliefMark[] = [];
   private liveTick = 0;
@@ -45,6 +47,8 @@ export class RealConnection implements WorldConnection {
 
   constructor(opts: RealOptions) {
     const base = opts.baseUrl.startsWith('http') ? opts.baseUrl : `${location.origin}${opts.baseUrl}`;
+    this.base = base.replace(/\/$/, '');
+    this.apiKey = opts.apiKey;
     this.api = new UasClient(base, opts.apiKey);
     this.worldId = opts.worldId;
     const rest = new RestAccount(base, () => this.worldId, opts.apiKey);
@@ -131,7 +135,8 @@ export class RealConnection implements WorldConnection {
         this.pace.paused = w.status.paused;
         const st = w.status as typeof w.status & { effectiveTicksPerRealSecond?: number; clockMode?: string };
         this.pace.effective = st.effectiveTicksPerRealSecond ?? null;
-        this.emit({ type: 'pace', realtime: st.clockMode === 'realtime', ticksPerRealSecond: this.rate() });
+        // `archived` is on the world summary (docs/architecture/objects.md): read-only, no inputs.
+        this.emit({ type: 'pace', realtime: st.clockMode === 'realtime', ticksPerRealSecond: this.rate(), archived: (w as { archived?: boolean }).archived === true });
         if (w.status.tick > this.liveTick) {
           this.markLive(w.status.tick);
           // Bring the shown clock up to the server's tick too (quiet worlds send few deltas).
@@ -226,6 +231,13 @@ export class RealConnection implements WorldConnection {
     const rows = await this.api.feed(this.worldId, characterId, limit, beforeTick);
     // A server without the cursor answers with the newest entries instead: treat that as "no paging".
     return rows.some((e) => e.tick >= beforeTick) ? [] : rows;
+  }
+
+  async objectDefs(): Promise<ObjectDef[]> {
+    const res = await fetch(`${this.base}/objects/defs`, { credentials: 'include', ...(this.apiKey && { headers: { authorization: `Bearer ${this.apiKey}` } }) });
+    if (!res.ok) return []; // a server before schema 2
+    const defs = (await res.json()) as unknown;
+    return Array.isArray(defs) ? (defs as ObjectDef[]) : [];
   }
 
   feedTrimmed(): number {

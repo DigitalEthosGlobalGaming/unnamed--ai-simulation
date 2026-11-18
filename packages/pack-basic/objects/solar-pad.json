@@ -2,18 +2,8 @@
   "type": "solarPad",
   "tags": [
     "metal",
-    "light"
+    "light",
+    "legacy"
   ],
-  "verbs": {
-    "charge": {
-      "range": 0,
-      "durationTicks": 50,
-      "handler": "basic.charge"
-    },
-    "scan": {
-      "range": 6,
-      "durationTicks": 20,
-      "handler": "basic.inspect"
-    }
-  }
+  "verbs": {}
 }

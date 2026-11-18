@@ -81,9 +81,11 @@ describe('checks', () => {
     expect(check(woke, { choices: [w0.id] }).results.noNap).toBe(!w0.key.startsWith('rest:'));
     const hot = byId('hot-cool-low');
     expect(check(hot, { choices: [idOf(hot, 'rinse:fountain')!] }).results.mustBeAmong).toBe(true);
-    expect(check(hot, { choices: [idOf(hot, 'scan:solarPad')!] }).results.mustBeAmong).toBe(false);
+    const notCooling = situationRequest(hot).candidates.find((c) => !/^(rinse|splash|dock|rest):/.test(c.key))!;
+    expect(check(hot, { choices: [notCooling.id] }).results.mustBeAmong).toBe(false);
     const night = byId('night-idle-rest');
-    expect(check(night, { choices: [idOf(night, 'play:piano')!] }).results.neverChoose).toBe(false);
+    const playing = { ...night, checks: [{ check: 'neverChoose', params: { verb: 'rest' }, minPassRate: 1, todo: false }] };
+    expect(check(playing, { choices: [idOf(night, 'rest:dock')!] }).results.neverChoose).toBe(false);
     expect(check(night, { choices: [idOf(night, 'rest:dock')!] }).results).toMatchObject({ neverChoose: true, choosesSleep: true });
   });
 

@@ -45,6 +45,52 @@ export interface ObjectView {
   pos: Vec2;
   state: Record<string, unknown>;
   heldBy?: string;
+  /** Schema 2 (docs/architecture/objects.md): ranges for the real state values. */
+  stateSpec?: Record<string, { min: number; max: number }>;
+  /** What the robot perceives now, in definition order. */
+  appearance?: string[];
+  products?: ProductSlot[];
+  footprint?: { w: number; h: number };
+  /** Set for objects made by `createObject` (a planted seed). */
+  createdBy?: { entityId: string; tick: number };
+}
+
+export interface ProductSlot {
+  slot: string;
+  item: string;
+  ready: number;
+  max: number;
+  verb: string;
+  hours?: number;
+  nextInHours?: number;
+}
+
+/** A schema-2 object definition, as `GET /objects/defs` serves it (only what the viewer reads is typed). */
+export interface ObjectDef {
+  schema: 2;
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  tags: string[];
+  solid?: boolean;
+  portable?: boolean;
+  footprint?: { w: number; h: number };
+  expiresAfter?: string | null;
+  state?: Record<string, { initial: number; min: number; max: number }>;
+  verbs?: Record<string, ObjectVerbDef>;
+  rules?: { every: string; when?: Record<string, Record<string, number>>; change?: Record<string, number>; nearby?: { range: number; needs: Record<string, number> }; remove?: boolean }[];
+  source?: 'pack' | 'catalog';
+  products?: { slot: string; item: string; when?: Record<string, Record<string, number>>; everyHours: number; max: number; verb: string; reset?: Record<string, number> }[];
+  appearance?: Record<string, { lt?: number; lte?: number; gt?: number; gte?: number; text: string }[]>;
+}
+
+export interface ObjectVerbDef {
+  range?: number;
+  durationSeconds?: number;
+  requires?: Record<string, unknown>;
+  effects?: { block: string; [k: string]: unknown }[];
+  fail?: string;
 }
 
 export interface MindView {
@@ -125,7 +171,7 @@ export type ViewerMessage =
   | { type: 'status'; status: ConnectionStatus; detail?: string }
   | { type: 'spend'; spendTodayAud: number }
   /** World status the viewer paces itself by (`WorldStatus.clockMode`, effective tick rate). */
-  | { type: 'pace'; realtime: boolean; ticksPerRealSecond: number };
+  | { type: 'pace'; realtime: boolean; ticksPerRealSecond: number; archived?: boolean };
 
 /** A belief change on the timeline (from `beliefs` deltas). */
 export interface BeliefMark {
@@ -144,6 +190,8 @@ export interface WorldConnection {
   feedBefore?(beforeTick: number, limit: number, characterId?: string): Promise<FeedEntry[]>;
   /** How many of the oldest loaded feed entries were dropped to keep memory bounded (keeps revision numbers stable). */
   feedTrimmed?(): number;
+  /** Schema-2 object definitions (`GET /objects/defs`); [] when the server has none yet. */
+  objectDefs?(): Promise<ObjectDef[]>;
   /** Where beliefs changed, for the timeline markers. */
   beliefMarks(): BeliefMark[];
   /** Earliest and latest ticks, for the scale bar. */
@@ -236,7 +284,8 @@ export interface CatalogBlock {
   [k: string]: unknown;
 }
 
-export interface CatalogItem {
+/** A catalogue item: schema 1 (`behaviours` blocks) or schema 2 (an object definition; docs/architecture/objects.md). */
+export interface CatalogItem extends Partial<Omit<ObjectDef, 'schema' | 'id' | 'name' | 'description' | 'icon' | 'tags' | 'portable' | 'expiresAfter'>> {
   schema: number;
   id: string;
   name: string;
@@ -247,7 +296,8 @@ export interface CatalogItem {
   portable?: boolean;
   /** Duration string: `30m`, `24h`, `7d`. */
   expiresAfter?: string;
-  behaviours: CatalogBlock[];
+  /** Schema 1 only. */
+  behaviours?: CatalogBlock[];
   /** Admin listing only. */
   disabled?: boolean;
   updatedAt?: string;

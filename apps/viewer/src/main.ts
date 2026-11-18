@@ -23,6 +23,7 @@ import type { AuthState, Vec2 } from './types.ts';
 import { VisitorStore } from './client/visitors.ts';
 import { airdropFlow, itemCard, mailView, type VisitorUiHost } from './ui/visitors.ts';
 import { CataloguePage, withParam } from './ui/catalogue.ts';
+import { objectCard } from './ui/objects.ts';
 
 /* Data source: the real server by default (via `@uas/client`; `?world=<id>`, `?key=<api key>`),
    or the offline sample with `?source=sample`.
@@ -58,6 +59,7 @@ app.innerHTML = `
         <button type="button" class="btn ghost" data-ref="sound-btn" aria-pressed="false">${icons.soundOff()}<span class="btn-text">Sound off</span></button>
       </div>
     </header>
+    <p class="archived-banner" data-ref="archived" role="status" hidden>${icons.revision()}<span><strong>Archived world · read only.</strong> Nothing new happens here; scrub the timeline and read the brain feed to look back.</span></p>
     <main class="workspace">
       <section class="sheet-col" aria-label="World plan">
         <div class="sheet" data-ref="sheet" tabindex="0" role="region" aria-label="World plan" aria-describedby="plan-keys">
@@ -103,6 +105,7 @@ const server: WorldConnection = sample
       seed: 7,
       startTick: 3 * TICKS_PER_DAY + 15 * TICKS_PER_HOUR + 8 * 10,
       ...(params.get('state') === 'disconnected' ? { disconnectAfterMs: 1200 } : {}),
+      ...(params.get('archived') === '1' && { archived: true }),
     })
   : new RealConnection({
       baseUrl: import.meta.env.VITE_UAS_API ?? '/api',
@@ -378,8 +381,9 @@ function render() {
   shell.dataset['mode'] = store.mode;
   shell.dataset['status'] = store.status;
   const status = $('status');
-  status.className = `status is-${store.status === 'live' ? store.mode : store.status}`;
-  status.textContent = store.status === 'connecting' ? 'Connecting' : store.status === 'disconnected' ? 'Disconnected' : store.mode === 'live' ? 'Live' : 'Replay';
+  status.className = `status is-${store.status === 'live' ? (store.archived && store.mode === 'live' ? 'replay' : store.mode) : store.status}`;
+  // An archived world never moves on: its latest state isn't "live".
+  status.textContent = store.status === 'connecting' ? 'Connecting' : store.status === 'disconnected' ? 'Disconnected' : store.mode === 'live' ? (store.archived ? 'Archived' : 'Live') : 'Replay';
 
   const now = performance.now();
   const selChanged = lastSel !== store.selectedId;
@@ -467,6 +471,7 @@ store.on(() => {
   noisesConfigured = true;
 });
 store.on(render);
+store.on(() => syncTopButtons());
 render();
 
 /* --------------------------------------------------------- visitors */
@@ -551,9 +556,25 @@ function syncTopButtons() {
   const admin = auth?.role === 'admin';
   catBtn.hidden = !admin || !server.visitors;
   catBtn.href = withParam('page', 'catalogue');
-  dropBtn.hidden = mailBtn.hidden = !server.visitors;
+  // An archived world takes no inputs: no drops or mail (history and the catalogue stay).
+  dropBtn.hidden = mailBtn.hidden = !server.visitors || store.archived;
+  const banner = $('archived');
+  if (banner.hidden !== !store.archived) {
+    banner.hidden = !store.archived;
+    requestAnimationFrame(layoutInsets);
+  }
+  if (store.archived && (panel.openView === 'airdrop' || panel.openView === 'mail')) panel.closeView();
 }
 scene.onSelectDrop = (id) => openDrop(id);
+function openObject(id: string) {
+  const o = store.world?.objects.find((x) => x.id === id);
+  // Several plants share a name: the grid reference tells them apart (it matches the plan's references).
+  const name = o ? `${store.objectLabel(o.type)} · ${String.fromCharCode(65 + o.pos.x)}${o.pos.y + 1}` : 'Object';
+  scene.focusObject = id;
+  openVisitorView(`obj:${id}`, name, objectCard(store, id), () => (scene.focusObject = null));
+}
+scene.onSelectObject = (id) => openObject(id);
+panel.onOpenObject = (id) => openObject(id);
 scene.onOpenMail = () => openMail();
 panel.onOpenDrop = (id) => openDrop(id);
 panel.onFocusDrop = (id) => (scene.focusDrop = id);
@@ -620,6 +641,7 @@ showPage();
         if (open === 'airdrop') openAirdrop();
         else if (open === 'mail') openMail();
         else if (open.startsWith('drop:')) openDrop(open.slice(5));
+        else if (open.startsWith('obj:')) openObject(open.slice(4));
       }, 400);
     });
   }

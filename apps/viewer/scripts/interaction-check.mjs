@@ -200,7 +200,8 @@ const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--ena
   await page.keyboard.press('Escape');
   await page.evaluate(() => {
     const pb = document.querySelector('#panel-body');
-    pb.scrollTop = 900;
+    const list = document.querySelector('.feed-list');
+    pb.scrollTop += list.getBoundingClientRect().top - pb.getBoundingClientRect().top + 400;
     pb.dispatchEvent(new Event('scroll'));
   });
   await page.waitForTimeout(300);

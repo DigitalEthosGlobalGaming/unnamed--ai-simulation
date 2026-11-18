@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ApiError, UasClient, type CatalogItem } from '@uas/client';
+import { ApiError, UasClient, type ObjectDef2 } from '@uas/client';
 import { KeyRing, WorldRuntime, createApp, parseWorldFile, type App } from '../src/index.ts';
 import { ReplaySession } from '../src/replay-session.ts';
 
@@ -43,21 +43,24 @@ const admin = () => new UasClient(base, ADMIN);
 const ada = () => new UasClient(base, ADA);
 const bob = () => new UasClient(base, BOB);
 const anon = () => new UasClient(base);
-const settle = () => new Promise((r) => setTimeout(r, 150));
+const settle = () => new Promise((r) => setTimeout(r, 400)); // a few ticks, with room for a loaded machine
 
 describe('visitors: catalogue, airdrops and the mailbox (REST)', () => {
   it('serves the seeded catalogue; templates, validation and edits are admin-only', async () => {
-    expect((await anon().catalogItems()).map((i) => i.id)).toEqual(['battery-snack', 'heavy-rock', 'squeaky-toy']);
+    expect((await anon().catalogItems()).map((i) => i.id)).toEqual(['cooling-gel', 'heavy-rock', 'squeaky-toy', 'sunflower-seed']);
     await expect(ada().catalogTemplates()).rejects.toMatchObject({ status: 403 });
     const templates = await admin().catalogTemplates();
-    expect(templates.map((t) => t.name)).toEqual(['snack', 'toy', 'noise-maker', 'inert']);
+    expect(templates.map((t) => t.name)).toEqual(['seed', 'toy', 'noise-maker', 'cooling gel']);
     const ball = templates[1]!.item;
     expect(await admin().validateItem(ball)).toMatchObject({ ok: true });
-    const bad = { ...ball, behaviours: [{ block: 'affectsNeeds', verb: 'bounce', needs: { hunger: 0.1 }, observation: 'x' }] };
-    expect(await admin().validateItem(bad)).toEqual({ ok: false, errors: [{ path: 'behaviours[0].needs.hunger', message: expect.stringContaining('unknown need') }] });
-    const err = (await admin().saveItem(bad as CatalogItem).catch((e) => e)) as ApiError;
+    const bad = { ...ball, verbs: { bounce: { effects: [{ block: 'affectNeeds', needs: { hunger: 0.1 }, observation: 'x' }] } } };
+    expect(await admin().validateItem(bad)).toEqual({ ok: false, errors: [{ path: 'verbs.bounce.effects[0].needs.hunger', message: expect.stringContaining('unknown need') }] });
+    const err = (await admin().saveItem(bad as unknown as ObjectDef2).catch((e) => e)) as ApiError;
     expect(err.status).toBe(400);
-    expect(err.errors?.[0]?.path).toBe('behaviours[0].needs.hunger');
+    expect(err.errors?.[0]?.path).toBe('verbs.bounce.effects[0].needs.hunger');
+    // Built-in ids, handler blocks and energy are refused.
+    expect(await admin().validateItem({ ...ball, id: 'plant' })).toMatchObject({ ok: false, errors: [{ path: 'id' }] });
+    expect(await admin().validateItem({ ...ball, verbs: { go: { effects: [{ block: 'handler', name: 'basic.push' }] } } })).toMatchObject({ ok: false, errors: [{ path: 'verbs.go.effects[0].block' }] });
     await expect(ada().saveItem(ball)).rejects.toMatchObject({ status: 403 });
     expect(await admin().saveItem(ball, true)).toMatchObject({ id: 'bouncy-ball', disabled: true, updatedBy: 'admin' });
     expect((await anon().catalogItems()).some((i) => i.id === 'bouncy-ball')).toBe(false); // disabled: admins only
@@ -69,17 +72,17 @@ describe('visitors: catalogue, airdrops and the mailbox (REST)', () => {
 
   it('drops items as visitors, with limits; admins are exempt and can delete', async () => {
     await expect(anon().dropItem('vgarden', 'battery-snack', { x: 3, y: 3 })).rejects.toMatchObject({ status: 401 });
-    const d = await ada().dropItem('vgarden', 'battery-snack', { x: 8, y: 8 });
-    expect(d).toMatchObject({ itemId: 'battery-snack', droppedBy: { username: expect.stringMatching(/^visitor-/), admin: false }, usesLeft: 1 });
-    expect(d.pos).not.toEqual({ x: 8, y: 8 }); // the pad is there
+    const d = await ada().dropItem('vgarden', 'cooling-gel', { x: 17, y: 8 });
+    expect(d).toMatchObject({ itemId: 'cooling-gel', droppedBy: { username: expect.stringMatching(/^visitor-/), admin: false }, usesLeft: 3 });
+    expect(d.pos).not.toEqual({ x: 17, y: 8 }); // the mailbox is there
     expect(d.expiresTick).toBeGreaterThan(d.droppedTick); // the item's own 24h
     await settle();
     expect((await anon().airdrops('vgarden')).map((x) => x.id)).toContain(d.id);
     const detail = await anon().airdrop('vgarden', d.id);
-    expect(detail.item.name).toBe('Fizzy cell');
+    expect(detail.item).toMatchObject({ schema: 2, name: 'Cooling gel' });
     expect(Array.isArray(detail.beliefs)).toBe(true);
 
-    await admin().updateSettings('vgarden', { airdropMaxActivePerVisitor: 1, catalogEnabled: ['battery-snack', 'heavy-rock'] });
+    await admin().updateSettings('vgarden', { airdropMaxActivePerVisitor: 1, catalogEnabled: ['cooling-gel', 'heavy-rock'] });
     await expect(ada().dropItem('vgarden', 'heavy-rock', { x: 3, y: 3 })).rejects.toMatchObject({ status: 429 });
     await expect(bob().dropItem('vgarden', 'squeaky-toy', { x: 3, y: 3 })).rejects.toMatchObject({ status: 403 });
     const rock = await bob().dropItem('vgarden', 'heavy-rock', { x: 3, y: 3 });

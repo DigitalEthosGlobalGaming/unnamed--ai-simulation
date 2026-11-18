@@ -4,7 +4,8 @@ const sym = (body: string) =>
 
 const ITEMS: [string, string][] = [
   ['Robot (eye = heading)', '<rect x="7" y="7" width="14" height="14" rx="4" stroke-width="2"/><circle cx="17.5" cy="14" r="2" fill="currentColor" stroke="none"/><path d="M9 4.5h7M9 23.5h7" stroke-width="2.4" stroke-linecap="round"/>'],
-  ['Solar pad', '<rect x="5" y="5" width="18" height="18" stroke-width="2"/><path d="M11 5v18M17 5v18M5 11h18M5 17h18" stroke-width="1" opacity=".8"/>'],
+  ['Bed · plant', '<rect x="3" y="7" width="22" height="14" stroke-width="2"/><path d="M7 19l4-4M12 21l6-6M19 21l4-4" stroke-width=".8" opacity=".6"/><path d="M14 14c-2.5-1-3.5-3-3.5-5 2.5.5 3.5 2.5 3.5 5zM14 14c2.5-1 3.5-3 3.5-5-2.5.5-3.5 2.5-3.5 5z" stroke-width="1.4"/>'],
+  ['Mast', '<rect x="8" y="8" width="12" height="12" stroke-width="2"/><path d="M8 8l12 12M20 8 8 20" stroke-width="1" opacity=".8"/><circle cx="14" cy="14" r="1.8" fill="currentColor" stroke="none"/>'],
   ['Dock', '<path d="M5 24V5h18v19" stroke-width="2.4"/><rect x="11" y="5" width="6" height="3.5" fill="currentColor" stroke="none"/>'],
   ['Ball', '<circle cx="14" cy="14" r="6" stroke-width="2"/><path d="M8.5 10.5a8 8 0 0 1 0 7" stroke-width="1"/>'],
   ['Fountain', '<circle cx="14" cy="14" r="10" stroke-width="2"/><circle cx="14" cy="14" r="6"/><circle cx="14" cy="14" r="1.6" fill="currentColor" stroke="none"/>'],
