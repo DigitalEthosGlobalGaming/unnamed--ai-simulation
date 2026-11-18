@@ -11,6 +11,7 @@ Unnamed AI Simulation is a self-hosted TypeScript world. Small AI robots live on
 | [Architecture overview](architecture/overview.md) | System context, containers, package dependency graph, process rules | root [`package.json`](../package.json), `packages/*/package.json` |
 | [Simulation](architecture/simulation.md) | Tick loop, determinism, entities, verbs and effect handlers, action queue, pathfinding, day and night | [`packages/sim`](../packages/sim), [`packages/core`](../packages/core) |
 | [Objects (schema 2)](architecture/objects.md) | Object definitions: state, verbs, requirements, effect blocks, rules, products, appearance; the new garden; archived worlds | [`packages/core`](../packages/core), [`packages/pack-basic`](../packages/pack-basic) |
+| [Prompt templates](architecture/prompts.md) | Editable, versioned prompt templates, variables, the locked safety block, activation per world, the Prompts page API | [`packages/mind`](../packages/mind), [`packages/server`](../packages/server) |
 | [Mind](architecture/mind.md) | Needs, battery, mood, boredom, senses, triggers, brain tiers, memory, beliefs, hearsay, thinking depth, sleep | [`packages/mind`](../packages/mind) |
 | [Models](architecture/models.md) | `DecisionModel` and `ChatModel`, adapters, routing, AUD cost meter, energy charging, local models, job queue | [`packages/models`](../packages/models) |
 | [Events and replay](architecture/events-and-replay.md) | Input log, deltas, snapshots, replay, forking, SQLite tables | [`packages/store`](../packages/store) |
