@@ -54,6 +54,8 @@ export interface Memory {
   lastRecallTick: number;
   /** Need changes the mind felt over the action (outcome memories only). */
   felt?: Record<string, number>;
+  /** How many times the same thing happened, merged into this one long-term memory (absent = 1). */
+  count?: number;
   embedding?: number[];
 }
 
@@ -127,6 +129,8 @@ export interface Candidate {
   key: string;
   /** It uses what the character holds (the verb needs it, e.g. filling a held can at the fountain). */
   usesHeld?: true;
+  /** It did this to the same thing recently and the thing hasn't changed since: nothing new to find. */
+  stale?: true;
 }
 
 export interface PendingJob {
@@ -192,7 +196,18 @@ export interface MindState {
   /** The last decision was only `wait`: routine triggers then go to autopilot, not a model. */
   idle?: boolean;
   /** Recent failures per candidate key (`verb:type`); two in a row set the option aside for a while. */
-  failures?: Record<string, { n: number; tick: number }>;
+  failures?: Record<string, { n: number; tick: number; until?: number }>;
+  /**
+   * The plan it is committed to (a model decision with two or more steps): what it is for, which
+   * feed entry started it, and how it is going. Weak triggers don't replace it (see `deferred`).
+   */
+  plan?: { feedTick: number; intent?: string; total: number; done: number; failed: number; repairs: number; failing?: true; lastFailure?: string };
+  /** The strongest trigger that came while it was busy with a plan; considered when the plan ends. */
+  deferred?: { kind: TriggerKind; tick: number; salience: number; detail?: string };
+  /** When it last did each verb to each thing (`verb:targetId`), and how that thing looked then. */
+  lastDone?: Record<string, { tick: number; look: string }>;
+  /** Loop guards fired today per option key: each repeat sets it aside for longer. */
+  loops?: Record<string, { count: number; day: number }>;
   /** Sleep pressure 0..1, from time awake and fog (iteration 2). */
   sleepPressure?: number;
   /** Short-term-memory fullness as felt, 0..1 (a perceivable "fog"). */

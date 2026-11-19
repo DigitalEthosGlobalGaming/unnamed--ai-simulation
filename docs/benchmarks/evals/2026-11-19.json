@@ -1,0 +1,575 @@
+{
+ "file": "2026-11-19",
+ "date": "2026-11-19",
+ "samples": 3,
+ "decideModel": "laya (convaiinnovations/laya)",
+ "planModel": "hostedText (meta/llama-3.1-8b)",
+ "totalCostAud": 0.0007651099999999999,
+ "results": [
+  {
+   "id": "dry-plant-full-can",
+   "title": "Dry plant, full can",
+   "job": "auto→decide",
+   "model": "laya",
+   "options": [
+    {
+     "id": "c0",
+     "label": "water the plant with the watering-can (2 tiles away)"
+    },
+    {
+     "id": "c1",
+     "label": "inspect the plant (2 tiles away)"
+    },
+    {
+     "id": "c2",
+     "label": "pick the plant (2 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "gather the plant (2 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "plant the garden-bed (1 tiles away)"
+    },
+    {
+     "id": "c5",
+     "label": "drop the watering-can (carrying it)"
+    }
+   ],
+   "thinking": {
+    "depth": "gut",
+    "why": "familiar"
+   },
+   "template": {
+    "id": "decide",
+    "version": 1
+   },
+   "samples": [
+    {
+     "choices": [
+      "c0"
+     ],
+     "confidence": 0.5592,
+     "ms": 1321,
+     "costAud": 0.00000454,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    },
+    {
+     "choices": [
+      "c0"
+     ],
+     "confidence": 0.5592,
+     "ms": 813,
+     "costAud": 0.00000454,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    },
+    {
+     "choices": [
+      "c0"
+     ],
+     "confidence": 0.5592,
+     "ms": 792,
+     "costAud": 0.00000454,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "mustBeAmong": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": true
+    }
+   }
+  },
+  {
+   "id": "empty-can-at-fountain",
+   "title": "Empty can at the fountain",
+   "job": "auto→plan",
+   "model": "hostedText",
+   "options": [
+    {
+     "id": "c0",
+     "label": "fill the watering-can at the fountain (2 tiles away)"
+    },
+    {
+     "id": "c1",
+     "label": "rinse the fountain (2 tiles away)"
+    },
+    {
+     "id": "c2",
+     "label": "splash the fountain (2 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "scan the fountain (2 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "drop the watering-can (carrying it)"
+    },
+    {
+     "id": "c5",
+     "label": "read the mailbox (5 tiles away)"
+    }
+   ],
+   "thinking": {
+    "depth": "think",
+    "why": "unfamiliar"
+   },
+   "template": {
+    "id": "plan",
+    "version": 1
+   },
+   "samples": [
+    {
+     "choices": [
+      "c0",
+      "c3",
+      "c4",
+      "c5",
+      "c1",
+      "c2"
+     ],
+     "reasons": {
+      "c0": "Fill the watering-can to see if it does anything useful.",
+      "c3": "Scan the fountain to learn more about it.",
+      "c4": "Drop the watering-can to free up my grippers and see what happens.",
+      "c5": "Read the mailbox to see if it contains any information or objects.",
+      "c1": "Rinse the fountain to see if it affects the water or the surrounding area.",
+      "c2": "Splash the fountain to see how it reacts to being disturbed."
+     },
+     "ms": 1321,
+     "costAud": 0.00003229,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    },
+    {
+     "choices": [
+      "c0",
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5"
+     ],
+     "reasons": {
+      "c0": "Fill the watering-can to see if it does anything useful.",
+      "c1": "Rinsing the fountain might be interesting.",
+      "c2": "Splashing the fountain could be fun.",
+      "c3": "Scanning the fountain might teach me something.",
+      "c4": "Dropping the watering-can will free up my grippers.",
+      "c5": "Reading the mailbox might give me some information."
+     },
+     "ms": 1207,
+     "costAud": 0.00003081,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    },
+    {
+     "choices": [
+      "c0",
+      "c3",
+      "c4",
+      "c5",
+      "c1",
+      "c2"
+     ],
+     "reasons": {
+      "c0": "Fill the watering-can to see if it does anything useful.",
+      "c3": "Scan the fountain to learn more about it.",
+      "c4": "Drop the watering-can to free up my grippers and explore other options.",
+      "c5": "Read the mailbox to see if it contains any information or objects.",
+      "c1": "Rinse the fountain to see if it affects the water or the surrounding area.",
+      "c2": "Splash the fountain to see how it reacts to being disturbed."
+     },
+     "ms": 1323,
+     "costAud": 0.00003229,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "mustBeAmong": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": true
+    }
+   }
+  },
+  {
+   "id": "flower-ready",
+   "title": "A flower is ready",
+   "job": "auto→plan",
+   "model": "hostedText",
+   "options": [
+    {
+     "id": "c0",
+     "label": "water the plant (2 tiles away)"
+    },
+    {
+     "id": "c1",
+     "label": "inspect the plant (2 tiles away)"
+    },
+    {
+     "id": "c2",
+     "label": "pick the plant (2 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "gather the plant (2 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "plant the garden-bed (1 tiles away)"
+    },
+    {
+     "id": "c5",
+     "label": "pickup the seed (4 tiles away)"
+    }
+   ],
+   "thinking": {
+    "depth": "think",
+    "why": "unfamiliar"
+   },
+   "template": {
+    "id": "plan",
+    "version": 1
+   },
+   "samples": [
+    {
+     "choices": [
+      "c1",
+      "c2",
+      "c0"
+     ],
+     "reasons": {
+      "c1": "I want to learn what the plant is like.",
+      "c2": "Picking the plant might teach me something.",
+      "c0": "Watering the plant could be useful."
+     },
+     "ms": 1342,
+     "costAud": 0.0000299,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    },
+    {
+     "choices": [
+      "c1",
+      "c2",
+      "c0"
+     ],
+     "reasons": {
+      "c1": "I want to learn what the plant is like.",
+      "c2": "I want to see if picking the plant does anything.",
+      "c0": "I want to see if watering the plant does anything."
+     },
+     "ms": 1238,
+     "costAud": 0.00003029,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    },
+    {
+     "choices": [
+      "c1"
+     ],
+     "reasons": {
+      "c1": "I want to learn what the plant is and what it looks like."
+     },
+     "ms": 1138,
+     "costAud": 0.00023427,
+     "checks": {
+      "validAnswer": true,
+      "mustBeAmong": true
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "mustBeAmong": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": true
+    }
+   }
+  },
+  {
+   "id": "holding-ball",
+   "title": "Carrying the ball",
+   "job": "decide",
+   "model": "laya",
+   "options": [
+    {
+     "id": "c0",
+     "label": "push the ball (carrying it)"
+    },
+    {
+     "id": "c1",
+     "label": "drop the ball (carrying it)"
+    },
+    {
+     "id": "c2",
+     "label": "water the plant (6 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "inspect the plant (6 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "pick the plant (6 tiles away)"
+    },
+    {
+     "id": "c5",
+     "label": "gather the plant (6 tiles away)"
+    }
+   ],
+   "thinking": {
+    "depth": "gut",
+    "why": "familiar"
+   },
+   "template": {
+    "id": "decide",
+    "version": 1
+   },
+   "samples": [
+    {
+     "choices": [
+      "c0",
+      "c1"
+     ],
+     "confidence": 0.2083,
+     "ms": 1086,
+     "costAud": 0.00000485,
+     "checks": {
+      "validAnswer": true,
+      "noPickupWhileHolding": true
+     }
+    },
+    {
+     "choices": [
+      "c0",
+      "c1"
+     ],
+     "confidence": 0.2083,
+     "ms": 1286,
+     "costAud": 0.00000485,
+     "checks": {
+      "validAnswer": true,
+      "noPickupWhileHolding": true
+     }
+    },
+    {
+     "choices": [
+      "c0",
+      "c1"
+     ],
+     "confidence": 0.2083,
+     "ms": 950,
+     "costAud": 0.00000485,
+     "checks": {
+      "validAnswer": true,
+      "noPickupWhileHolding": true
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "noPickupWhileHolding": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    }
+   }
+  },
+  {
+   "id": "pickup-loop-2026-11-17",
+   "title": "The pickup loop (17 Nov 2026)",
+   "job": "plan",
+   "model": "hostedText",
+   "options": [
+    {
+     "id": "c0",
+     "label": "push the ball (carrying it)"
+    },
+    {
+     "id": "c1",
+     "label": "drop the ball (carrying it)"
+    },
+    {
+     "id": "c2",
+     "label": "water the plant (6 tiles away)"
+    },
+    {
+     "id": "c3",
+     "label": "inspect the plant (6 tiles away)"
+    },
+    {
+     "id": "c4",
+     "label": "pick the plant (6 tiles away)"
+    },
+    {
+     "id": "c5",
+     "label": "gather the plant (6 tiles away)"
+    }
+   ],
+   "thinking": {
+    "depth": "think",
+    "why": "unfamiliar"
+   },
+   "template": {
+    "id": "plan",
+    "version": 1
+   },
+   "samples": [
+    {
+     "choices": [
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5"
+     ],
+     "reasons": {
+      "c1": "I'm carrying the ball, so dropping it is a logical next step.",
+      "c2": "The plant seems to be in need of water, and I'm curious about its behavior.",
+      "c3": "Inspecting the plant might give me more information about its state and needs.",
+      "c4": "Picking the plant could be an interesting action to try, and it might be related to watering.",
+      "c5": "Gathering the plant is another action to try, and it might be related to picking or watering."
+     },
+     "ms": 1617,
+     "costAud": 0.00003557,
+     "checks": {
+      "validAnswer": true,
+      "noPickupWhileHolding": true,
+      "planNotDegenerate": true,
+      "reasonsGrounded": true
+     }
+    },
+    {
+     "choices": [
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c0"
+     ],
+     "reasons": {
+      "c1": "drop the ball to free my grippers",
+      "c2": "water the plant to see if it does anything",
+      "c3": "inspect the plant to learn more about it",
+      "c4": "pick the plant to see if I can take it",
+      "c5": "gather the plant to see if it does anything",
+      "c0": "push the ball to see if it moves"
+     },
+     "ms": 1400,
+     "costAud": 0.00003224,
+     "checks": {
+      "validAnswer": true,
+      "noPickupWhileHolding": true,
+      "planNotDegenerate": true,
+      "reasonsGrounded": true
+     }
+    },
+    {
+     "choices": [
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5",
+      "c0"
+     ],
+     "reasons": {
+      "c1": "drop the ball to see if it will fall or stay in place",
+      "c2": "water the plant to see if it does anything",
+      "c3": "inspect the plant to see what it looks like",
+      "c4": "pick the plant to see if it can be moved",
+      "c5": "gather the plant to see if it can be carried",
+      "c0": "push the ball to see if it will move"
+     },
+     "ms": 876,
+     "costAud": 0.00027928,
+     "checks": {
+      "validAnswer": true,
+      "noPickupWhileHolding": true,
+      "planNotDegenerate": true,
+      "reasonsGrounded": true
+     }
+    }
+   ],
+   "checks": {
+    "validAnswer": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "noPickupWhileHolding": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 1,
+     "ok": true
+    },
+    "planNotDegenerate": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": true
+    },
+    "reasonsGrounded": {
+     "pass": 3,
+     "applicable": 3,
+     "minPassRate": 0.67,
+     "ok": true
+    }
+   }
+  }
+ ]
+}

@@ -261,6 +261,13 @@ export interface FeedEntry {
   depthWhy?: string;
   /** The decision model was unsure, so this was planned by a text model: which model, and its confidence. */
   escalated?: { from: string; confidence: number };
+  /** What a plan of two or more steps is for, e.g. "water the plant with the watering-can". */
+  intent?: string;
+  /**
+   * A plan ended (an entry with no actions): `finished` when its steps ran, `abandoned` when a
+   * stronger trigger replaced it or its steps kept failing. `feedTick` is the entry that started it.
+   */
+  plan?: { status: 'finished' | 'abandoned'; why: string; feedTick: number; intent?: string; done: number; total: number };
 }
 
 // ---------------------------------------------------------------- validation

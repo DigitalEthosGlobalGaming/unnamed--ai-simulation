@@ -29,8 +29,8 @@ function longestStreak(keys: string[]): number {
   return best;
 }
 
-function week(seed: number, registry?: ReturnType<typeof buildRegistry>) {
-  const { world, minds } = mindWorld(seed, { brain: 'autopilot' }, undefined, registry);
+function week(seed: number, registry?: ReturnType<typeof buildRegistry>, staleHours?: number) {
+  const { world, minds } = mindWorld(seed, { brain: 'autopilot', ...(staleHours !== undefined && { staleHours }) }, undefined, registry);
   const keysByDay: string[][] = [];
   const dull: number[] = [];
   const tiers = new Set<string>();
@@ -63,7 +63,9 @@ function week(seed: number, registry?: ReturnType<typeof buildRegistry>) {
 
 describe('M3: a week on autopilot', () => {
   const run = week(7);
-  const control = week(7, noBoredom());
+  // Boredom on its own (no "nothing new" penalty), against the same with boredom switched off.
+  const bored = week(7, undefined, 0);
+  const control = week(7, noBoredom(), 0);
 
   it('survives the week: on autopilot it never thinks, so the battery never drops', () => {
     expect(run.minEnergy).toBeGreaterThan(0.2);
@@ -78,18 +80,18 @@ describe('M3: a week on autopilot', () => {
   });
 
   it('boredom steers it: after something gets dull it is repeated far less than without boredom', () => {
-    expect(run.dull.length).toBeGreaterThan(20);
-    const repeatAfterDull = run.switchedAfterDull.filter((x) => !x).length / run.switchedAfterDull.length;
+    expect(bored.dull.length).toBeGreaterThan(20);
+    const repeatAfterDull = bored.switchedAfterDull.filter((x) => !x).length / bored.switchedAfterDull.length;
     const keys = control.keysByDay.flat().filter((k) => !k.startsWith('moveTo') && k !== 'rest:dock');
     const repeatControl = keys.slice(1).filter((k, i) => k === keys[i]).length / (keys.length - 1);
-    console.log(`dull ${run.dull.length}x; repeated right after dull ${(repeatAfterDull * 100).toFixed(0)}%, control repeat rate ${(repeatControl * 100).toFixed(0)}%`);
+    console.log(`dull ${bored.dull.length}x; repeated right after dull ${(repeatAfterDull * 100).toFixed(0)}%, control repeat rate ${(repeatControl * 100).toFixed(0)}%`);
     // Iteration 2: sleeping (driven by sleep pressure, not boredom) now breaks up the day for both
     // runs, so the gap is smaller than in iteration 1 (where it was more than 20%).
     expect(repeatAfterDull).toBeLessThan(repeatControl * 0.9);
   });
 
   it('boredom is what breaks up long streaks (compared with boredom switched off)', () => {
-    const withB = longestStreak(run.keysByDay.flat());
+    const withB = longestStreak(bored.keysByDay.flat());
     const without = longestStreak(control.keysByDay.flat());
     console.log(`longest streak with boredom ${withB}, without ${without}`);
     expect(withB * 2).toBeLessThanOrEqual(without);

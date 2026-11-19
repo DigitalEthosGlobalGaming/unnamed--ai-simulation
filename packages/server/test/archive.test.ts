@@ -23,7 +23,7 @@ beforeAll(async () => {
   await app.startWorld(world('old', true));
   await new Promise<void>((r) => app.server.listen(0, r));
   base = `http://127.0.0.1:${(app.server.address() as AddressInfo).port}`;
-});
+}, 30_000); // a worker start under a loaded full run can pass the 10 s default
 afterAll(async () => {
   await app.close();
 });

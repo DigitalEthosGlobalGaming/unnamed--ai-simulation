@@ -1,7 +1,9 @@
 import {
+  checkCondition,
   manhattan,
   perceivedType,
   type Action,
+  type AnyEntity,
   type ArchetypeDef,
   type Candidate,
   type Character,
@@ -23,9 +25,9 @@ import {
   type Usage,
 } from '@uas/core';
 import type { SimPlugin, World } from '@uas/sim';
-import { buildCandidates, byValue, carrying, choose, confident, score } from './autopilot.ts';
+import { buildCandidates, byValue, carrying, choose, confident, guardUntil, lookOf, score } from './autopilot.ts';
 import { mindConfigOf, type MindConfig } from './config.ts';
-import { admit, hearsay, recall, updateBelief } from './memory.ts';
+import { admit, hearsay, mergeDuplicates, recall, updateBelief } from './memory.ts';
 import { band, clamp, computeMood, feltWord, round3, updateNeeds } from './needs.ts';
 import { buildPrompt, consolidateQuestion, freezePrefix, sheetQuestion, timeWord } from './prompt.ts';
 import { TEMPLATE_IDS, activeBody, activeTemplatesOf, type TemplateId } from './templates.ts';
@@ -56,7 +58,20 @@ const MAX_MODEL_OPTIONS = 6;
 const PLAN_VALID_SECONDS = 3600;
 /** Steps a single model answer may plan (3 go into the queue; the rest wait in planSteps). */
 const MAX_PLAN_STEPS = 6;
+/**
+ * A plan is a commitment: while busy with purposeful steps, only a trigger at least this salient
+ * (or a need emergency, a poke, or a failing plan) replaces it. Weaker ones wait for the plan's end.
+ */
+const PLAN_INTERRUPT = 0.8;
+const STRONG_KINDS: TriggerKind[] = ['need-threshold', 'admin-poke', 'woke-up'];
+/** Options scoring below this are pointless (a nap when not tired, wandering at night) and aren't offered to a model. */
+const POINTLESS = -0.5;
+/** Remembered `verb:target` looks (for "nothing changed since I last did this"). */
+const LAST_DONE_MAX = 40;
 const NOTE_RE = /\b[a-z]+-[A-G]\b/g;
+
+/** A decaying value, snapped to 0 once it is negligible. */
+const settle = (v: number) => (Math.abs(v) < 1e-4 ? 0 : v);
 
 const isRecord = (v: unknown): v is Record<string, Json> => !!v && typeof v === 'object' && !Array.isArray(v);
 
@@ -299,11 +314,13 @@ export class MindSystem implements SimPlugin {
     this.updatePressure(world, c, arch);
 
     this.interoception(world, c, arch);
-    m.mood.bias = round3(m.mood.bias * Math.pow(0.5, hours));
-    const mood = computeMood([c.energy, ...Object.values(c.needs)], m.mood.bias, isNight);
+    // Decay without rounding: at a quarter-second tick one tick's decay is far below 0.001, so
+    // rounding each tick froze the bias (a robot stayed "agitated" for hours, even asleep).
+    m.mood.bias = settle(m.mood.bias * Math.pow(0.5, hours));
+    const mood = computeMood([c.energy, ...Object.values(c.needs)], m.mood.bias, isNight, m.sleep === 'asleep');
     const changed = mood.word !== m.mood.word;
     Object.assign(m.mood, mood);
-    for (const item of m.openItems) item.weight = round3(item.weight * Math.pow(0.5, hours / 6));
+    for (const item of m.openItems) item.weight = settle(item.weight * Math.pow(0.5, hours / 6));
     m.openItems = m.openItems.filter((i) => i.weight >= 0.05);
 
     this.sleepCycle(world, c, arch, cfg, isNight);
@@ -324,6 +341,8 @@ export class MindSystem implements SimPlugin {
   private processOwnDeltas(world: World, c: Character, deltas: readonly Delta[], isNight: boolean): void {
     const m = c.mind!;
     let finished = false;
+    let resolved = false;
+    let repaired = false;
     for (const d of deltas) {
       if (d.kind !== 'action' || d.id !== c.id) continue;
       const target = d.action.targetId === undefined ? undefined : world.entity(d.action.targetId);
@@ -340,7 +359,19 @@ export class MindSystem implements SimPlugin {
         case 'done':
         case 'failed': {
           finished = true;
+          resolved = true;
           const objectType = target?.kind === 'object' ? perceivedType(target) : undefined;
+          if (d.status === 'done' && target?.kind === 'object' && d.action.targetId && d.action.verb !== 'moveTo') this.noteDone(world, m, d.action.verb, target);
+          // A failure it can repair (fetch the missing thing, try again) doesn't count against the plan.
+          const fixing: boolean = d.status === 'failed' && !repaired && this.repair(world, c, d.action, target, d.reason);
+          repaired ||= fixing;
+          if (m.plan && d.action.verb !== 'moveTo' && !fixing) {
+            if (d.status === 'done') m.plan.done++;
+            else {
+              m.plan.failed++;
+              m.plan.lastFailure = `${d.action.verb}${target ? ` the ${perceivedType(target)}` : ''}: ${d.reason ?? 'it did not work'}`;
+            }
+          }
           if (objectType) this.countFailure(world, m, `${d.action.verb}:${objectType}`, d.status === 'failed');
           if (d.status === 'done') this.trackCarrying(world, c, d.action, objectType);
           if (d.action.verb === 'vocalize' && Array.isArray(d.action.args?.notes)) {
@@ -351,13 +382,20 @@ export class MindSystem implements SimPlugin {
             this.outcome(world, c, d.action.verb, objectType, d.observation ?? d.reason ?? '', isNight);
           }
           // A failed step doesn't throw away the valid steps after it: only re-think when nothing is left.
-          if (d.status === 'failed' && !c.current && c.queue.length === 0) m.triggers.push({ kind: 'action-rejected', tick: world.tick, salience: 0.5, detail: d.reason });
+          if (d.status === 'failed' && !c.current && c.queue.length === 0 && !m.planSteps?.actions.length) m.triggers.push({ kind: 'action-rejected', tick: world.tick, salience: 0.5, detail: d.reason });
           m.actionStart = undefined;
           break;
         }
         case 'rejected': {
+          resolved = true;
+          const fixing: boolean = !repaired && this.repair(world, c, d.action, target, d.reason);
+          repaired ||= fixing;
+          if (m.plan && !fixing) {
+            m.plan.failed++;
+            m.plan.lastFailure = `${d.action.verb}${target ? ` the ${perceivedType(target)}` : ''}: ${d.reason ?? 'rejected'}`;
+          }
           if (target?.kind === 'object') this.countFailure(world, m, `${d.action.verb}:${perceivedType(target)}`, true);
-          if (!c.current && c.queue.length === 0) m.triggers.push({ kind: 'action-rejected', tick: world.tick, salience: 0.6, detail: d.reason });
+          if (!c.current && c.queue.length === 0 && !m.planSteps?.actions.length) m.triggers.push({ kind: 'action-rejected', tick: world.tick, salience: 0.6, detail: d.reason });
           if (d.reason?.startsWith('no such target') && d.action.targetId) delete m.known[d.action.targetId];
           this.openItem(world, m, 'unfinished', `I could not ${d.action.verb}${target ? ` the ${perceivedType(target)}` : ''}: ${d.reason}`, d.action.verb);
           this.diary(world, c, `tried to ${d.action.verb} but ${d.reason}`);
@@ -367,7 +405,9 @@ export class MindSystem implements SimPlugin {
           break;
       }
     }
-    if (finished && !c.current && c.queue.length === 0) {
+    // A plan whose steps keep failing (and can't be repaired) is no longer a commitment.
+    if (m.plan && m.plan.failed > 0 && !repaired && m.plan.failed >= Math.max(1, m.plan.done)) m.plan.failing = true;
+    if (resolved && !c.current && c.queue.length === 0) {
       if (m.planSteps && m.planSteps.untilTick > world.tick && m.planSteps.actions.length > 0) {
         // Keep following the plan: one model call covers several steps.
         const next = m.planSteps.actions.splice(0, 3);
@@ -375,9 +415,84 @@ export class MindSystem implements SimPlugin {
         this.queue(world, c, next, 'action-finished', 'carry-on', {}, true);
       } else {
         m.planSteps = undefined;
-        m.triggers.push({ kind: 'action-finished', tick: world.tick, salience: 0.3 });
+        if (m.plan) {
+          const p = m.plan;
+          const ok = p.done > 0 && p.done >= p.failed;
+          const why = !p.failed ? 'all steps done' : ok ? `done; ${p.failed} step${p.failed > 1 ? 's' : ''} did not work (${p.lastFailure})` : `its steps did not work (${p.lastFailure})`;
+          this.endPlan(world, c, ok ? 'finished' : 'abandoned', why);
+        }
+        if (finished) m.triggers.push({ kind: 'action-finished', tick: world.tick, salience: 0.3 });
+        // What came up while it was busy gets its turn now.
+        if (m.deferred) {
+          m.triggers.push({ ...m.deferred, tick: world.tick });
+          m.deferred = undefined;
+        }
       }
     }
+  }
+
+  /** Remember how a thing looked when it last did this to it (for "nothing has changed since"). */
+  private noteDone(world: World, m: MindState, verb: string, target: AnyEntity): void {
+    const done = { ...(m.lastDone ?? {}), [`${verb}:${target.id}`]: { tick: world.tick, look: lookOf(target) } };
+    const keys = Object.keys(done);
+    if (keys.length > LAST_DONE_MAX) {
+      const oldest = keys.sort((a, b) => done[a]!.tick - done[b]!.tick || (a < b ? -1 : 1)).slice(0, keys.length - LAST_DONE_MAX);
+      for (const k of oldest) delete done[k];
+    }
+    m.lastDone = done;
+  }
+
+  /**
+   * A plan step failed because it needs something in the grippers (schema-2 `requires.holding`):
+   * if a matching thing is known and free, fetch it (put down what it holds first), then try the
+   * step again and carry on with the rest of the plan. Once per step.
+   */
+  private repair(world: World, c: Character, action: Action, target: AnyEntity | undefined, reason: string | undefined): boolean {
+    const m = c.mind!;
+    if (action.args?.repaired === true || target?.kind !== 'object' || reason === 'out of range') return false;
+    const need = world.registry.objects.get(target.type)?.def2?.verbs[action.verb]?.requires?.holding;
+    if (!need) return false;
+    const fits = (e: AnyEntity) =>
+      e.kind === 'object' && e.id !== target.id && (!need.type || e.type === need.type) && (!need.tag || e.tags.includes(need.tag)) && (!need.state || checkCondition(need.state, e.state));
+    const held = world.entities().find((e) => e.heldBy === c.id);
+    if (held && fits(held)) return false; // holding the right thing: it failed for another reason
+    const item = world
+      .entities()
+      .filter((e) => fits(e) && e.heldBy === undefined && m.known[e.id])
+      .sort((a, b) => manhattan(a.pos, c.pos) - manhattan(b.pos, c.pos) || (a.id < b.id ? -1 : 1))[0];
+    if (!item) return false;
+    const what = perceivedType(item);
+    const why = `I need the ${what} to ${action.verb} the ${perceivedType(target)}`;
+    const { approached: _a, ...args } = action.args ?? {};
+    const steps: Action[] = [
+      ...(held ? [{ verb: 'drop', targetId: held.id, reason: `I put down the ${perceivedType(held)}: ${why}` }] : []),
+      { verb: 'moveTo', targetId: item.id, reason: `fetching the ${what}` },
+      { verb: 'pickup', targetId: item.id, reason: why },
+      { ...action, args: { ...args, repaired: true } },
+    ];
+    const rest = [...c.queue, ...(m.planSteps?.actions ?? [])];
+    const all = [...steps, ...rest].slice(0, MAX_PLAN_STEPS + 3);
+    const tier = m.planSteps?.tier ?? 'decision';
+    this.queue(world, c, all, 'action-rejected', 'carry-on', { reason: `repair: ${why}`, ...(m.plan?.intent && { intent: m.plan.intent }) }, true, 'moved into a repair');
+    m.planSteps = all.length > 3 ? { actions: all.slice(3), untilTick: world.tick + Math.round(PLAN_VALID_SECONDS / world.state.config.secondsPerTick), tier } : undefined;
+    if (m.plan) m.plan.repairs++;
+    this.diary(world, c, `could not ${action.verb} the ${perceivedType(target)}, so I went to get the ${what}`);
+    return true;
+  }
+
+  /** A plan ends: a feed line for the viewer ("finished" or "abandoned", and why). */
+  private endPlan(world: World, c: Character, status: 'finished' | 'abandoned', why: string): void {
+    const p = c.mind!.plan;
+    if (!p) return;
+    c.mind!.plan = undefined;
+    this.feed(world, {
+      tick: world.tick,
+      characterId: c.id,
+      trigger: 'action-finished',
+      tier: 'carry-on',
+      actions: [],
+      plan: { status, why: why.slice(0, 200), feedTick: p.feedTick, ...(p.intent && { intent: p.intent }), done: p.done, total: p.total },
+    });
   }
 
   /** Feel an action's outcome: the need change since it started becomes a draft memory. */
@@ -464,7 +579,8 @@ export class MindSystem implements SimPlugin {
     const arch = world.archetype(c.type)!;
     const cap = Math.max(2, Math.round(arch.mind.stmSize * (c.energy < 0.2 ? 0.5 : 1)));
     const store = mem.store === 'stm' ? m.stm : m.ltm;
-    const { admitted, evicted } = admit(store, mem, mem.store === 'stm' ? cap : this.ltmCapacity(m, arch), world.tick, this.ticksPerDay(world), arch.mind);
+    const { admitted, evicted, merged } = admit(store, mem, mem.store === 'stm' ? cap : this.ltmCapacity(m, arch), world.tick, this.ticksPerDay(world), arch.mind);
+    if (merged) world.emit({ kind: 'memory', id: c.id, memory: structuredClone(merged) });
     if (!admitted) return;
     if (mem.store === 'stm') m.unsettled = (m.unsettled ?? 0) + 1;
     world.emit({ kind: 'memory', id: c.id, memory: structuredClone(mem), ...(evicted && { evicted: evicted.id }) });
@@ -634,15 +750,17 @@ export class MindSystem implements SimPlugin {
     const cfg = mindConfigOf(world.state.ext);
     m.sleepWork = undefined;
     this.sleepStep(world, c, 'consolidating', 0, m.stm.length);
-    // Code part of consolidation: memories worth keeping move to long-term memory.
+    // Code part of consolidation: memories worth keeping move to long-term memory. A repeat of
+    // something already there is merged into it with a count ("… (×6)"), not kept twice.
+    for (const { kept, removed } of mergeDuplicates(m.ltm)) world.emit({ kind: 'memory', id: c.id, memory: structuredClone(kept), evicted: removed.id });
     let moved = 0;
     for (const mem of [...m.stm]) {
       if (mem.recallDays.length >= 2 || mem.strength >= 0.7) {
         const promoted: Memory = { ...structuredClone(mem), store: 'ltm' };
-        const { admitted } = admit(m.ltm, promoted, this.ltmCapacity(m, arch), world.tick, this.ticksPerDay(world), arch.mind);
-        if (admitted) {
+        const { admitted, merged } = admit(m.ltm, promoted, this.ltmCapacity(m, arch), world.tick, this.ticksPerDay(world), arch.mind);
+        if (admitted || merged) {
           m.stm = m.stm.filter((x) => x.id !== mem.id);
-          world.emit({ kind: 'memory', id: c.id, memory: structuredClone(promoted) });
+          world.emit({ kind: 'memory', id: c.id, memory: structuredClone(merged ?? promoted) });
           moved++;
         }
       }
@@ -807,6 +925,11 @@ export class MindSystem implements SimPlugin {
     if (m.sleep === 'asleep') return;
     const busy = !!c.current || c.queue.length > 0;
     if (busy && top.salience < arch.mind.wakeThreshold) return; // carry on
+    // A plan is a commitment: a weaker trigger is noted and considered when the plan ends.
+    if (this.committed(c) && !(top.salience >= PLAN_INTERRUPT || STRONG_KINDS.includes(top.kind) || m.plan?.failing)) {
+      if (!m.deferred || top.salience > m.deferred.salience) m.deferred = { kind: top.kind, tick: top.tick, salience: top.salience, ...(top.detail && { detail: top.detail }) };
+      return;
+    }
     const pending = m.pendingJobs.find((j) => j.job === 'decide' || j.job === 'vocalize');
     if (pending) {
       // Only a clearly salient new situation replaces a pending decision (the host's queue
@@ -847,6 +970,16 @@ export class MindSystem implements SimPlugin {
       return;
     }
     this.autopilot(world, c, arch, cfg, isNight, top.kind, 'autopilot', scored, undefined, { depth: 'habit', depthWhy: why });
+  }
+
+  /**
+   * Busy with something it chose on purpose: a plan, or queued steps that use a thing (not just
+   * waiting, wandering or a walk). Looking around is for finding things, so it stays interruptible.
+   */
+  private committed(c: Character): boolean {
+    const m = c.mind!;
+    if (m.plan && (c.current || c.queue.length > 0 || m.planSteps?.actions.length)) return true;
+    return [c.current?.action, ...c.queue].some((a) => !!a && !!a.targetId && a.verb !== 'moveTo' && !REST_VERBS.has(a.verb));
   }
 
   /**
@@ -921,11 +1054,15 @@ export class MindSystem implements SimPlugin {
     this.queue(world, c, actions, trigger, tier, { ...(reason && { reason }), ...extra });
   }
 
-  private queue(world: World, c: Character, actions: Action[], trigger: TriggerKind, tier: FeedEntry['tier'], extra: Partial<FeedEntry> = {}, keepPlan = false): void {
-    if (!keepPlan) c.mind!.planSteps = undefined;
+  private queue(world: World, c: Character, actions: Action[], trigger: TriggerKind, tier: FeedEntry['tier'], extra: Partial<FeedEntry> = {}, keepPlan = false, closeAs = 'replaced by a newer decision'): void {
+    if (!keepPlan) {
+      c.mind!.planSteps = undefined;
+      // A new decision replaces the plan it was committed to.
+      if (c.mind!.plan) this.endPlan(world, c, 'abandoned', `replaced: ${trigger}${c.mind!.plan.failing ? ' (its steps were failing)' : ''}`);
+    }
     c.mind!.idle = actions.length > 0 && actions.every((a) => a.verb === 'wait');
     // Steps of the previous entry that never resolved are dropped for this decision.
-    this.closeFeedSteps(world, c, 'superseded', 'replaced by a newer decision');
+    this.closeFeedSteps(world, c, 'superseded', closeAs);
     world.replaceQueue(c, actions.slice(0, 3));
     c.mind!.feedSteps = { tick: world.tick, steps: actions.slice(0, 3).map((a) => ({ verb: a.verb, ...(a.targetId && { targetId: a.targetId }), open: true })) };
     this.feed(world, {
@@ -953,6 +1090,7 @@ export class MindSystem implements SimPlugin {
     const actions: Action[] = [];
     const rejected: FeedEntry['actions'] = [];
     const used = new Set<string>();
+    const picked: Candidate[] = [];
     for (const ch of choices) {
       if (used.has(String(ch.id))) continue; // a repeated choice is not a second step
       used.add(String(ch.id));
@@ -968,7 +1106,12 @@ export class MindSystem implements SimPlugin {
       if (actions.length > 0 && (actions[0]!.verb === 'wait' || (actions[0]!.verb === 'rest' && !actions[0]!.targetId))) break;
       const reason = typeof reasons[cand.id] === 'string' ? (reasons[cand.id] as string) : `I chose to ${cand.label.replace(/ \(.*\)$/, '')}`;
       actions.push(...cand.actions.map((a) => ({ ...a, reason: a.reason || reason })));
+      picked.push(cand);
     }
+    // Two or more real steps make a plan: a commitment with an intent (its last purposeful step).
+    const purposeful = picked.filter((x) => x.key !== 'explore:self' && x.key !== 'wait:self' && x.key !== 'rest:self');
+    const isPlan = actions.filter((a) => a.verb !== 'moveTo').length >= 2 && purposeful.length > 0;
+    const intent = isPlan ? purposeful.at(-1)!.label.replace(/ \(.*\)$/, '') : undefined;
     const tier = (['local', 'decision', 'llm'] as const).find((t) => t === answer.tier) ?? 'decision';
     const extra: Partial<FeedEntry> = {
       ...thinking,
@@ -985,7 +1128,8 @@ export class MindSystem implements SimPlugin {
       this.feed(world, { tick: world.tick, characterId: c.id, trigger, tier, actions: rejected, ...extra });
       return;
     }
-    this.queue(world, c, actions, trigger, tier, extra);
+    this.queue(world, c, actions, trigger, tier, { ...extra, ...(intent && { intent }) });
+    if (isPlan) c.mind!.plan = { feedTick: world.tick, ...(intent && { intent }), total: actions.filter((a) => a.verb !== 'moveTo').length, done: 0, failed: 0, repairs: 0 };
     if (actions.length > 3) {
       const ticks = Math.round(PLAN_VALID_SECONDS / world.state.config.secondsPerTick);
       c.mind!.planSteps = { actions: actions.slice(3), untilTick: world.tick + ticks, tier };
@@ -1179,7 +1323,7 @@ export class MindSystem implements SimPlugin {
     if (!held) return;
     if (verb === 'drop' && action.targetId === held.id) {
       if (!held.used) {
-        m.failures = { ...(m.failures ?? {}), [`pickup:${held.type}`]: { n: 2, tick: world.tick } };
+        this.guard(world, m, `pickup:${held.type}`);
         this.openItem(world, m, 'question', `I picked up the ${held.type} and put it down without using it. What is it for?`, `pickup:${held.type}`);
         this.diary(world, c, `picked up the ${held.type} and put it down again without using it`);
       }
@@ -1197,10 +1341,25 @@ export class MindSystem implements SimPlugin {
   /** Loop protection: count failures in a row per option; a success clears them. */
   private countFailure(world: World, m: MindState, key: string, failed: boolean): void {
     const f = { ...(m.failures ?? {}) };
-    if (failed) f[key] = { n: (f[key]?.n ?? 0) + 1, tick: world.tick };
+    // A guard that has run out starts the count again (so the next guard can fire, and be longer).
+    if (f[key]?.until !== undefined && world.tick >= f[key]!.until!) delete f[key];
+    if (failed) f[key] = { ...f[key], n: (f[key]?.n ?? 0) + 1, tick: world.tick };
     else delete f[key];
     if (Object.keys(f).length) m.failures = f;
     else delete m.failures;
+    if (failed && f[key]!.n === 2) this.guard(world, m, key);
+  }
+
+  /**
+   * A loop guard fires: the option is set aside, for longer each time it fires that in-world day
+   * (10 minutes, then an hour, then the rest of the day), so a loop can't simply resume after it.
+   */
+  private guard(world: World, m: MindState, key: string): void {
+    const day = world.day;
+    const loops = Object.fromEntries(Object.entries(m.loops ?? {}).filter(([, v]) => v.day === day));
+    const count = (loops[key]?.count ?? 0) + 1;
+    m.loops = { ...loops, [key]: { count, day } };
+    m.failures = { ...(m.failures ?? {}), [key]: { n: Math.max(2, m.failures?.[key]?.n ?? 0), tick: world.tick, until: guardUntil(world, count) } };
   }
 
   private charge(world: World, c: Character, usage: Usage): number {
@@ -1261,7 +1420,12 @@ function roundAll(v: Record<string, number>): Record<string, number> {
 
 /** The most relevant options for a decision model: top by utility, plus the best untried one for curiosity. */
 function modelOptions(scored: ReturnType<typeof score>): Candidate[] {
-  const ranked = [...scored].sort(byValue);
+  // A repeat on an unchanged thing that is worth nothing isn't offered: a model would happily scan
+  // the same mailbox three times in a row (it only sees the list, not that nothing changed).
+  // Nor is a clearly pointless one (a nap right after waking, looking around in the dark): a
+  // decision model picks from the list and sometimes takes those.
+  const useful = scored.filter((s) => !(s.candidate.stale && s.value <= 0) && s.value > POINTLESS);
+  const ranked = [...(useful.length >= 2 ? useful : scored)].sort(byValue);
   const pick = ranked.slice(0, MAX_MODEL_OPTIONS);
   const untried = ranked.find((s) => !s.believed);
   if (untried && !pick.includes(untried)) pick[pick.length - 1] = untried;

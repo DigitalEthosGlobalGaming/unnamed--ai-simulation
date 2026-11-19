@@ -11,6 +11,46 @@ export function worth(m: Memory, tick: number, ticksPerDay: number, t: MindTunin
   return m.strength * (1 + t.recallAlpha * Math.log(1 + m.recalls)) * Math.pow(0.5, dt / halfLife);
 }
 
+const COUNT_RE = / \(×\d+\)$/;
+/** The memory's text without its "(×n)" count. */
+export const baseText = (m: Pick<Memory, 'text'>) => m.text.replace(COUNT_RE, '');
+
+/**
+ * Fold `mem` into `into` (the same thing happened again): one memory with a count, a little
+ * stronger for each repeat, recalls added, its time the newer one.
+ */
+export function mergeInto(into: Memory, mem: Memory): void {
+  const count = (into.count ?? 1) + (mem.count ?? 1);
+  into.count = count;
+  into.text = `${baseText(into)} (×${count})`;
+  into.strength = round3(Math.min(1, Math.max(into.strength, mem.strength) + 0.02 * (mem.count ?? 1)));
+  into.recalls += mem.recalls;
+  into.recallDays = [...new Set([...into.recallDays, ...mem.recallDays])].sort((a, b) => a - b);
+  into.lastRecallTick = Math.max(into.lastRecallTick, mem.lastRecallTick);
+  into.valence = round3((into.valence * (count - (mem.count ?? 1)) + mem.valence * (mem.count ?? 1)) / count);
+}
+
+/** The long-term duplicate of `mem`: same subject (verb, thing, time of day) and the same text. */
+export function duplicateOf(store: Memory[], mem: Memory): Memory | undefined {
+  const key = aboutKey(mem);
+  const text = baseText(mem);
+  return store.find((m) => m !== mem && aboutKey(m) === key && baseText(m) === text);
+}
+
+/** Merge near-duplicates already in a store (sleep consolidation; older worlds kept every copy). */
+export function mergeDuplicates(store: Memory[]): { kept: Memory; removed: Memory }[] {
+  const merged: { kept: Memory; removed: Memory }[] = [];
+  for (let i = 0; i < store.length; i++) {
+    const m = store[i]!;
+    const first = store.slice(0, i).find((x) => aboutKey(x) === aboutKey(m) && baseText(x) === baseText(m));
+    if (!first) continue;
+    mergeInto(first, m);
+    store.splice(i--, 1);
+    merged.push({ kept: first, removed: m });
+  }
+  return merged;
+}
+
 /**
  * Competitive admission. If the store (or this subject's ceiling) is full the new memory
  * must out-score the weakest, which is evicted. Returns the evicted id, true, or false.
@@ -22,7 +62,15 @@ export function admit(
   tick: number,
   ticksPerDay: number,
   t: MindTuning,
-): { admitted: boolean; evicted?: Memory } {
+): { admitted: boolean; evicted?: Memory; merged?: Memory } {
+  // Long-term memory keeps one copy of a repeated experience, with a count.
+  if (mem.store === 'ltm') {
+    const dup = duplicateOf(store, mem);
+    if (dup) {
+      mergeInto(dup, mem);
+      return { admitted: false, merged: dup };
+    }
+  }
   const key = aboutKey(mem);
   const sameSubject = store.filter((m) => aboutKey(m) === key);
   const pool = sameSubject.length >= t.subjectCeiling ? sameSubject : store.length >= capacity ? store : [];

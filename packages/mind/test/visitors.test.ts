@@ -38,7 +38,11 @@ describe('visitors and the mind', () => {
     const known = m.known['drop-d1'];
     expect(known?.type).toBe('thing-metal-small');
     expect(known?.affordances).toEqual(expect.arrayContaining(['eat', 'pickup', 'scan']));
-    const sensed = t.deltas.some((d) => d.kind === 'feed' && d.entry.trigger === 'sensed') || m.triggers.some((x) => x.kind === 'sensed' && x.detail?.includes('thing-metal-small'));
+    // Acted on now, or (busy with a plan) noted for when the plan ends.
+    const sensed =
+      t.deltas.some((d) => d.kind === 'feed' && d.entry.trigger === 'sensed') ||
+      m.triggers.some((x) => x.kind === 'sensed' && x.detail?.includes('thing-metal-small')) ||
+      (m.deferred?.kind === 'sensed' && m.deferred.detail?.includes('thing-metal-small'));
     expect(sensed).toBe(true);
     // Its name and description never reach the mind.
     expect(JSON.stringify(m)).not.toContain('Battery snack');

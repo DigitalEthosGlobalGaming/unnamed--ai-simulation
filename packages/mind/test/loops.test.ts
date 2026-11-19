@@ -70,20 +70,39 @@ describe('behaviour loops', () => {
     expect(t.world.entity('ball')!.heldBy).toBeUndefined();
   });
 
-  it('an option that fails twice in a row is set aside for a while', () => {
+  it('an option that fails twice in a row is set aside, longer each time that day (10 min, 1 h, the rest of the day)', () => {
     const t = setup();
     const m = () => t.robot().mind!;
+    const spt = t.world.state.config.secondsPerTick;
     t.decide(act('pickup', 'ball'));
     t.until((d) => d.kind === 'action' && d.action.verb === 'pickup' && d.status === 'done');
-    t.decide(act('pickup', 'ball'));
-    t.run(15);
-    expect(m().failures?.['pickup:ball']?.n).toBe(1);
-    t.decide(act('pickup', 'ball'));
-    t.run(15);
+    const failTwice = () => {
+      if (t.world.entity('ball')!.heldBy !== 'robot') {
+        t.decide(act('pickup', 'ball'));
+        t.until((d) => d.kind === 'action' && d.action.verb === 'pickup' && d.status === 'done', 400);
+      }
+      for (let i = 0; i < 2; i++) {
+        t.decide(act('pickup', 'ball'));
+        t.until((d) => d.kind === 'action' && d.action.verb === 'pickup' && d.status === 'failed');
+      }
+    };
+    const left = () => (m().failures!['pickup:ball']!.until! - t.world.tick) * spt; // in-world seconds
+    failTwice();
     expect(setAside(t.world, m(), 'pickup:ball')).toBe(true);
+    expect(left()).toBeGreaterThan(560);
+    expect(left()).toBeLessThanOrEqual(600);
     // Ten in-world minutes later it may be tried again.
-    t.run(Math.ceil(600 / t.world.state.config.secondsPerTick) + 1);
+    t.run(Math.ceil(600 / spt) + 1);
     expect(setAside(t.world, m(), 'pickup:ball')).toBe(false);
+    // The second time today: an hour; the third: the rest of the in-world day.
+    failTwice();
+    expect(left()).toBeGreaterThan(3500);
+    expect(left()).toBeLessThanOrEqual(3600);
+    m().failures!['pickup:ball']!.until = t.world.tick; // skip ahead
+    failTwice();
+    expect(left()).toBeGreaterThan(3600);
+    expect(left()).toBeLessThanOrEqual(86_400);
+    expect(m().loops?.['pickup:ball']?.count).toBe(3);
   });
 
   it('waiting again after a wait, with nothing new, goes to autopilot without a model call', () => {
@@ -159,8 +178,9 @@ describe('behaviour loops', () => {
     const u = setup();
     u.decide(act('pickup', 'ball'), act('push', 'ball'));
     u.until((d) => d.kind === 'action' && d.action.verb === 'push' && d.status === 'done');
-    u.decide(act('pickup', 'ball'), act('chase', 'ball'));
-    u.run(60);
+    // The ball rolled away: it walks to it, picks it up and tosses it again.
+    u.decide(act('pickup', 'ball'), act('push', 'ball'));
+    u.until((d) => d.kind === 'action' && d.action.verb === 'push' && d.status === 'done' && d.action.args === undefined, 400);
     expect(setAside(u.world, u.robot().mind!, 'pickup:ball')).toBe(false);
   });
 });

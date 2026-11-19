@@ -69,15 +69,27 @@ describe('world', () => {
     expect(ds).toContainEqual({ kind: 'needs', id: 'bot', values: { fun: 1 } }); // the effect's energy is ignored: actions never change the battery
   });
 
-  it('rejects out-of-range verbs, unknown verbs, bad notes and a 4th queued action', () => {
+  it('rejects unknown verbs, bad notes and a 4th queued action', () => {
     const t = setup(['.....']);
-    t.input('admin.spawn', { id: 'rock', type: 'rock', pos: { x: 4, y: 0 } });
-    t.decide(a('kick', { targetId: 'rock' }), a('dance', { targetId: 'rock' }), a('vocalize', { args: { notes: ['beep-C', 'beep-D', 'beep-C'] } }), a('wait'));
+    t.input('admin.spawn', { id: 'rock', type: 'rock', pos: { x: 1, y: 0 } });
+    t.decide(a('dance', { targetId: 'rock' }), a('vocalize', { args: { notes: ['beep-C', 'beep-D', 'beep-C'] } }), a('wait'), a('wait'));
     const s = t.statuses(t.run(2));
     expect(s).toContain('wait:rejected:queue holds at most 3 actions');
-    expect(s).toContain('kick:rejected:out of range');
     expect(s).toContain('dance:rejected:rock has no verb dance');
     expect(s).toContain('vocalize:rejected:at most 2 notes');
+  });
+
+  it('walks to an out-of-range target before its verb, once; an unreachable one stays out of range', () => {
+    const t = setup(['.....']);
+    t.input('admin.spawn', { id: 'rock', type: 'rock', pos: { x: 4, y: 0 } });
+    t.decide(a('kick', { targetId: 'rock' }));
+    const ds = t.run(30);
+    expect(t.statuses(ds)).toEqual(['kick:queued', 'moveTo:started', 'moveTo:done', 'kick:started', 'kick:done']);
+    expect(t.world.entity('bot')!.pos).toEqual({ x: 3, y: 0 });
+    const walled = setup(['..#..']);
+    walled.input('admin.spawn', { id: 'rock', type: 'rock', pos: { x: 4, y: 0 } });
+    walled.decide(a('kick', { targetId: 'rock' }));
+    expect(walled.statuses(walled.run(3))).toContain('kick:rejected:out of range');
   });
 
   it('rejects unwalkable destinations and unreachable targets', () => {

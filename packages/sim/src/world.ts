@@ -487,8 +487,25 @@ export class World implements WorldView {
       const action = c.queue.shift()!;
       const reason = this.begin(c, action);
       if (reason) this.actionDelta(c, action, 'rejected', reason);
-      else this.actionDelta(c, action, 'started');
+      // `begin` may have started a walk towards the target first (see `approach`).
+      else this.actionDelta(c, c.current!.action, 'started');
     }
+  }
+
+  /**
+   * The executor walks to an out-of-range target before using it: a plan step chosen from
+   * somewhere else ("play the piano" after "go and look around") would otherwise be rejected.
+   * The step goes back to the head of the queue, marked so it walks only once; a target it
+   * can't reach, or one someone holds, stays "out of range".
+   */
+  private approach(c: Character, action: Action, target: AnyEntity): boolean {
+    if (action.args?.approached === true || target.heldBy !== undefined) return false;
+    const walk: Action = { verb: 'moveTo', targetId: target.id, reason: action.reason || `heading to the ${target.type}`, args: { approach: true } };
+    const path = this.planMove(c, walk);
+    if (typeof path === 'string' || path.length === 0) return false;
+    c.queue.unshift({ ...action, args: { ...action.args, approached: true } });
+    c.current = { action: walk, startedTick: this.state.tick, path, nextStepTick: this.state.tick + this.state.config.moveTicksPerTile };
+    return true;
   }
 
   /** Validate and start an action. Returns a rejection reason, or undefined on success. */
@@ -500,7 +517,7 @@ export class World implements WorldView {
     const verbDef = this.verbDefOf(target, action.verb);
     if (verbDef && !this.registry.handlers.has(verbDef.handler) && !BUILT_IN_HANDLERS.has(verbDef.handler)) return `${action.verb} does not work here`;
     if (target && verbDef) {
-      if (this.reach(c, target) > verbDef.range) return 'out of range';
+      if (this.reach(c, target) > verbDef.range) return this.approach(c, action, target) ? undefined : 'out of range';
       c.current = { action, startedTick: tick, endsTick: tick + this.scaled(verbDef.durationTicks) };
       return;
     }

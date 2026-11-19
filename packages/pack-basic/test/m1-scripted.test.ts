@@ -12,7 +12,7 @@ const act = (verb: string, targetId?: string, args?: Action['args']): Action => 
 
 /** Every object verb in the pack, plus a rejection and every built-in. */
 const PLANS: Action[][] = [
-  [act('water', 'plant')], // rejected: out of range
+  [act('water', 'plant')], // out of range: it walks there first, then fails (no watering can yet)
   // The gardening loop (iteration 2): fill the can at the fountain, water the plant, plant a seed.
   [act('moveTo', 'can'), act('pickup', 'can'), act('moveTo', 'fountain')],
   [act('fill', 'fountain'), act('moveTo', 'plant'), act('water', 'plant')],
@@ -80,8 +80,8 @@ describe('M1: scripted robot in the garden', () => {
       'fountain.rinse', 'fountain.splash', 'fountain.scan',
       'piano.play', 'piano.press', 'piano.scan',
     ]) expect(done, v).toContain(v);
-    const failed = a.deltas.filter((d) => d.kind === 'action' && d.status === 'failed');
-    expect(failed).toEqual([]);
+    const failed = a.deltas.flatMap((d) => (d.kind === 'action' && d.status === 'failed' ? [`${d.action.verb}:${d.reason}`] : []));
+    expect(failed).toEqual(['water:you need a watering can with water in it']);
   });
 
   it('moves the character along paths and runs the built-ins', () => {
@@ -93,7 +93,10 @@ describe('M1: scripted robot in the garden', () => {
 
   it('feeds rejections back as events', () => {
     const rejected = a.deltas.filter((d) => d.kind === 'action' && d.status === 'rejected');
-    expect(rejected.map((d) => d.kind === 'action' && d.reason)).toEqual(['out of range', 'unknown note "honk-C"']);
+    expect(rejected.map((d) => d.kind === 'action' && d.reason)).toEqual(['unknown note "honk-C"']);
+    // The out-of-range first step was walked to, not rejected.
+    const first = a.deltas.filter((d) => d.kind === 'action' && (d.action.verb === 'water' || d.action.args?.approach === true)).slice(0, 4);
+    expect(first.map((d) => d.kind === 'action' && `${d.action.verb}:${d.status}`)).toEqual(['water:queued', 'moveTo:started', 'moveTo:done', 'water:started']);
   });
 
   it('fills the can, waters the plant and plants a seed (schema-2 blocks); the battery never moves', () => {

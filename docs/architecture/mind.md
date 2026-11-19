@@ -51,10 +51,10 @@ Felt words: `very low` < 0.1 ≤ `low` < 0.25 ≤ `quite low` < 0.45 ≤ `okay` 
 Valence (−1..1) and arousal (0..1), recomputed every tick from all need levels plus the battery, a mood `bias`, and day or night:
 
 - `valence = (mean level − 0.5) × 1.6 + bias`
-- `arousal = 0.3 + 0.7 × (1 − lowest level)² + |bias| × 0.5`, minus 0.2 at night or plus 0.1 by day
+- `arousal = 0.3 + 0.7 × (1 − lowest level)² + |bias| × 0.5`, minus 0.2 at night or plus 0.1 by day; asleep it is at most 0.2 (sleep is calm)
 - A 3 × 3 grid maps them to a word: `gloomy, unhappy, agitated / sleepy, okay, restless / content, happy, excited`.
 
-`bias` is lowered by boredom penalties and decays with a one-hour half-life. Appraisals don't feed mood directly.
+`bias` is lowered by boredom penalties and decays with a one-hour half-life. Appraisals don't feed mood directly. The decay (like open items' six-hour fade) is stored unrounded: at a quarter-second tick one tick's decay is far below 0.001, and rounding it each tick froze the bias, so a robot stayed "agitated" for hours, even asleep with every need fine (fixed 19 Nov).
 
 ## Boredom
 
@@ -111,7 +111,8 @@ At each decision the brain chooses how hard to think, and records it in the feed
 `buildCandidates` ([`autopilot.ts`](../../packages/mind/src/autopilot.ts)) makes a bounded list of at most 12: each affordance of each known object, nearest first (with a `moveTo` prepended when out of range), plus `go and look around`, `go to sleep here` and `wait and watch`. `rest` options are labelled as sleep and say what sleep does, as the locked sheet line does ("go to sleep at the dock (recharges me, settles my memories; 4 tiles away)"), because a decision model doesn't see the sheet. They are scored from sleep pressure, not beliefs: `3.5 × (pressure − 0.4) + 0.5 × (1 − battery) × pressure`, so a nap when it isn't tired scores below waiting and exploration never picks one. Past pressure 0.5 every other positive value shrinks (× `1 − 0.5 × (pressure − 0.5)`): a tired robot is less keen on everything but sleep.
 
 - **Carrying.** Something the robot holds is labelled "(carrying it)"; it is offered `drop` and `push` (a toss) but not `pickup` or `chase`. While carrying anything, no `pickup` is offered (grippers full), and `drop` is offered only for what is carried. Prompts state what the robot is carrying (`carrying: the ball`, in the `state` part). An option whose verb needs something in the grippers (schema-2 `requires.holding`) and that matches what it holds names the held thing (`verbPhrase`): "fill the watering-can at the fountain" when the verb only changes the held item, "water the plant with the watering-can" when it changes both. Such options are marked `usesHeld`. **Near-ties favour using what it holds**: options are ranked (for autopilot, habits and the decision model's top 6) by value with `drop` treated as 0.02 lower and `usesHeld` options as 0.02 higher (`DROP_TIE`, 5 tiles of travel). Untried options otherwise differ only by travel, and the held thing is always 0 tiles away, so `drop` used to top every list. Values themselves are unchanged, so a belief or a need still decides.
-- **Loop protection.** Each `verb:type` that fails or is rejected counts up in `failures`; a success clears it. Two in a row set the option aside for 10 in-world minutes. A failed or rejected step no longer raises `action-rejected` while later steps are still queued, so a plan's valid steps still run.
+- **Loop protection.** Each `verb:type` that fails or is rejected counts up in `failures`; a success clears it. Two in a row fire a **guard**, and so does picking something up and putting it down without using it in between (`pickup:type`, with a question on its mind). A guard sets the option aside for longer each time it fires that in-world day: 10 minutes, then an hour, then the rest of the day (`loops`, `failures[key].until`); the count starts again after a guard runs out. A failed or rejected step no longer raises `action-rejected` while later steps are still queued, so a plan's valid steps still run.
+- **Nothing new.** It remembers how each thing looked when it last did each verb to it (`lastDone`: appearance, ready products, state and position). Doing the same verb to a thing that hasn't changed within `staleHours` (a mind setting, default 2 in-world hours; 0 turns it off) marks the option `stale`: curiosity and the remembered thrill count only a fifth and it costs 0.05, so only the other needs (cooling down, company) still pull. Scanning an unchanged mast or reading an empty mailbox again is nearly worthless; a mailbox with a new note, or a ball that has rolled, is new again. A stale option worth nothing isn't offered to a decision model at all (a model only sees the list, and would scan the same mailbox three times in a row).
 - **Looking around.** `go and look around` walks to the farthest of nine fixed waypoints (sector centres). It scores `curiosityWeight × (1 − curiosity) − 0.05` by day with battery ≥ 0.3 (else −1), so restlessness beats waiting and a satisfied robot still watches.
  Models can only pick candidate IDs; anything else is rejected in the feed as "not one of the options".
 
@@ -160,6 +161,16 @@ sequenceDiagram
 
 If a decision is still pending, routine triggers wait for it. A trigger at or above `wakeThreshold` (other than `action-finished`) drops the pending job from the mind and dispatches a new one. The [job queue](models.md#job-queue) also replaces an older queued decision for the same character.
 
+## Plans
+
+A model decision of two or more steps is a **plan**, a commitment ([`system.ts`](../../packages/mind/src/system.ts)):
+
+- **Intent.** It carries what it is for: the label of its last purposeful step ("water the plant with the watering-can"), on the feed entry (`intent`) and in `mind.plan` with its counts.
+- **Walking.** The sim walks to a step's target first when it is out of range (once per step, marked `args.approached`; the walk is `moveTo` with `args.approach`), so a step chosen from elsewhere ("play the piano" after "go and look around") no longer fails "out of range". A target it can't reach, or one someone holds, is still out of range ([simulation.md](simulation.md)).
+- **Repair.** A step that fails because it needs something held (schema-2 `requires.holding`) fetches a known, free thing that fits (putting down what it holds first), tries the step again (`args.repaired`, once) and carries on with the rest: "fill the fountain" without the can becomes `moveTo can, pickup can, fill fountain`. The feed entry says `repair: I need the watering-can to fill the fountain`; the steps it carried over are closed as "moved into a repair".
+- **Commitment.** While it is busy with a plan, or with queued steps that use a thing, a new trigger replaces it only if it is strong: salience ≥ 0.8, a need emergency, a poke or waking, or a plan whose steps keep failing. A weaker one (a new thing in sight is 0.7) is kept in `mind.deferred` (the strongest) and raised when the plan ends. Waiting, wandering and walks stay interruptible: looking around is for finding things.
+- **End.** When the last step resolves (or a decision replaces it) a feed line with no actions records it: `plan: { status: 'finished' | 'abandoned', why, feedTick, intent, done, total }`. Finished means most steps worked; abandoned says why (`replaced: admin-poke`, or the failing step).
+
 ## Memory
 
 Memory records ([`mind-types.ts`](../../packages/core/src/mind-types.ts)) live in two small competitive stores, STM and LTM.
@@ -168,6 +179,7 @@ Memory records ([`mind-types.ts`](../../packages/core/src/mind-types.ts)) live i
 - With `brain: models` and `appraiseOutcomes: true`, `appraise` and `scoreMemory` jobs refine valence and strength before the draft settles. Otherwise it settles immediately with the code values. The garden world sets `appraiseOutcomes: false` by default because CPU-only local models are slow.
 - **Worth:** `s × (1 + recallAlpha × ln(1 + recalls)) × 0.5^(Δt / halfLife)`, Δt in in-world days ([`memory.ts`](../../packages/mind/src/memory.ts)).
 - **Admission:** a full store (or a subject with `subjectCeiling` memories already) admits a newcomer only if it out-scores the weakest, which is evicted. STM capacity halves while the battery is below 0.2. LTM capacity is `ltmSize` plus the number of known objects.
+- **Merging:** long-term memory keeps one copy of a repeated experience. A newcomer with the same subject (`verb:type@when`) and text as one already there is merged into it: its `count` goes up, the text ends "(×n)", it gets a little stronger (+0.02 a repeat), and recalls and valence are combined. Sleep consolidation also merges duplicates an older world kept.
 - **Recall:** first sighting of an object recalls memories about its type. Recalls within the same 600 ticks refresh Δt without adding to the count. STM goes into every prompt but that does not count as a recall.
 - **Diary:** every notable event is written as a `diary` delta (stored per day, see [events-and-replay.md](events-and-replay.md)); the last 200 lines of the day are kept in the mind as input to reflection.
 

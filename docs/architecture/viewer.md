@@ -99,6 +99,7 @@ Contract: [objects.md](objects.md).
 - **Sheet extras**: "Last night: …" under the goal, and each unlocked line says whose words it is ("reworded by itself · night 3", "given, can change").
 - **Red-pen notes** wrap to stay inside the plan frame.
 - **Now line**: "Decided 15:10 · Gut call · Local (tev1:0.8b) · prompt decide@2 · trigger: action finished". While asleep the stale waking reason is hidden; the sleep steps show instead.
+- **Plans in the feed**: an entry that starts a plan of 2+ steps shows its `intent` above the steps ("PLAN: WATER THE PLANT WITH THE WATERING-CAN"); a plan-end line (`plan: { status, why, intent, done, total }`, no actions) reads "Finished “…” · 3 of 3 steps" or "Gave up on “…” · 1 of 3 steps: why"; a step superseded by a repair is marked "moved into a repair", not counted as a problem. The plan's robot tag letters `moveTo` as GO TO.
 - **Brain feed**: the tier mark shows the depth choice (Habit, Gut, Think) and, on wider screens, the template (`decide@2`) after a rule; both are in the detail box.
 - **Object card, Over time**: one small ruled line chart per state value (first → last value, lowest and highest in its accessible name, the time span below), from `GET /worlds/:id/objects/:oid/history` (`WorldConnection.objectHistory`), fetched when the card opens and at most every 30 s while it stays open. A server without the endpoint just leaves the section out. The sample records each object's state changes.
 

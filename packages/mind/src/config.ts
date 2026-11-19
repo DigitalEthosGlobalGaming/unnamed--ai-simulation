@@ -18,6 +18,8 @@ export interface MindConfig {
   batteryPlanAbove: number;
   batteryGutAbove: number;
   batteryHabitAbove: number;
+  /** In-world hours a repeat on an unchanged thing counts as "nothing new" (0 turns it off). */
+  staleHours: number;
 }
 
 export const DEFAULT_MIND_CONFIG: MindConfig = {
@@ -30,6 +32,7 @@ export const DEFAULT_MIND_CONFIG: MindConfig = {
   batteryPlanAbove: 0.6,
   batteryGutAbove: 0.3,
   batteryHabitAbove: 0.05,
+  staleHours: 2,
 };
 
 export function mindConfigOf(ext: Record<string, Json>): MindConfig {

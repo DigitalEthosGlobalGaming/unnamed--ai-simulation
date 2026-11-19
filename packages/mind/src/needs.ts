@@ -49,10 +49,12 @@ export function moodWord(valence: number, arousal: number): string {
   ][row]![col]!;
 }
 
-export function computeMood(levels: number[], bias: number, isNight: boolean) {
+export function computeMood(levels: number[], bias: number, isNight: boolean, asleep = false) {
   const avg = levels.reduce((a, b) => a + b, 0) / levels.length;
   const min = Math.min(...levels);
   const valence = clamp((avg - 0.5) * 1.6 + bias, -1, 1);
-  const arousal = clamp(0.3 + 0.7 * (1 - min) * (1 - min) + Math.abs(bias) * 0.5 + (isNight ? -0.2 : 0.1));
+  const awake = clamp(0.3 + 0.7 * (1 - min) * (1 - min) + Math.abs(bias) * 0.5 + (isNight ? -0.2 : 0.1));
+  // Asleep it is calm: arousal is low whatever the day left behind.
+  const arousal = asleep ? Math.min(awake, 0.2) : awake;
   return { valence: round3(valence), arousal: round3(arousal), word: moodWord(valence, arousal) };
 }

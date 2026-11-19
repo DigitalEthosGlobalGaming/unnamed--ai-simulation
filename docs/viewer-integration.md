@@ -111,11 +111,12 @@ Live messages carry no `sessionId`; replay messages always do.
 
 ### `FeedEntry`
 
-`{ tick, characterId, trigger, tier, depth?, depthWhy?, template?, system?, modelId?, confidence?, actions: [{ verb, targetId?, reason, status, result? }], usage?, energyCost?, notes?, reason?, escalated? }`
+`{ tick, characterId, trigger, tier, depth?, depthWhy?, template?, system?, intent?, plan?, modelId?, confidence?, actions: [{ verb, targetId?, reason, status, result? }], usage?, energyCost?, notes?, reason?, escalated? }`
 
 - Each step's `status` starts `queued` and is updated as it resolves: `done` (with `result`, the observation), `failed` (it started but didn't work; `result` is why), `rejected` (invalid when its turn came; `result` is why), or `superseded` (a newer decision replaced it before it ran). Live updates arrive as `feedStep { worldId, sessionId?, characterId, feedTick, step, status, result? }` messages on the feed channel (and `feedStep` deltas in the store): update `actions[step]` of the entry with that `characterId` and `tick === feedTick`. `GET /feed` returns entries already updated.
 - `depth` (`habit`, `gut` or `think`) and `depthWhy` record how hard the robot chose to think (decision 44): habit is free (autopilot or a named habit), gut is the decision model, think is the plan model. Carry-on and fallback entries have none.
 - `template: { id, version }` is the prompt template that rendered a model decision (`plan@3`). `system` is an admin note with no actions, e.g. `prompt template plan@2 activated` ([prompts.md](architecture/prompts.md)).
+- `intent` is what a plan of two or more steps is for ("water the plant with the watering-can"). `plan: { status: 'finished' | 'abandoned', why, feedTick, intent?, done, total }` is a line with no actions marking the end of the plan that started at `feedTick`. A `carry-on` entry whose `reason` starts `repair:` fetches a missing item (its carried-over steps in the earlier entry close as `superseded` with result "moved into a repair"). A step walked to first shows an extra `moveTo` with `args.approach` in the action deltas, not in the feed ([mind.md](architecture/mind.md#plans)).
 - `escalated: { from, confidence }` marks a decision the decision model (`from`) was unsure about, answered by a stronger model or a text-model plan. Plans (tier `llm`) carry no `confidence`.
 
 - `tier: 'carry-on'` marks the later steps of a model plan that run without a new call.

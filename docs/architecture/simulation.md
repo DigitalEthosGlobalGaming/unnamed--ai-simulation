@@ -147,7 +147,7 @@ Available to every character, no target object needed ([`world.ts`](../../packag
 
 ### Action queue and statuses
 
-Each character has a queue of at most 3 actions (`MAX_QUEUE`). A new decision replaces the queue and cancels the running action. The head action is validated when it starts: unknown target, unknown verb, out of range, bad notes or no path reject it, and the next one starts in the same tick.
+Each character has a queue of at most 3 actions (`MAX_QUEUE`). A new decision replaces the queue and cancels the running action. The head action is validated when it starts: unknown target, unknown verb, bad notes or no path reject it, and the next one starts in the same tick. A verb whose target is out of range is walked to first: the action goes back to the head of the queue (marked `args.approached`) and a `moveTo` to the target (marked `args.approach`) starts in its place; when the walk ends the verb starts. It walks once per action: a target it can't reach, or one someone holds, rejects it "out of range".
 
 ```mermaid
 stateDiagram-v2
