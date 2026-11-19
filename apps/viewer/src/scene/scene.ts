@@ -1779,7 +1779,7 @@ export class Scene {
     }
     // name + current verb (robots in the parked group are named by its shared tag)
     if (this.groupLabelled.has(c.id)) return;
-    const verb = c.mind.asleep ? 'ASLEEP' : c.action ? c.action.verb.toUpperCase() : 'IDLE';
+    const verb = c.mind.asleep ? 'ASLEEP' : c.action ? verbTag(c.action.verb) : 'IDLE';
     // Zoomed in, phones also get the current verb; at fit they show the name only.
     const txt = L.compact && ts < 30 ? c.name : `${c.name} · ${verb}`;
     const size = L.compact ? 12 : 13;
@@ -2022,7 +2022,7 @@ export class Scene {
         ? work
           ? `${work.step === 'done' ? 'ASLEEP · ' : ''}${SLEEP_STEP_TAG[work.step]}${work.step === 'consolidating' && work.total ? ` ${work.done ?? 0}/${work.total}` : ''}`
           : 'ASLEEP'
-        : c.action ? `${c.action.verb.toUpperCase()}${c.action.targetId ? ` · ${this.store.nameOf(c.action.targetId).toUpperCase()}` : ''}` : 'IDLE';
+        : c.action ? `${verbTag(c.action.verb)}${c.action.targetId ? ` · ${this.store.nameOf(c.action.targetId).toUpperCase()}` : ''}` : 'IDLE';
       g.moveTo(box.x, y - rowH * 0.25).lineTo(box.x + bw, y - rowH * 0.25).stroke({ width: 1, color: C.ink2, alpha: 0.6 });
       this.label('co-action', a, box.x + padX, y + 3, { size: 12, weight: '700', anchorX: 0, bg: false, spacing: 0.6, top: true });
     }
@@ -2031,6 +2031,9 @@ export class Scene {
 }
 
 /* ------------------------------------------------------------ helpers */
+
+/** Verb as lettered on the plan: `moveTo` reads "GO TO", `pickup` "PICK UP". */
+const verbTag = (v: string) => ({ moveTo: 'GO TO', pickup: 'PICK UP', putdown: 'PUT DOWN', vocalize: 'CALL' })[v] ?? v.toUpperCase();
 
 const SLEEP_STEP_TAG: Record<string, string> = { consolidating: 'CONSOLIDATING', habits: 'HABITS', sheet: 'SHEET', refine: 'REVIEW', done: 'RESTING' };
 

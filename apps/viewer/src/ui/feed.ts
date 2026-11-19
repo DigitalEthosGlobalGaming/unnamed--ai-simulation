@@ -461,7 +461,7 @@ export class FeedView {
         const words = a.verb === 'moveTo' && !a.targetId ? (nextT ? say(s, 'moveTo', nextT) : 'go to a spot') : say(s, a.verb, a.targetId);
         const txt = i === 0 ? cap(words) : words;
         // Only problems are marked: "done" is the normal case and "queued" is often never updated in history.
-        const mark = st === 'rejected' || st === 'failed' ? ` <span class="st st-${st}">${st}</span>` : st === 'superseded' ? ' <span class="st st-superseded">replaced</span>' : '';
+        const mark = st === 'rejected' || st === 'failed' ? ` <span class="st st-${st}">${st}</span>` : st === 'superseded' ? ` <span class="st st-superseded">${/repair/.test(a.result ?? '') ? 'moved into a repair' : 'replaced'}</span>` : '';
         return `<span class="fe-step${st === 'rejected' || st === 'failed' ? ' is-bad' : st === 'superseded' ? ' is-dropped' : ''}">${esc(txt)}${mark}</span>`;
       })
       .join('<span class="fe-then" aria-label="then"> → </span>');
@@ -507,6 +507,12 @@ export class FeedView {
       <span class="fe-cost">${cost}</span>`;
   }
 
+  /** What a multi-step plan is for, above its steps. */
+  private intentHtml(e: FeedEntry): string {
+    const intent = (e as FeedEntry & { intent?: string }).intent;
+    return intent && e.actions.length > 1 ? `<p class="fe-intent">Plan: ${esc(intent)}</p>` : '';
+  }
+
   private rowHtml(r: Row): string {
     const s = this.store;
     const w = s.world!;
@@ -515,13 +521,20 @@ export class FeedView {
     const sys = (e as FeedEntry & { system?: string }).system;
     if (sys && !e.actions.length)
       return `<li class="fe-row fe-system" data-entry="${keyOf(e)}" data-newest="${keyOf(e)}"><p class="fe-meta"><span class="fe-time">${clockOf(e.tick, w.clock).time}</span><span class="fe-sys">${esc(cap(sys))}</span></p></li>`;
+    // A plan ended: finished, or abandoned and why (the line names the plan by its intent).
+    const plan = (e as FeedEntry & { plan?: { status: 'finished' | 'abandoned'; why?: string; intent?: string; done?: number; total?: number } }).plan;
+    if (plan && !e.actions.length) {
+      const steps = plan.total ? ` · ${plan.done ?? 0} of ${plan.total} steps` : '';
+      const what = plan.intent ? `“${esc(cap(plan.intent))}”` : 'the plan';
+      return `<li class="fe-row fe-system${plan.status === 'abandoned' ? ' fe-plan-off' : ''}" data-entry="${keyOf(e)}" data-newest="${keyOf(e)}"><p class="fe-meta"><span class="fe-time">${clockOf(e.tick, w.clock).time}</span><span class="fe-sys">${this.robotId ? '' : `${esc(s.nameOf(e.characterId))} · `}${plan.status === 'finished' ? 'Finished' : 'Gave up on'} ${what}${steps}${plan.status === 'abandoned' && plan.why ? `: ${esc(plan.why)}` : ''}</span></p></li>`;
+    }
     const n = r.entries.length;
     const warn = this.bad(e);
     const lit = r.entries.some((x) => keyOf(x) === s.highlight);
     const reason = e.actions[0]?.reason ? `<p class="fe-why">${esc(quote(e.actions[0].reason))}</p>` : '';
     if (n === 1) {
       return `<li class="fe-row${warn ? ' is-warn' : ''}${lit ? ' is-lit' : ''}" data-entry="${keyOf(e)}" data-newest="${keyOf(e)}">
-        <p class="fe-do">${this.steps(e)}</p>
+        ${this.intentHtml(e)}<p class="fe-do">${this.steps(e)}</p>
         ${this.problems(e)}${reason}
         <p class="fe-meta">${this.metaBits(e, { time: clockOf(e.tick, w.clock).time })}</p>
       </li>`;

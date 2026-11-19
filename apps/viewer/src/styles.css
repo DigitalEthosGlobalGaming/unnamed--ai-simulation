@@ -3520,3 +3520,16 @@ pre.pr-code.is-locked {
 .sh-last .sh-k {
   margin-right: var(--space-2);
 }
+
+.fe-intent {
+  margin: 0 0 2px;
+  font-family: var(--font-draft);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.fe-plan-off .fe-sys {
+  color: var(--ink);
+}
